@@ -9,11 +9,14 @@ API Documentation: https://cwe-api.mitre.org/api/v1/
 
 import requests
 from typing import List, Union, Optional
+from argparse import ArgumentParser
+from pathlib import Path
+import os
 
 CWE_API_BASE_URL = "https://cwe-api.mitre.org/api/v1"
 
 
-def get_cwe_weaknesses(cwe_ids: List[int]) -> List[dict]:
+def get_cwe_weaknesses(cwe_ids: Union[List[int], int]) -> List[dict]:
     """
     Retrieve information about one or more CWE weaknesses from the MITRE CWE API.
 
@@ -104,3 +107,35 @@ def filter_cwe_relevant_fields(weakness_data: dict, relevant_fields: Optional[Li
             raise KeyError(f"Missing required field `{field}` from CWE data")
     
     return {field: weakness_data.get(field) for field in relevant_fields}
+
+def main():
+    parser = ArgumentParser(description="CWE API Client")
+    parser.add_argument("cwe_ids", nargs="+", help="CWE IDs to look up (e.g., 79 89 119)")
+    parser.add_argument("--output-dir", help="Directory to save output", default="output")
+    args = parser.parse_args()
+
+    cwe_ids = [int(cwe_id) for cwe_id in args.cwe_ids]
+
+    try:
+        weaknesses = get_cwe_weaknesses(cwe_ids)
+        filtered_weaknesses = weaknesses #[filter_cwe_relevant_fields(weakness) for weakness in weaknesses]
+
+        output_dir = args.output_dir if args.output_dir else "output"
+        output_dir = str(Path(output_dir).resolve())
+
+        os.makedirs(output_dir, exist_ok=True)
+        for weakness in filtered_weaknesses:
+            output_path = f"{output_dir}/CWE-{weakness['ID']}.json" if args.output_dir else None
+            if output_path:
+                with open(output_path, "w") as f:
+                    import json
+                    json.dump(weakness, f, indent=4)
+            else:
+                raise ValueError("Output directory must be specified to save files.") # This should never happen
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    main()
