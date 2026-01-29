@@ -14,7 +14,7 @@ def get_cwe_condition(cwe: str, chat_history=None) -> str:
     ...
     
 @ask_model_prompt("prompts/regogeneration.md")
-def get_rego_generation(cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
+def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
     """Get a Rego generation from the LLM."""
     ...
 
@@ -45,9 +45,32 @@ if __name__ == "__main__":
     print("CWE Condition Explanation:")
     print(cwe_condition)
     
+    with open(f"prompt_data/glitch_lib.rego", "r") as f:
+        rego_lib = f.read()
+        
+    with open(f"prompt_data/inter.txt", "r") as f:
+        ir = f.read()
+        
+    with open(f"prompt_data/example_queries/sec_full_permission_filesystem.rego", "r") as f:
+        example_rule_1 = f.read()
+        
+    with open(f"prompt_data/example_queries/sec_obsolete_command.rego", "r") as f:
+        example_rule_2 = f.read()
     
+    rego_rule = get_rego_generation(
+        cwe=args.cwe,
+        cwe_condition=cwe_condition,
+        ir=ir,
+        rego_lib=rego_lib,
+        example_rule_1=example_rule_1,
+        example_rule_2=example_rule_2
+    )
     
+    print("Generated Rego Rule:")
+    print(rego_rule)
     
+    with open(f"generated_rego/CWE-{args.cwe}-generated.rego", "w") as f:
+        f.write(rego_rule)
     
     #print(get_cwe_condition(cwe="CWE-89", chat_history=conversation_history))
     
