@@ -1,0 +1,325 @@
+These are the Python classes used for the Intermediate Representation of GLITCH, which you can use as reference.
+Please take into account the inheritence strcuture that exists between components.
+
+class ElementInfo:
+    line: int
+    column: int
+    end_line: int
+    end_column: int
+    code: str
+    sketched: ClassVar[int] = -1
+
+class CodeElement(ABC):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is not None:
+            self.line: int = info.line
+            self.column: int = info.column
+            self.end_line: int = info.end_line
+            self.end_column: int = info.end_column
+            self.code: str = info.code
+        else:
+            self.line: int = UNDEFINED_POSITION
+            self.column: int = UNDEFINED_POSITION
+            self.end_line: int = UNDEFINED_POSITION
+            self.end_column: int = UNDEFINED_POSITION
+            self.code: str = ""
+
+class Expr(CodeElement, ABC):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
+
+class Value(Expr, ABC):
+    def __init__(self, info: ElementInfo, value: Any) -> None:
+        super().__init__(info)
+        self.value = value
+
+class String(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Integer(Value):
+    def __init__(self, value: int, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Complex(Value):
+    def __init__(self, value: complex, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Float(Value):
+    def __init__(self, value: float, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Boolean(Value):
+    def __init__(self, value: bool, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Null(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
+        super().__init__(info, None)
+
+class Undef(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
+        super().__init__(info, None)    
+
+class Hash(Value):
+    def __init__(self, value: Dict[Expr, Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class Array(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class VariableReference(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class FunctionCall(Expr):
+    def __init__(self, name: str, args: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info)
+        self.name: str = name
+        self.args: List[Expr] = args
+
+class MethodCall(Expr):
+    def __init__(
+        self, receiver: Expr, method: str, args: List[Expr], info: ElementInfo
+    ) -> None:
+        super().__init__(info)
+        self.receiver: Expr = receiver
+        self.method: str = method
+        self.args: List[Expr] = args
+
+class BlockExpr(Expr):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
+        self.statements: List[CodeElement] = []
+
+class AddArgs(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+class UnaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info)
+        self.expr = expr
+
+class Not(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+class Minus(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+class BinaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info)
+        self.left = left
+        self.right = right
+
+class Or(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class And(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Sum(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Equal(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class NotEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class LessThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class LessThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class GreaterThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class GreaterThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class In(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Subtract(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Multiply(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Divide(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Modulo(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Power(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class RightShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class LeftShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Access(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class BitwiseAnd(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class BitwiseOr(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class BitwiseXor(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Assign(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+class Block(CodeElement):
+    def __init__(self) -> None:
+        CodeElement.__init__(self)
+        self.statements: List[CodeElement] = []
+
+class ConditionalStatement(Block, Expr):
+    class ConditionType(Enum):
+        IF = 1
+        SWITCH = 2
+
+    def __init__(
+        self,
+        condition: Expr,
+        type: "ConditionalStatement.ConditionType",
+        is_default: bool = False,
+        is_top: bool = False,
+        info: ElementInfo | None = None
+    ) -> None:
+        Block.__init__(self)
+        if info is not None:
+            Expr.__init__(self, info)
+        self.condition: Expr = condition
+        self.else_statement: ConditionalStatement | None = None
+        self.is_default = is_default
+        self.is_top = is_top
+        self.type = type
+
+class Comment(CodeElement):
+    def __init__(self, content: str, info: ElementInfo | None = None) -> None:
+        super().__init__(info)
+        self.content: str = content
+
+class KeyValue(CodeElement):
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(info)
+        self.name: str = name
+        self.value: Expr = value
+
+class Variable(KeyValue):
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
+
+class Attribute(KeyValue):
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
+
+class AtomicUnit(Block):
+    def __init__(self, name: Expr, type: str) -> None:
+        super().__init__()
+        self.name: Expr = name
+        self.type: str = type
+        self.attributes: List[Attribute] = []
+
+class Dependency(CodeElement):
+    def __init__(self, names: List[str]) -> None:
+        super().__init__()
+        self.names: List[str] = names
+
+class UnitBlockType(str, Enum):
+    script = "script"
+    tasks = "tasks"
+    vars = "vars"
+    block = "block"
+    function = "function"
+    definition = "definition"
+    unknown = "unknown"
+
+class UnitBlock(Block):
+    def __init__(self, name: str, type: UnitBlockType) -> None:
+        super().__init__()
+        self.dependencies: list[Dependency] = []
+        self.comments: list[Comment] = []
+        self.variables: list[Variable] = []
+        self.atomic_units: list[AtomicUnit] = []
+        self.unit_blocks: list["UnitBlock"] = []
+        self.attributes: list[Attribute] = []
+        self.name: str | None = name
+        self.path: str = ""
+        self.type: UnitBlockType = type
+
+class File:
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+
+class Folder:
+    def __init__(self, name: str) -> None:
+        self.content: List[Union["Folder", File]] = []
+        self.name: str = name
+
+class Module:
+    def __init__(self, name: str, path: str) -> None:
+        self.name: str = name
+        self.path: str = path
+        self.blocks: list[UnitBlock] = []
+        self.modules: list[Module] = []
+        self.folder: Folder = Folder(name)
+
+class Project:
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+        self.modules: list[Module] = []
+        self.blocks: list[UnitBlock] = []
+
+Some information about some of these classes:
+
+Project - Represents a generic folder that may contain several modules and unit blocks. Usually in IaC technologies, a folder for each project is created and it has a recommended structure
+Module - The top component from each code structure (e.g. Roles in Ansible, Cookbooks in Chef or Modules in Puppet) and they agglomerate the scripts necessary to execute a specific functionality. Modules are file system folders, usually with a specific organization (e.g. a role in Ansible usually has a tasks and a vars folder where, respectively, the tasks and variables for the role are defined, as shown here)
+Unit Blocks - correspond to the IaC scripts themselves or to a group of atomic units (e.g. Classes in Puppet).
+Atomic Unit - The building block of IaC scripts (e.g. Tasks in Ansible and Resources in Chef and Puppet). Atomic units define the system components we want to change and the actions we want to perform on them.
+Condition statements - Some IaC technologies may define condition statements in their languages (e.g. if, switch, unless...) which we abstract using this component.
+
+Other components that are not already in used are defined in the intermediate representation:
+
+Dependency - Abstracts the concept of dependencies between IaC scripts (e.g. include, require, import, contain...). Every time a statement of this type appears in a script, a Dependency instance should be created.
+Folder and File - These components were introduced to track the folders and files in which the other components are. A good example for why these components could be useful is to check if a project is following the structure that is considered the best practice.
