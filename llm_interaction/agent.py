@@ -1,14 +1,13 @@
 from pydantic_ai import Agent
-from pydantic_ai import Agent, UnexpectedModelBehavior, capture_run_messages, RunContext, PromptedOutput
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, RetryError
+from pydantic_ai import Agent, UnexpectedModelBehavior, capture_run_messages, PromptedOutput
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from pydantic_ai.exceptions import UsageLimitExceeded, UnexpectedModelBehavior
-from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
+from pydantic_ai.models.openrouter import OpenRouterModelSettings
 import asyncio
-from typing import Any, Callable, List, Tuple
+from typing import Callable, List
 from pydantic_ai.messages import ModelMessage
 
 class InfraAgent:
-    """Main agent for vibenix using pydantic-ai."""
     def __init__(self, model, model_settings: OpenRouterModelSettings={}, output_type: type = None):
         """Initialize the agent with optional custom instructions and output type."""
         self.model = model
@@ -42,7 +41,6 @@ class InfraAgent:
     
     def add_tool(self, func: Callable) -> None:
         self.agent.tool_plain(func, sequential=True)
-
 
     @retry(
       retry=retry_if_exception_type((UsageLimitExceeded, UnexpectedModelBehavior)),

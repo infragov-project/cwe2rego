@@ -1,1 +1,0 @@
-What is the most famous spot in {{ location }} ?
