@@ -1,0 +1,3 @@
+pydantic-ai-slim[openrouter]
+tenacity
+jinja2
