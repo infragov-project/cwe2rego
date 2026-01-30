@@ -71,15 +71,17 @@ if __name__ == "__main__":
             chat_history=conversation_history
         )
 
+    model_name = args.model.split("/")[-1]
+    
     i = 1    
     while True:
         print(f"--- Validation Attempt {i} ---")
         i += 1
         
-        with open(f"generated_rego/CWE-{args.cwe}-{args.model}-generated.rego", "w") as f:
+        with open(f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego", "w") as f:
             f.write(rego_rule)
             
-        error = opa_check("prompt_data/glitch_lib.rego", f"generated_rego/CWE-{args.cwe}-{args.model}-generated.rego")
+        error = opa_check("prompt_data/glitch_lib.rego", f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego")
         
         if error is None:
             break
