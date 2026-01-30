@@ -48,7 +48,6 @@ def ask_model_prompt(template_path: str):
 
             type_hints = get_type_hints(func)
             return_type = type_hints.get('return', type(None))
-            prompt_key = template_path.split('/')[-1].replace('.md', '')
 
             # Get function signature to map args to param names
             sig = inspect.signature(func)
@@ -60,8 +59,6 @@ def ask_model_prompt(template_path: str):
                 k: v for k, v in bound_args.arguments.items() 
                 if v is not None# and v != []
             }
-            
-            tool_call_collector = template_context.pop('tool_call_collector', None) # TODO
             chat_history = template_context.pop('chat_history', None)
 
             # Load and render the template
@@ -82,6 +79,7 @@ def ask_model_prompt(template_path: str):
             
             try:
                 # Run the agent
+                print(f"🤖 Model Prompt `{func.__name__}` (\"{template_path}\"):")
                 result, usage = agent.run(rendered_prompt, message_history=chat_history if chat_history else [])
                     
                 if chat_history is not None:
