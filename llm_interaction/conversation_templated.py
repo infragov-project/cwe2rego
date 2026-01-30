@@ -41,7 +41,7 @@ def ask_model_prompt(template_path: str):
     
     Args:
         template_path: Path to template file relative to model_prompts directory
-        functions: Optional list of functions to make available to the model
+        TODO: functions: Optional list of functions to make available to the model
     """
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         def wrapper(*args, **kwargs) -> T:
