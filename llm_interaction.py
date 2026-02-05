@@ -1,6 +1,7 @@
 """
 Interact with LLM via Pydantic framework (main file).
 """
+import re
 from llm_interaction.conversation_templated import ask_model_prompt
 from llm_interaction.conversation_templated import initialize_model, initialize_model_settings
 from dotenv import load_dotenv
@@ -24,10 +25,28 @@ def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
     """Get a syntax error regeneration of the rule from the LLM."""
     ...
 
+def replace_type_name(rego_code: str, desired_type: str) -> str:
+    """
+    Replace the type field value in the rego rule with the desired type name.
+    
+    Args:
+        rego_code: The generated Rego code
+        desired_type: The desired type name to use
+    
+    Returns:
+        Modified Rego code with replaced type name
+    """
+    # Pattern to match: "type": "anything_here"
+    pattern = r'"type"\s*:\s*"[^"]*"'
+    replacement = f'"type": "{desired_type}"'
+    
+    return re.sub(pattern, replacement, rego_code)
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
     parser.add_argument("--cwe", help="Choose CWE to use")
+    parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=True)
     args = parser.parse_args()
     
     load_dotenv()
@@ -80,12 +99,21 @@ if __name__ == "__main__":
         
         with open(f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego", "w") as f:
             f.write(rego_rule)
-            
+        
         error = opa_check("prompt_data/glitch_lib.rego", f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego")
         
         if error is None:
             break
         
         rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
+    
+    # Replace the type name with the desired one after validation passes
+    rego_rule = replace_type_name(rego_rule, args.type_name)
+    
+    with open(f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego", "w") as f:
+            f.write(rego_rule)
+    
+    
+    
         
     

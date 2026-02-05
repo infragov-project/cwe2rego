@@ -1,4 +1,4 @@
-You are a security expert with extensive Rego expertise. Considering the following information, write a Rego V0 rule for the GLITCH framework to detect the CWE weakness presented. The rule needs to have the name ```Glitch_Analysis``` and return the same format as the examples.
+You are a security expert with extensive Rego expertise. Considering the following information, write a Rego V0 rule for the GLITCH framework to detect the CWE weakness presented. The rule needs to have the name ```Glitch_Analysis``` and return the same format as the examples. Only return the Rego rule, ready to be used, and nothing else. No extra characters or words such as ` or rego, that do not conform to Rego syntax. There is no need to "present" the rule, just the code itself.
 
 Considering this CWE condition, which briefly explains how the CWE-{{cwe}} may appear in Infrastructure as Code scripts:
 
