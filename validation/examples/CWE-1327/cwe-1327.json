@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "inv_bind.pp",
+            "lines": [12],
+            "type": "script"
+        },
+        {
+            "file": "inv_bind.rb",
+            "lines": [7],
+            "type": "script"
+        },
+        {
+            "file": "inv_bind.yml",
+            "lines": [7],
+            "type": "tasks"
+        }
+    ]
+}
