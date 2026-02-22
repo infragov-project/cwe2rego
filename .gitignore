@@ -35,3 +35,6 @@ htmlcov/
 .ipynb_checkpoints/
 
 *.sqlite3
+
+
+validation/GLITCH
