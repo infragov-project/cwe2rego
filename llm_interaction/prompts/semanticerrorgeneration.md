@@ -2,7 +2,10 @@ You are a security expert with extensive Rego expertise. Please rewrite the prev
 
 The file is of the language ```{{iac_language}}```.
 
-The line that should have been detected is ```{{line_number}}```.
+The lines that should have been detected are:
+{% for line in missing_lines %}
+- Line {{line}}
+{% endfor %}
 
 The intermediate representation of the file in GLITCH is the following:
 

@@ -30,7 +30,7 @@ def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
     ...
     
 @ask_model_prompt(str(PROMPTS_DIR / "semanticerrorgeneration.md"))
-def get_semantic_error_generation(ir_file: str, iac_language: str, line_number: int, chat_history=None) -> str:
+def get_semantic_error_generation(ir_file: str, iac_language: str, missing_lines: list, chat_history=None) -> str:
     """Get a semantic error regeneration of the rule from the LLM."""
     ...
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
         error = semantic_check(rego_rule, args.type_name, str(args.cwe))
         
         if error is not None:
-            rego_rule = get_semantic_error_generation(ir_file=error[0], iac_language=error[1], line_number=error[2], chat_history=conversation_history)
+            rego_rule = get_semantic_error_generation(ir_file=error[0], iac_language=error[1], missing_lines=error[2], chat_history=conversation_history)
             continue
         
         break
