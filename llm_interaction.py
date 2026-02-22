@@ -102,10 +102,13 @@ if __name__ == "__main__":
         
         error = opa_check("prompt_data/glitch_lib.rego", f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego")
         
-        if error is None:
-            break
+        if error is not None:
+            rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
+            continue
         
-        rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
+        
+        
+        break
     
     # Replace the type name with the desired one after validation passes
     rego_rule = replace_type_name(rego_rule, args.type_name)
