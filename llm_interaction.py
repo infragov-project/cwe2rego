@@ -2,27 +2,36 @@
 Interact with LLM via Pydantic framework (main file).
 """
 import re
+from pathlib import Path
 from llm_interaction.conversation_templated import ask_model_prompt
 from llm_interaction.conversation_templated import initialize_model, initialize_model_settings
 from dotenv import load_dotenv
 import os
 from argparse import ArgumentParser
+from validation.semantinc_checking import semantic_check
 from validation.syntax_checking import opa_check
 
+PROMPTS_DIR = Path(__file__).parent / "llm_interaction" / "prompts"
 
-@ask_model_prompt("prompts/cwecondition.md")
+
+@ask_model_prompt(str(PROMPTS_DIR / "cwecondition.md"))
 def get_cwe_condition(cwe: str, chat_history=None) -> str:
     """Get a CWE condition explanation from the LLM."""
     ...
     
-@ask_model_prompt("prompts/regogeneration.md")
+@ask_model_prompt(str(PROMPTS_DIR / "regogeneration.md"))
 def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
     """Get a Rego generation from the LLM."""
     ...
 
-@ask_model_prompt("prompts/syntaxerrorgeneration.md")
+@ask_model_prompt(str(PROMPTS_DIR / "syntaxerrorgeneration.md"))
 def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
     """Get a syntax error regeneration of the rule from the LLM."""
+    ...
+    
+@ask_model_prompt(str(PROMPTS_DIR / "semanticerrorgeneration.md"))
+def get_semantic_error_generation(ir_file: str, iac_language: str, line_number: int, chat_history=None) -> str:
+    """Get a semantic error regeneration of the rule from the LLM."""
     ...
 
 def replace_type_name(rego_code: str, desired_type: str) -> str:
@@ -60,23 +69,25 @@ if __name__ == "__main__":
         raise ValueError("Model argument is required")
     initialize_model(OPENROUTER_API_KEY, args.model)
 
-    with open(f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
+    base_dir = Path(__file__).parent
+    
+    with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
         cwe_text = f.read()
     
     cwe_condition = get_cwe_condition(cwe=cwe_text)
     print("CWE Condition Explanation:")
     print(cwe_condition)
     
-    with open(f"prompt_data/glitch_lib.rego", "r") as f:
+    with open(base_dir / "prompt_data/glitch_lib.rego", "r") as f:
         rego_lib = f.read()
         
-    with open(f"prompt_data/inter.txt", "r") as f:
+    with open(base_dir / "prompt_data/inter.txt", "r") as f:
         ir = f.read()
         
-    with open(f"prompt_data/example_queries/sec_full_permission_filesystem.rego", "r") as f:
+    with open(base_dir / "prompt_data/example_queries/sec_full_permission_filesystem.rego", "r") as f:
         example_rule_1 = f.read()
         
-    with open(f"prompt_data/example_queries/sec_obsolete_command.rego", "r") as f:
+    with open(base_dir / "prompt_data/example_queries/sec_obsolete_command.rego", "r") as f:
         example_rule_2 = f.read()
     
     conversation_history = []
@@ -97,24 +108,27 @@ if __name__ == "__main__":
         print(f"--- Validation Attempt {i} ---")
         i += 1
         
-        with open(f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego", "w") as f:
+        # Replace the type name with the desired one
+        rego_rule = replace_type_name(rego_rule, args.type_name)
+        
+        output_path = base_dir / f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego"
+        
+        with open(output_path, "w") as f:
             f.write(rego_rule)
         
-        error = opa_check("prompt_data/glitch_lib.rego", f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego")
+        error = opa_check(str(base_dir / "prompt_data/glitch_lib.rego"), str(output_path))
         
         if error is not None:
             rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
             continue
         
+        error = semantic_check(rego_rule, args.type_name, str(args.cwe))
         
+        if error is not None:
+            rego_rule = get_semantic_error_generation(ir_file=error[0], iac_language=error[1], line_number=error[2], chat_history=conversation_history)
+            continue
         
         break
-    
-    # Replace the type name with the desired one after validation passes
-    rego_rule = replace_type_name(rego_rule, args.type_name)
-    
-    with open(f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego", "w") as f:
-            f.write(rego_rule)
     
     
     
