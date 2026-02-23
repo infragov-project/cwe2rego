@@ -11,25 +11,22 @@ from argparse import ArgumentParser
 from validation.semantinc_checking import semantic_check
 from validation.syntax_checking import opa_check
 
-PROMPTS_DIR = Path(__file__).parent / "llm_interaction" / "prompts"
-
-
-@ask_model_prompt(str(PROMPTS_DIR / "cwecondition.md"))
+@ask_model_prompt("prompts/cwecondition.md")
 def get_cwe_condition(cwe: str, chat_history=None) -> str:
     """Get a CWE condition explanation from the LLM."""
     ...
     
-@ask_model_prompt(str(PROMPTS_DIR / "regogeneration.md"))
+@ask_model_prompt("prompts/regogeneration.md")
 def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
     """Get a Rego generation from the LLM."""
     ...
 
-@ask_model_prompt(str(PROMPTS_DIR / "syntaxerrorgeneration.md"))
+@ask_model_prompt("prompts/syntaxerrorgeneration.md")
 def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
     """Get a syntax error regeneration of the rule from the LLM."""
     ...
     
-@ask_model_prompt(str(PROMPTS_DIR / "semanticerrorgeneration.md"))
+@ask_model_prompt("prompts/semanticerrorgeneration.md")
 def get_semantic_error_generation(ir_file: str, iac_language: str, missing_lines: list, chat_history=None) -> str:
     """Get a semantic error regeneration of the rule from the LLM."""
     ...

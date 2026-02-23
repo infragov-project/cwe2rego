@@ -69,6 +69,8 @@ def _verify_examples(
 
     unit_type = example.get("type") or "unknown"
 
+    print(f"  Checking {script_path.name} (type: {unit_type}, expected lines: {expected_lines})")
+
     # Remove any previous CSV to avoid stale results.
     if csv_path.exists():
         csv_path.unlink()
@@ -112,9 +114,11 @@ def _verify_examples(
     detected_set = set(detected_lines)
     missing = [line for line in expected_lines if line not in detected_set]
     if missing:
+        print(f"    ❌ Missing detections on lines: {missing}")
         ir = extract_ir(str(script_path), unit_type)
         return (ir, file_type.value, missing)
 
+    print(f"    ✅ All expected lines detected")
     return None
 
 
@@ -130,24 +134,31 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> Tuple[str
     Returns:
         Tuple of (ir_file, iac_language, line_number) if validation fails, None if passes
     """
+    print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
+    
     # Write rule to GLITCH security directory using type_name
     glitch_dir = Path(__file__).parent / "GLITCH"
     rule_path = glitch_dir / "glitch" / "rego" / "queries" / "security" / f"{type_name}.rego"
     rule_path.parent.mkdir(parents=True, exist_ok=True)
     with open(rule_path, "w") as f:
         f.write(rego_rule)
+    print(f"  Wrote rule to {rule_path}")
 
     folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
     examples = _load_examples(folder, cwe_number)
+    print(f"  Loaded {len(examples)} example(s) from {folder}")
 
     runner = CliRunner()
     csv_path = Path.cwd() / "glitch_lint.csv"
 
-    for example in examples:
+    for i, example in enumerate(examples, 1):
+        print(f" Example #{i}/{len(examples)}:")
         failure = _verify_examples(runner, folder, example, type_name, csv_path)
         if failure is not None:
+            print(f"Semantic check failed ❌")
             return failure
 
+    print(f"Semantic check passed ✅")
     return None
 
 def extract_ir(file_path: str, file_type_glitch: str) -> str:
