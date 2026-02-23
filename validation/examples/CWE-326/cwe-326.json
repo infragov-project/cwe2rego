@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "weak_crypt.pp",
+            "lines": [12],
+            "type": "script"
+        },
+        {
+            "file": "weak_crypt.rb",
+            "lines": [4],
+            "type": "script"
+        },
+        {
+            "file": "weak_crypt.yml",
+            "lines": [4, 7],
+            "type": "tasks"
+        }
+    ]
+}

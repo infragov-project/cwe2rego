@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "empty.pp",
+            "lines": [1],
+            "type": "script"
+        },
+        {
+            "file": "empty.rb",
+            "lines": [1],
+            "type": "script"
+        },
+        {
+            "file": "empty.yml",
+            "lines": [8],
+            "type": "tasks"
+        }
+    ]
+}

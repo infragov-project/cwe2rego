@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "admin.pp",
+            "lines": [7],
+            "type": "script"
+        },
+        {
+            "file": "admin.rb",
+            "lines": [8],
+            "type": "script"
+        },
+        {
+            "file": "admin.yml",
+            "lines": [3],
+            "type": "tasks"
+        }
+    ]
+}

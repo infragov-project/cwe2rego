@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "susp.pp",
+            "lines": [19],
+            "type": "script"
+        },
+        {
+            "file": "susp.rb",
+            "lines": [1],
+            "type": "script"
+        },
+        {
+            "file": "susp.yml",
+            "lines": [9],
+            "type": "vars"
+        }
+    ]
+}

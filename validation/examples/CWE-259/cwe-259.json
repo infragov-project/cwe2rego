@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "hard_secr.pp",
+            "lines": [2],
+            "type": "script"
+        },
+        {
+            "file": "hard_secr.rb",
+            "lines": [8],
+            "type": "script"
+        },
+        {
+            "file": "hard_secr.yml",
+            "lines": [8],
+            "type": "tasks"
+        }
+    ]
+}

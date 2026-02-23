@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "int_check.pp",
+            "lines": [5],
+            "type": "script"
+        },
+        {
+            "file": "int_check.rb",
+            "lines": [1],
+            "type": "script"
+        },
+        {
+            "file": "int_check.yml",
+            "lines": [5],
+            "type": "tasks"
+        }
+    ]
+}

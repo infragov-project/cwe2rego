@@ -1,0 +1,19 @@
+{
+    "examples": [
+        {
+            "file": "http.pp",
+            "lines": [2],
+            "type": "script"
+        },
+        {
+            "file": "http.rb",
+            "lines": [3],
+            "type": "script"
+        },
+        {
+            "file": "http.yml",
+            "lines": [4],
+            "type": "tasks"
+        }
+    ]
+}

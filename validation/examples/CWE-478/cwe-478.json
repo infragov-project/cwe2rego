@@ -1,0 +1,14 @@
+{
+    "examples": [
+        {
+            "file": "missing_default.pp",
+            "lines": [1, 6],
+            "type": "script"
+        },
+        {
+            "file": "missing_default.rb",
+            "lines": [1],
+            "type": "script"
+        }
+    ]
+}
