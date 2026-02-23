@@ -27,8 +27,13 @@ def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
     ...
     
 @ask_model_prompt("prompts/semanticerrorgeneration.md")
-def get_semantic_error_generation(ir_file: str, iac_language: str, missing_lines: list, chat_history=None) -> str:
-    """Get a semantic error regeneration of the rule from the LLM."""
+def get_semantic_error_generation(failures: list, chat_history=None) -> str:
+    """Get a semantic error regeneration of the rule from the LLM.
+    
+    Args:
+        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'file_name'
+        chat_history: Conversation history
+    """
     ...
 
 def replace_type_name(rego_code: str, desired_type: str) -> str:
@@ -119,10 +124,19 @@ if __name__ == "__main__":
             rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
             continue
         
-        error = semantic_check(rego_rule, args.type_name, str(args.cwe))
+        failures = semantic_check(rego_rule, args.type_name, str(args.cwe))
         
-        if error is not None:
-            rego_rule = get_semantic_error_generation(ir_file=error[0], iac_language=error[1], missing_lines=error[2], chat_history=conversation_history)
+        if failures:
+            # Format failures for the prompt
+            formatted_failures = [
+                {
+                    "iac_language": f[1],
+                    "missing_lines": f[2],
+                    "ir_file": f[0]
+                }
+                for f in failures
+            ]
+            rego_rule = get_semantic_error_generation(failures=formatted_failures, chat_history=conversation_history)
             continue
         
         break

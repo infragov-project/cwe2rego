@@ -49,6 +49,12 @@ def _verify_examples(
     type_name: str,
     csv_path: Path,
 ) -> Tuple[str, str, List[int]] | None:
+    """
+    Verify a single example.
+    
+    Returns:
+        Tuple of (ir_file, iac_language, missing_lines) if validation fails, None if passes
+    """
     file_name = example.get("file")
     if not file_name:
         raise ValueError("Example entry missing 'file'")
@@ -122,9 +128,9 @@ def _verify_examples(
     return None
 
 
-def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> Tuple[str, str, List[int]] | None:
+def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tuple[str, str, List[int]]]:
     """
-    Load the JSON examples manifest for a CWE folder.
+    Load the JSON examples manifest for a CWE folder and verify all examples.
     
     Args:
         rego_rule: The generated Rego rule content
@@ -132,7 +138,8 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> Tuple[str
         cwe_number: CWE number (e.g., "1327")
         
     Returns:
-        Tuple of (ir_file, iac_language, line_number) if validation fails, None if passes
+        List of tuples (ir_file, iac_language, missing_lines) for failed files.
+        Empty list if all files pass.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
     
@@ -150,16 +157,24 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> Tuple[str
 
     runner = CliRunner()
     csv_path = Path.cwd() / "glitch_lint.csv"
+    failures: List[Tuple[str, str, List[int]]] = []
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
         failure = _verify_examples(runner, folder, example, type_name, csv_path)
         if failure is not None:
-            print(f"Semantic check failed ❌")
-            return failure
+            failures.append(failure)
+            # Stop early if we have 3 failures
+            if len(failures) >= 3:
+                print(f"  Reached maximum of 3 failures, stopping verification")
+                break
 
+    if failures:
+        print(f"Semantic check failed ❌ ({len(failures)} file(s) failed)")
+        return failures
+    
     print(f"Semantic check passed ✅")
-    return None
+    return []
 
 def extract_ir(file_path: str, file_type_glitch: str) -> str:
     """
