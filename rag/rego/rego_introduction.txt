@@ -1,0 +1,553 @@
+The Open Policy Agent (OPA, pronounced “oh-pa”) is an open source, general-purpose policy engine that unifies policy enforcement across the stack. OPA provides a high-level declarative language that lets you specify policy as code and simple APIs to offload policy decision-making from your software. You can use OPA to enforce policies in microservices, Kubernetes, CI/CD pipelines, API gateways, and more.
+
+OPA was originally created by [Styra](https://www.styra.com) and is proud to be a graduated project in the [Cloud Native Computing Foundation (CNCF)](https://www.cncf.io/) landscape. For details read the CNCF [announcement](https://www.cncf.io/announcements/2021/02/04/cloud-native-computing-foundation-announces-open-policy-agent-graduation/).
+
+Read this page to learn about the core concepts in OPA’s policy language ([Rego](policy-language)) as well as how to download, run, and integrate OPA.
+
+Overview[](#overview)
+---------------------
+
+OPA [decouples](philosophy#policy-decoupling) policy decision-making from policy enforcement. When your software needs to make policy decisions it **queries** OPA and supplies structured data (e.g., JSON) as input. OPA accepts arbitrary structured data as input.
+
+![](/docs/v0.70.0/images/opa-service.svg)
+
+Policy Decoupling
+
+OPA generates policy decisions by evaluating the query input against policies and data. OPA and Rego are domain-agnostic so you can describe almost any kind of invariant in your policies. For example:
+
+*   Which users can access which resources.
+*   Which subnets egress traffic is allowed to.
+*   Which clusters a workload must be deployed to.
+*   Which registries binaries can be downloaded from.
+*   Which OS capabilities a container can execute with.
+*   Which times of day the system can be accessed at.
+
+Policy decisions are not limited to simple yes/no or allow/deny answers. Like query inputs, your policies can generate arbitrary structured data as output.
+
+Let’s look at an example.
+
+Example[](#example)
+-------------------
+
+Imagine you work for an organization with the following system:
+
+![](/docs/v0.70.0/images/system.svg)
+
+Example System
+
+There are three kinds of components in the system:
+
+*   Servers expose zero or more protocols (e.g., `http`, `ssh`, etc.)
+*   Networks connect servers and can be public or private. Public networks are connected to the Internet.
+*   Ports attach servers to networks.
+
+All the servers, networks, and ports are provisioned by a script. The script receives a JSON representation of the system as input:
+
+    {
+        "servers": [
+            {"id": "app", "protocols": ["https", "ssh"], "ports": ["p1", "p2", "p3"]},
+            {"id": "db", "protocols": ["mysql"], "ports": ["p3"]},
+            {"id": "cache", "protocols": ["memcache"], "ports": ["p3"]},
+            {"id": "ci", "protocols": ["http"], "ports": ["p1", "p2"]},
+            {"id": "busybox", "protocols": ["telnet"], "ports": ["p1"]}
+        ],
+        "networks": [
+            {"id": "net1", "public": false},
+            {"id": "net2", "public": false},
+            {"id": "net3", "public": true},
+            {"id": "net4", "public": true}
+        ],
+        "ports": [
+            {"id": "p1", "network": "net1"},
+            {"id": "p2", "network": "net3"},
+            {"id": "p3", "network": "net2"}
+        ]
+    }
+    
+
+Earlier in the day your boss told you about a new security policy that has to be implemented:
+
+    1. Servers reachable from the Internet must not expose the insecure 'http' protocol.
+    2. Servers are not allowed to expose the 'telnet' protocol.
+    
+
+The policy needs to be enforced when servers, networks, and ports are provisioned and the compliance team wants to periodically audit the system to find servers that violate the policy.
+
+Your boss has asked you to determine if OPA would be a good fit for implementing the policy.
+
+Rego[](#rego)
+-------------
+
+OPA policies are expressed in a high-level declarative language called Rego. Rego (pronounced “ray-go”) is purpose-built for expressing policies over complex hierarchical data structures. For detailed information on Rego see the [Policy Language](policy-language) documentation.
+
+💡 The examples below are interactive! If you edit the input data above containing servers, networks, and ports, the output will change below. Similarly, if you edit the queries or rules in the examples below the output will change. As you read through this section, try changing the input, queries, and rules and observe the difference in output.
+
+💻 They can also be run locally on your machine using the [`opa eval` command, here are setup instructions.](#running-opa)
+
+Note that the examples in this section try to represent the best practices. As such, they make use of keywords that are meant to become standard keywords at some point in time, but have been introduced gradually. [See the docs on _future keywords_](./policy-language/#future-keywords) for more information.
+
+### References[](#references)
+
+    package example
+    import rego.v1
+    
+
+When OPA evaluates policies it binds data provided in the query to a global variable called `input`. You can refer to data in the input using the `.` (dot) operator.
+
+    input.servers
+    
+
+To refer to array elements you can use the familiar square-bracket syntax:
+
+    input.servers[0].protocols[0]
+    
+
+> 💡 You can use the same square bracket syntax if keys contain other than `[a-zA-Z0-9_]`. E.g., `input["foo~bar"]`.
+
+If you refer to a value that does not exist, OPA returns _undefined_. Undefined means that OPA was not able to find any results.
+
+    input.deadbeef
+    
+
+### Expressions (Logical AND)[](#expressions-logical-and)
+
+    package example
+    import rego.v1
+    
+
+To produce policy decisions in Rego you write expressions against input and other data.
+
+    input.servers[0].id == "app"
+    
+
+OPA includes a set of built-in functions you can use to perform common operations like string manipulation, regular expression matching, arithmetic, aggregation, and more.
+
+    count(input.servers[0].protocols) >= 1
+    
+
+For a complete list of built-in functions supported in OPA out-of-the-box see the [Policy Reference](./policy-reference) page.
+
+Multiple expressions are joined together with the `;` (AND) operator. For queries to produce results, all of the expressions in the query must be true or defined. The order of expressions does not matter.
+
+    input.servers[0].id == "app"; input.servers[0].protocols[0] == "https"
+    
+
+You can omit the `;` (AND) operator by splitting expressions across multiple lines. The following query has the same meaning as the previous one:
+
+    input.servers[0].id == "app"
+    input.servers[0].protocols[0] == "https"
+    
+
+If any of the expressions in the query are not true (or defined) the result is undefined. In the example below, the second expression is false:
+
+    input.servers[0].id == "app"
+    input.servers[0].protocols[0] == "telnet"
+    
+
+### Variables[](#variables)
+
+    package example
+    import rego.v1
+    
+
+You can store values in intermediate variables using the `:=` (assignment) operator. Variables can be referenced just like `input`.
+
+    s := input.servers[0]
+    s.id == "app"
+    p := s.protocols[0]
+    p == "https"
+    
+
+When OPA evaluates expressions, it finds values for the variables that make all of the expressions true. If there are no variable assignments that make all of the expressions true, the result is undefined.
+
+    s := input.servers[0]
+    s.id == "app"
+    s.protocols[1] == "telnet"
+    
+
+Variables are immutable. OPA reports an error if you try to assign the same variable twice.
+
+    s := input.servers[0]
+    s := input.servers[1]
+    
+
+OPA must be able to enumerate the values for all variables in all expressions. If OPA cannot enumerate the values of a variable in any expression, OPA will report an error.
+
+    x := 1
+    x != y  # y has not been assigned a value
+    
+
+### Iteration[](#iteration)
+
+    package example
+    import rego.v1
+    
+
+Like other declarative languages (e.g., SQL), iteration in Rego happens implicitly when you inject variables into expressions.
+
+There are explicit iteration constructs to express _FOR ALL_ and _FOR SOME_, [see below](#for-some-and-for-all).
+
+To understand how iteration works in Rego, imagine you need to check if any networks are public. Recall that the networks are supplied inside an array:
+
+    input.networks
+    
+
+One option would be to test each network in the input:
+
+    input.networks[0].public == true
+    
+
+    input.networks[1].public == true
+    
+
+    input.networks[2].public == true
+    
+
+This approach is problematic because there may be too many networks to list statically, or more importantly, the number of networks may not be known in advance.
+
+In Rego, the solution is to substitute the array index with a variable.
+
+    some i; input.networks[i].public == true
+    
+
+Now the query asks for values of `i` that make the overall expression true. When you substitute variables in references, OPA automatically finds variable assignments that satisfy all of the expressions in the query. Just like intermediate variables, OPA returns the values of the variables.
+
+You can substitute as many variables as you want. For example, to find out if any servers expose the insecure `"http"` protocol you could write:
+
+    some i, j; input.servers[i].protocols[j] == "http"
+    
+
+If variables appear multiple times the assignments satisfy all of the expressions. For example, to find the ids of ports connected to public networks, you could write:
+
+    some i, j
+    id := input.ports[i].id
+    input.ports[i].network == input.networks[j].id
+    input.networks[j].public
+    
+
+Providing good names for variables can be hard. If you only refer to the variable once, you can replace it with the special `_` (wildcard variable) operator. Conceptually, each instance of `_` is a unique variable.
+
+    input.servers[_].protocols[_] == "http"
+    
+
+Just like references that refer to non-existent fields or expressions that fail to match, if OPA is unable to find any variable assignments that satisfy all of the expressions, the result is undefined.
+
+    some i; input.servers[i].protocols[i] == "ssh"  # there is no assignment of i that satisfies the expression
+    
+
+#### FOR SOME and FOR ALL[](#for-some-and-for-all)
+
+While plain iteration serves as a powerful building block, Rego also features ways to express _FOR SOME_ and _FOR ALL_ more explicitly.
+
+To ensure backwards-compatibility, the keywords discussed below introduced slowly. In the first stage, users can opt-in to using the new keywords via a special import: `import rego.v1` or, alternatively, `import future.keywords.every` introduces the `every` keyword described here. (Importing `every` means also importing `in` without an extra `import` statement.)
+
+At some point in the future, the keyword will become _standard_, and the import will become a no-op that can safely be removed. This should give all users ample time to update their policies, so that the new keyword will not cause clashes with existing variable names. [See the docs on _future keywords_](./policy-language/#future-keywords) for more information.
+
+##### FOR SOME (`some`)[](#for-some-some)
+
+`some ... in ...` is used to iterate over the collection (its last argument), and will bind its variables (key, value position) to the collection items. It introduces new bindings to the evaluation of the rest of the rule body.
+
+Using `some`, we can express the rules introduced above in different ways:
+
+    public_network contains net.id if {
+        some net in input.networks # some network exists and..
+        net.public                 # it is public.
+    }
+    
+    shell_accessible contains server.id if {
+        some server in input.servers
+        "telnet" in server.protocols
+    }
+    
+    shell_accessible contains server.id if {
+        some server in input.servers
+        "ssh" in server.protocols
+    }
+    
+
+    shell_accessible
+    
+
+For details on `some ... in ...`, see [the documentation of the `in` operator](policy-language/#membership-and-iteration-in).
+
+##### FOR ALL (`every`)[](#for-all-every)
+
+Expanding on the examples above, `every` allows us to succinctly express that a condition holds for all elements of a domain.
+
+    no_telnet_exposed if {
+        every server in input.servers {
+            every protocol in server.protocols {
+                "telnet" != protocol
+            }
+        }
+    }
+    
+    no_telnet_exposed_alt if { # alternative: every + not-in
+        every server in input.servers {
+            not "telnet" in server.protocols
+        }
+    }
+    
+    no_telnet_exposed_alt2 if { # alternative: not + rule + some
+        not any_telnet_exposed
+    }
+    
+    any_telnet_exposed if {
+        some server in input.servers
+        "telnet" in server.protocols
+    }
+    
+
+    {
+        "servers": [
+            {
+                "id": "busybox",
+                "protocols": ["http", "ftp"]
+            },
+            {
+                "id": "db",
+                "protocols": ["mysql", "ssh"]
+            },
+            {
+                "id": "web",
+                "protocols": ["https"]
+            }
+        ]
+    }
+    
+
+    no_telnet_exposed
+    
+
+For all the details, see [Every Keyword](policy-language/#every-keyword).
+
+### Rules[](#rules)
+
+Rego lets you encapsulate and re-use logic with rules. Rules are just if-then logic statements. Rules can either be “complete” or “partial”.
+
+    package example.rules
+    import rego.v1
+    
+
+#### Complete Rules[](#complete-rules)
+
+Complete rules are if-then statements that assign a single value to a variable. For example:
+
+    any_public_networks := true if {
+        some net in input.networks # some network exists and..
+        net.public                 # it is public.
+    }
+    
+
+Every rule consists of a _head_ and a _body_. In Rego we say the rule head is true _if_ the rule body is true for some set of variable assignments. In the example above `any_public_networks := true` is the head and `some net in input.networks; net.public` is the body.
+
+You can query for the value generated by rules just like any other value:
+
+    any_public_networks
+    
+
+All values generated by rules can be queried via the global `data` variable.
+
+    data.example.rules.any_public_networks
+    
+
+> 💡 You can query the value of any rule loaded into OPA by referring to it with an absolute path. The path of a rule is always: `data.<package-path>.<rule-name>`.
+
+If you omit the `= <value>` part of the rule head the value defaults to `true`. You could rewrite the example above as follows without changing the meaning:
+
+    any_public_networks if {
+        some net in input.networks
+        net.public
+    }
+    
+
+To define constants, omit the rule body. When you omit the rule body it defaults to `true`. Since the rule body is true, the rule head is always true/defined.
+
+    package example.constants
+    
+    pi := 3.14
+    
+
+Constants defined like this can be queried just like any other values:
+
+    pi > 3
+    
+
+If OPA cannot find variable assignments that satisfy the rule body, we say that the rule is undefined. For example, if the `input` provided to OPA does not include a public network then `any_public_networks` will be undefined (which is not the same as false.) Below, OPA is given a different set of input networks (none of which are public):
+
+    {
+        "networks": [
+            {"id": "n1", "public": false},
+            {"id": "n2", "public": false}
+        ]
+    }
+    
+
+    any_public_networks
+    
+
+#### Partial Rules[](#partial-rules)
+
+    package example
+    import rego.v1
+    
+
+Partial rules are if-then statements that generate a set of values and assign that set to a variable. For example:
+
+    public_network contains net.id if {
+        some net in input.networks # some network exists and..
+        net.public                 # it is public.
+    }
+    
+
+In the example above `public_network contains net.id if` is the rule head and `some net in input.networks; net.public` is the rule body. You can query for the entire set of values just like any other value:
+
+    public_network
+    
+
+Iteration over the set of values can be done with the `some ... in ...` expression:
+
+    some net in public_network
+    
+
+With a literal, or a bound variable, you can check if the value exists in the set via `... in ...`:
+
+    "net3" in public_network
+    
+
+You can also iterate over the set of values by referencing the set elements with a variable:
+
+    some n; public_network[n]
+    
+
+Lastly, you can check if a value exists in the set using the same syntax:
+
+    public_network["net3"]
+    
+
+In addition to partially defining sets, You can also partially define key/value pairs (aka objects). See [Rules](https://www.openpolicyagent.org/docs/latest/policy-language/#rules) in the language guide for more information.
+
+#### Logical OR[](#logical-or)
+
+When you join multiple expressions together in a query you are expressing logical AND. To express logical OR in Rego you define multiple rules with the same name. Let’s look at an example.
+
+Imagine you wanted to know if any servers expose protocols that give clients shell access. To determine this you could define a complete rule that declares `shell_accessible` to be `true` if any servers expose the `"telnet"` or `"ssh"` protocols:
+
+    package example.logical_or
+    
+    import rego.v1
+    
+    default shell_accessible := false
+    
+    shell_accessible if {
+    	input.servers[_].protocols[_] == "telnet"
+    }
+    
+    shell_accessible if {
+    	input.servers[_].protocols[_] == "ssh"
+    }
+    
+
+    {
+        "servers": [
+            {
+                "id": "busybox",
+                "protocols": ["http", "telnet"]
+            },
+            {
+                "id": "web",
+                "protocols": ["https"]
+            }
+        ]
+    }
+    
+
+    shell_accessible
+    
+
+> 💡 The `default` keyword tells OPA to assign a value to the variable if all of the other rules with the same name are undefined.
+
+When you use logical OR with partial rules, each rule definition contributes to the set of values assigned to the variable. For example, the example above could be modified to generate a set of servers that expose `"telnet"` or `"ssh"`.
+
+    package example.logical_or
+    
+    import rego.v1
+    
+    shell_accessible contains server.id if {
+    	server := input.servers[_]
+    	server.protocols[_] == "telnet"
+    }
+    
+    shell_accessible contains server.id if {
+    	server := input.servers[_]
+    	server.protocols[_] == "ssh"
+    }
+    
+
+    {
+        "servers": [
+            {
+                "id": "busybox",
+                "protocols": ["http", "telnet"]
+            },
+            {
+                "id": "db",
+                "protocols": ["mysql", "ssh"]
+            },
+            {
+                "id": "web",
+                "protocols": ["https"]
+            }
+        ]
+    }
+    
+
+    shell_accessible
+    
+
+💡 there’s a [blog post](https://www.styra.com/blog/how-to-express-or-in-rego/) that goes into much more detail on this topic showing different methods express OR in idiomatic Rego for different use cases.
+
+### Putting It Together[](#putting-it-together)
+
+The sections above explain the core concepts in Rego. To put it all together let’s review the desired policy (in English):
+
+    1. Servers reachable from the Internet must not expose the insecure 'http' protocol.
+    2. Servers are not allowed to expose the 'telnet' protocol.
+    
+
+At a high-level the policy needs to identify servers that violate some conditions. To implement this policy we could define rules called `violation` that generate a set of servers that are in violation.
+
+For example:
+
+    package example
+    
+    import rego.v1
+    
+    allow if {                                          # allow is true if...
+        count(violation) == 0                           # there are zero violations.
+    }
+    
+    violation contains server.id if {                   # a server is in the violation set if...
+        some server in public_servers                   # it exists in the 'public_servers' set and...
+        "http" in server.protocols                      # it contains the insecure "http" protocol.
+    }
+    
+    violation contains server.id if {                   # a server is in the violation set if...
+        some server in input.servers                    # it exists in the input.servers collection and...
+        "telnet" in server.protocols                    # it contains the "telnet" protocol.
+    }
+    
+    public_servers contains server if {                 # a server exists in the public_servers set if...
+        some server in input.servers                    # it exists in the input.servers collection and...
+    
+        some port in server.ports                       # it references a port in the input.ports collection and...
+        some input_port in input.ports
+        port == input_port.id
+    
+        some input_network in input.networks            # the port references a network in the input.networks collection and...
+        input_port.network == input_network.id
+        input_network.public                            # the network is public.
+    }
+    
+
+    some x; violation[x]

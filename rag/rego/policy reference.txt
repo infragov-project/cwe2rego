@@ -1,0 +1,6203 @@
+Policy Reference [Edit](https://github.com/open-policy-agent/opa/edit/main/docs/content/policy-reference.md)
+
+* * *
+
+Assignment and Equality[](#assignment-and-equality)
+---------------------------------------------------
+
+    # assign variable x to value of field foo.bar.baz in input
+    x := input.foo.bar.baz
+    
+    # check if variable x has same value as variable y
+    x == y
+    
+    # check if variable x is a set containing "foo" and "bar"
+    x == {"foo", "bar"}
+    
+    # OR
+    
+    {"foo", "bar"} == x
+    
+
+Lookup[](#lookup)
+-----------------
+
+### Arrays[](#arrays)
+
+    # lookup value at index 0
+    val := arr[0]
+    
+     # check if value at index 0 is "foo"
+    "foo" == arr[0]
+    
+    # find all indices i that have value "foo"
+    "foo" == arr[i]
+    
+    # lookup last value
+    val := arr[count(arr)-1]
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    some 0, val in arr   # lookup value at index 0
+    0, "foo" in arr      # check if value at index 0 is "foo"
+    some i, "foo" in arr # find all indices i that have value "foo"
+    
+
+### Objects[](#objects)
+
+    # lookup value for key "foo"
+    val := obj["foo"]
+    
+    # check if value for key "foo" is "bar"
+    "bar" == obj["foo"]
+    
+    # OR
+    
+    "bar" == obj.foo
+    
+    # check if key "foo" exists and is not false
+    obj.foo
+    
+    # check if key assigned to variable k exists
+    k := "foo"
+    obj[k]
+    
+    # check if path foo.bar.baz exists and is not false
+    obj.foo.bar.baz
+    
+    # check if path foo.bar.baz, foo.bar, or foo does not exist or is false
+    not obj.foo.bar.baz
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    o := {"foo": false}
+    # check if value exists: the expression will be true
+    false in o
+    # check if value for key "foo" is false
+    "foo", false in o
+    
+
+### Sets[](#sets)
+
+    # check if "foo" belongs to the set
+    a_set["foo"]
+    
+    # check if "foo" DOES NOT belong to the set
+    not a_set["foo"]
+    
+    # check if the array ["a", "b", "c"] belongs to the set
+    a_set[["a", "b", "c"]]
+    
+    # find all arrays of the form [x, "b", z] in the set
+    a_set[[x, "b", z]]
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    "foo" in a_set
+    not "foo" in a_set
+    some ["a", "b", "c"] in a_set
+    some [x, "b", z] in a_set
+    
+
+Iteration[](#iteration)
+-----------------------
+
+    package example
+    import future.keywords
+    
+
+### Arrays[](#arrays-1)
+
+    # iterate over indices i
+    arr[i]
+    
+    # iterate over values
+    val := arr[_]
+    
+    # iterate over index/value pairs
+    val := arr[i]
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    some val in arr    # iterate over values
+    some i, _ in arr   # iterate over indices
+    some i, val in arr # iterate over index/value pairs
+    
+
+### Objects[](#objects-1)
+
+    # iterate over keys
+    obj[key]
+    
+    # iterate over values
+    val := obj[_]
+    
+    # iterate over key/value pairs
+    val := obj[key]
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    some val in obj      # iterate over values
+    some key, _ in obj   # iterate over keys
+    some key, val in obj # key/value pairs
+    
+
+### Sets[](#sets-1)
+
+    # iterate over values
+    set[val]
+    
+    # with `import rego.v1` or `import future.keywords.in`
+    some val in set
+    
+
+### Advanced[](#advanced)
+
+    # nested: find key k whose bar.baz array index i is 7
+    foo[k].bar.baz[i] == 7
+    
+    # simultaneous: find keys in objects foo and bar with same value
+    foo[k1] == bar[k2]
+    
+    # simultaneous self: find 2 keys in object foo with same value
+    foo[k1] == foo[k2]; k1 != k2
+    
+    # multiple conditions: k has same value in both conditions
+    foo[k].bar.baz[i] == 7; foo[k].qux > 3
+    
+
+For All[](#for-all)
+-------------------
+
+    # assert no values in set match predicate
+    count({x | set[x]; f(x)}) == 0
+    
+    # assert all values in set make function f true
+    count({x | set[x]; f(x)}) == count(set)
+    
+    # assert no values in set make function f true (using negation and helper rule)
+    not any_match
+    
+    # assert all values in set make function f true (using negation and helper rule)
+    not any_not_match
+    
+
+    # with `import rego.v1`, or `import future.keywords.in` and `import future.keywords.if`
+    any_match if {
+        some x in set
+        f(x)
+    }
+    
+    any_not_match if {
+        some x in set
+        not f(x)
+    }
+    
+
+Rules[](#rules)
+---------------
+
+In the examples below `...` represents one or more conditions.
+
+    package example
+    import future.keywords
+    
+
+### Constants[](#constants)
+
+    a := {1, 2, 3}
+    b := {4, 5, 6}
+    c := a | b
+    
+
+### Conditionals (Boolean)[](#conditionals-boolean)
+
+    # p is true if ...
+    p := true { ... }
+    
+    # OR
+    # with `import rego.v1` or `import future.keywords.if`
+    p if { ... }
+    
+    # OR
+    p { ... }
+    
+
+### Conditionals[](#conditionals)
+
+    # with `import rego.v1` or `import future.keywords.if`
+    default a := 1
+    a := 5   if { ... }
+    a := 100 if { ... }
+    
+
+### Incremental[](#incremental)
+
+    # a_set will contain values of x and values of y
+    a_set[x] { ... }
+    a_set[y] { ... }
+    
+    # alternatively, with `import rego.v1`, or `import future.keywords.contains` and `import future.keywords.if`
+    a_set contains x if { ... }
+    a_set contains y if { ... }
+    
+    # a_map will contain key->value pairs x->y and w->z
+    a_map[x] := y if { ... }
+    a_map[w] := z if { ... }
+    
+
+### Ordered (Else)[](#ordered-else)
+
+    # with `import rego.v1` or `import future.keywords.if`
+    default a := 1
+    a := 5 if { ... }
+    else := 10 if { ... }
+    
+
+### Functions (Boolean)[](#functions-boolean)
+
+    # with `import rego.v1` or `import future.keywords.if`
+    f(x, y) if {
+        ...
+    }
+    
+    # OR
+    
+    f(x, y) := true if {
+        ...
+    }
+    
+
+### Functions (Conditionals)[](#functions-conditionals)
+
+    # with `import rego.v1` or `import future.keywords.if`
+    f(x) := "A" if { x >= 90 }
+    f(x) := "B" if { x >= 80; x < 90 }
+    f(x) := "C" if { x >= 70; x < 80 }
+    
+
+### Reference Heads[](#reference-heads)
+
+    # with `import rego.v1`, or `import future.keywords.contains` and `import future.keywords.if`
+    fruit.apple.seeds = 12 if input == "apple"             # complete document (single value rule)
+    
+    fruit.pineapple.colors contains x if x := "yellow"     # multi-value rule
+    
+    fruit.banana.phone[x] = "bananular" if x := "cellular" # single value rule
+    fruit.banana.phone.cellular = "bananular" if true      # equivalent single value rule
+    
+    fruit.orange.color(x) = true if x == "orange"          # function
+    
+
+For reasons of backwards-compatibility, partial sets need to use `contains` in their rule heads, i.e.
+
+    fruit.box contains "apples" if true
+    
+
+whereas
+
+    fruit.box[x] if { x := "apples" }
+    
+
+defines a _complete document rule_ `fruit.box.apples` with value `true`. The same is the case of rules with brackets that don’t contain dots, like
+
+    box[x] if { x := "apples" } # => {"box": {"apples": true }}
+    box2[x] { x := "apples" } # => {"box": ["apples"]}
+    
+
+For backwards-compatibility, rules _without_ if and without _dots_ will be interpreted as defining partial sets, like `box2`.
+
+Tests[](#tests)
+---------------
+
+    # define a rule that starts with test_
+    test_NAME { ... }
+    
+    # override input.foo value using the 'with' keyword
+    data.foo.bar.deny with input.foo as {"bar": [1,2,3]}}
+    
+
+Built-in Functions[](#built-in-functions)
+-----------------------------------------
+
+The built-in functions for the language provide basic operations to manipulate scalar values (e.g. numbers and strings), and aggregate functions that summarize complex types.
+
+### Comparison[](#comparison)
+
+[`x == y`](#builtin-comparison-equal)
+
+`result := x == y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is equal to `y`; false otherwise
+
+Wasm
+
+[`x > y`](#builtin-comparison-gt)
+
+`result := x > y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is greater than `y`; false otherwise
+
+Wasm
+
+[`x >= y`](#builtin-comparison-gte)
+
+`result := x >= y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is greater or equal to `y`; false otherwise
+
+Wasm
+
+[`x < y`](#builtin-comparison-lt)
+
+`result := x < y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is less than `y`; false otherwise
+
+Wasm
+
+[`x <= y`](#builtin-comparison-lte)
+
+`result := x <= y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is less than or equal to `y`; false otherwise
+
+Wasm
+
+[`x != y`](#builtin-comparison-neq)
+
+`result := x != y`
+
+`x`
+
+(any)
+
+`y`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `x` is not equal to `y`; false otherwise
+
+Wasm
+
+### Numbers[](#numbers)
+
+[`abs`](#builtin-numbers-abs)
+
+`y := abs(x)`
+
+Returns the number without its sign.
+
+`x`
+
+(number)
+
+Returns:
+
+`y`
+
+(number)
+
+the absolute value of `x`
+
+Wasm
+
+[`ceil`](#builtin-numbers-ceil)
+
+`y := ceil(x)`
+
+Rounds the number _up_ to the nearest integer.
+
+`x`
+
+(number)
+
+the number to round
+
+Returns:
+
+`y`
+
+(number)
+
+the result of rounding `x` _up_
+
+[v0.26.0](https://github.com/open-policy-agent/opa/releases/v0.26.0) Wasm
+
+[`x / y`](#builtin-numbers-div)
+
+`z := x / y`
+
+Divides the first number by the second number.
+
+`x`
+
+(number)
+
+the dividend
+
+`y`
+
+(number)
+
+the divisor
+
+Returns:
+
+`z`
+
+(number)
+
+the result of `x` divided by `y`
+
+Wasm
+
+[`floor`](#builtin-numbers-floor)
+
+`y := floor(x)`
+
+Rounds the number _down_ to the nearest integer.
+
+`x`
+
+(number)
+
+the number to round
+
+Returns:
+
+`y`
+
+(number)
+
+the result of rounding `x` _down_
+
+[v0.26.0](https://github.com/open-policy-agent/opa/releases/v0.26.0) Wasm
+
+[`x - y`](#builtin-numbers-minus)
+
+`z := x - y`
+
+Minus subtracts the second number from the first number or computes the difference between two sets.
+
+`x`
+
+(any<number, set\[any\]>)
+
+`y`
+
+(any<number, set\[any\]>)
+
+Returns:
+
+`z`
+
+(any<number, set\[any\]>)
+
+the difference of `x` and `y`
+
+Wasm
+
+[`x * y`](#builtin-numbers-mul)
+
+`z := x * y`
+
+Multiplies two numbers.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+the product of `x` and `y`
+
+Wasm
+
+[`numbers.range`](#builtin-numbers-numbersrange)
+
+`range := numbers.range(a, b)`
+
+Returns an array of numbers in the given (inclusive) range. If `a==b`, then `range == [a]`; if `a > b`, then `range` is in descending order.
+
+`a`
+
+(number)
+
+`b`
+
+(number)
+
+Returns:
+
+`range`
+
+(array\[number\])
+
+the range between `a` and `b`
+
+[v0.22.0](https://github.com/open-policy-agent/opa/releases/v0.22.0) Wasm
+
+[`numbers.range_step`](#builtin-numbers-numbersrange_step)
+
+`range := numbers.range_step(a, b, step)`
+
+Returns an array of numbers in the given (inclusive) range incremented by a positive step. If “a==b”, then “range == \[a\]”; if “a > b”, then “range” is in descending order. If the provided “step” is less then 1, an error will be thrown. If “b” is not in the range of the provided “step”, “b” won’t be included in the result.
+
+`a`
+
+(number)
+
+`b`
+
+(number)
+
+`step`
+
+(number)
+
+Returns:
+
+`range`
+
+(array\[number\])
+
+the range between `a` and `b` in `step` increments
+
+[v0.56.0](https://github.com/open-policy-agent/opa/releases/v0.56.0) SDK-dependent
+
+[`x + y`](#builtin-numbers-plus)
+
+`z := x + y`
+
+Plus adds two numbers together.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+the sum of `x` and `y`
+
+Wasm
+
+[`rand.intn`](#builtin-numbers-randintn)
+
+`y := rand.intn(str, n)`
+
+Returns a random integer between `0` and `n` (`n` exclusive). If `n` is `0`, then `y` is always `0`. For any given argument pair (`str`, `n`), the output will be consistent throughout a query evaluation.
+
+`str`
+
+(string)
+
+`n`
+
+(number)
+
+Returns:
+
+`y`
+
+(number)
+
+random integer in the range `[0, abs(n))`
+
+[v0.31.0](https://github.com/open-policy-agent/opa/releases/v0.31.0) SDK-dependent
+
+[`x % y`](#builtin-numbers-rem)
+
+`z := x % y`
+
+Returns the remainder for of `x` divided by `y`, for `y != 0`.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+the remainder
+
+Wasm
+
+[`round`](#builtin-numbers-round)
+
+`y := round(x)`
+
+Rounds the number to the nearest integer.
+
+`x`
+
+(number)
+
+the number to round
+
+Returns:
+
+`y`
+
+(number)
+
+the result of rounding `x`
+
+Wasm
+
+### Aggregates[](#aggregates)
+
+[`count`](#builtin-aggregates-count)
+
+`n := count(collection)`
+
+Count takes a collection or string and returns the number of elements (or characters) in it.
+
+`collection`
+
+(any<string, array\[any\], object\[any: any\], set\[any\]>)
+
+the set/array/object/string to be counted
+
+Returns:
+
+`n`
+
+(number)
+
+the count of elements, key/val pairs, or characters, respectively.
+
+Wasm
+
+[`max`](#builtin-aggregates-max)
+
+`n := max(collection)`
+
+Returns the maximum value in a collection.
+
+`collection`
+
+(any<array\[any\], set\[any\]>)
+
+Returns:
+
+`n`
+
+(any)
+
+the maximum of all elements
+
+Wasm
+
+[`min`](#builtin-aggregates-min)
+
+`n := min(collection)`
+
+Returns the minimum value in a collection.
+
+`collection`
+
+(any<array\[any\], set\[any\]>)
+
+Returns:
+
+`n`
+
+(any)
+
+the minimum of all elements
+
+Wasm
+
+[`product`](#builtin-aggregates-product)
+
+`n := product(collection)`
+
+Muliplies elements of an array or set of numbers
+
+`collection`
+
+(any<array\[number\], set\[number\]>)
+
+Returns:
+
+`n`
+
+(number)
+
+the product of all elements
+
+Wasm
+
+[`sort`](#builtin-aggregates-sort)
+
+`n := sort(collection)`
+
+Returns a sorted array.
+
+`collection`
+
+(any<array\[any\], set\[any\]>)
+
+the array or set to be sorted
+
+Returns:
+
+`n`
+
+(array\[any\])
+
+the sorted array
+
+Wasm
+
+[`sum`](#builtin-aggregates-sum)
+
+`n := sum(collection)`
+
+Sums elements of an array or set of numbers.
+
+`collection`
+
+(any<array\[number\], set\[number\]>)
+
+Returns:
+
+`n`
+
+(number)
+
+the sum of all elements
+
+Wasm
+
+### Arrays[](#arrays-2)
+
+[`array.concat`](#builtin-array-arrayconcat)
+
+`z := array.concat(x, y)`
+
+Concatenates two arrays.
+
+`x`
+
+(array\[any\])
+
+`y`
+
+(array\[any\])
+
+Returns:
+
+`z`
+
+(array\[any\])
+
+the concatenation of `x` and `y`
+
+Wasm
+
+[`array.reverse`](#builtin-array-arrayreverse)
+
+`rev := array.reverse(arr)`
+
+Returns the reverse of a given array.
+
+`arr`
+
+(array\[any\])
+
+the array to be reversed
+
+Returns:
+
+`rev`
+
+(array\[any\])
+
+an array containing the elements of `arr` in reverse order
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) Wasm
+
+[`array.slice`](#builtin-array-arrayslice)
+
+`slice := array.slice(arr, start, stop)`
+
+Returns a slice of a given array. If `start` is greater or equal than `stop`, `slice` is `[]`.
+
+`arr`
+
+(array\[any\])
+
+the array to be sliced
+
+`start`
+
+(number)
+
+the start index of the returned slice; if less than zero, it’s clamped to 0
+
+`stop`
+
+(number)
+
+the stop index of the returned slice; if larger than `count(arr)`, it’s clamped to `count(arr)`
+
+Returns:
+
+`slice`
+
+(array\[any\])
+
+the subslice of `array`, from `start` to `end`, including `arr[start]`, but excluding `arr[end]`
+
+Wasm
+
+### Sets[](#sets-2)
+
+[`x & y`](#builtin-sets-and)
+
+`z := x & y`
+
+Returns the intersection of two sets.
+
+`x`
+
+(set\[any\])
+
+`y`
+
+(set\[any\])
+
+Returns:
+
+`z`
+
+(set\[any\])
+
+the intersection of `x` and `y`
+
+Wasm
+
+[`intersection`](#builtin-sets-intersection)
+
+`y := intersection(xs)`
+
+Returns the intersection of the given input sets.
+
+`xs`
+
+(set\[set\[any\]\])
+
+set of sets to intersect
+
+Returns:
+
+`y`
+
+(set\[any\])
+
+the intersection of all `xs` sets
+
+Wasm
+
+[`x - y`](#builtin-sets-minus)
+
+`z := x - y`
+
+Minus subtracts the second number from the first number or computes the difference between two sets.
+
+`x`
+
+(any<number, set\[any\]>)
+
+`y`
+
+(any<number, set\[any\]>)
+
+Returns:
+
+`z`
+
+(any<number, set\[any\]>)
+
+the difference of `x` and `y`
+
+Wasm
+
+[`x | y`](#builtin-sets-or)
+
+`z := x | y`
+
+Returns the union of two sets.
+
+`x`
+
+(set\[any\])
+
+`y`
+
+(set\[any\])
+
+Returns:
+
+`z`
+
+(set\[any\])
+
+the union of `x` and `y`
+
+Wasm
+
+[`union`](#builtin-sets-union)
+
+`y := union(xs)`
+
+Returns the union of the given input sets.
+
+`xs`
+
+(set\[set\[any\]\])
+
+set of sets to merge
+
+Returns:
+
+`y`
+
+(set\[any\])
+
+the union of all `xs` sets
+
+Wasm
+
+### Objects[](#object)
+
+[`json.filter`](#builtin-object-jsonfilter)
+
+`filtered := json.filter(object, paths)`
+
+Filters the object. For example: `json.filter({"a": {"b": "x", "c": "y"}}, ["a/b"])` will result in `{"a": {"b": "x"}}`). Paths are not filtered in-order and are deduplicated before being evaluated.
+
+`object`
+
+(object\[any: any\])
+
+`paths`
+
+(any<array\[any<string, array\[any\]>\], set\[any<string, array\[any\]>\]>)
+
+JSON string paths
+
+Returns:
+
+`filtered`
+
+(any)
+
+remaining data from `object` with only keys specified in `paths`
+
+Wasm
+
+[`json.match_schema`](#builtin-object-jsonmatch_schema)
+
+`output := json.match_schema(document, schema)`
+
+Checks that the document matches the JSON schema.
+
+`document`
+
+(any<string, object\[any: any\]>)
+
+document to verify by schema
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+schema to verify document by
+
+Returns:
+
+`output`
+
+(array<boolean, array\[object<desc: string, error: string, field: string, type: string>\]>)
+
+`output` is of the form `[match, errors]`. If the document is valid given the schema, then `match` is `true`, and `errors` is an empty array. Otherwise, `match` is `false` and `errors` is an array of objects describing the error(s).
+
+[v0.50.0](https://github.com/open-policy-agent/opa/releases/v0.50.0) SDK-dependent
+
+[`json.patch`](#builtin-object-jsonpatch)
+
+`output := json.patch(object, patches)`
+
+Patches an object according to RFC6902. For example: `json.patch({"a": {"foo": 1}}, [{"op": "add", "path": "/a/bar", "value": 2}])` results in `{"a": {"foo": 1, "bar": 2}`. The patches are applied atomically: if any of them fails, the result will be undefined. Additionally works on sets, where a value contained in the set is considered to be its path.
+
+`object`
+
+(any)
+
+`patches`
+
+(array\[object<op: string, path: any>\[any: any\]\])
+
+Returns:
+
+`output`
+
+(any)
+
+result obtained after consecutively applying all patch operations in `patches`
+
+[v0.25.0](https://github.com/open-policy-agent/opa/releases/v0.25.0) SDK-dependent
+
+[`json.remove`](#builtin-object-jsonremove)
+
+`output := json.remove(object, paths)`
+
+Removes paths from an object. For example: `json.remove({"a": {"b": "x", "c": "y"}}, ["a/b"])` will result in `{"a": {"c": "y"}}`. Paths are not removed in-order and are deduplicated before being evaluated.
+
+`object`
+
+(object\[any: any\])
+
+`paths`
+
+(any<array\[any<string, array\[any\]>\], set\[any<string, array\[any\]>\]>)
+
+JSON string paths
+
+Returns:
+
+`output`
+
+(any)
+
+result of removing all keys specified in `paths`
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`json.verify_schema`](#builtin-object-jsonverify_schema)
+
+`output := json.verify_schema(schema)`
+
+Checks that the input is a valid JSON schema object. The schema can be either a JSON string or an JSON object.
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+the schema to verify
+
+Returns:
+
+`output`
+
+(array<boolean, any<null, string>>)
+
+`output` is of the form `[valid, error]`. If the schema is valid, then `valid` is `true`, and `error` is `null`. Otherwise, `valid` is `false` and `error` is a string describing the error.
+
+[v0.50.0](https://github.com/open-policy-agent/opa/releases/v0.50.0) SDK-dependent
+
+[`object.filter`](#builtin-object-objectfilter)
+
+`filtered := object.filter(object, keys)`
+
+Filters the object by keeping only specified keys. For example: `object.filter({"a": {"b": "x", "c": "y"}, "d": "z"}, ["a"])` will result in `{"a": {"b": "x", "c": "y"}}`).
+
+`object`
+
+(object\[any: any\])
+
+object to filter keys
+
+`keys`
+
+(any<array\[any\], object\[any: any\], set\[any\]>)
+
+Returns:
+
+`filtered`
+
+(any)
+
+remaining data from `object` with only keys specified in `keys`
+
+[v0.17.2](https://github.com/open-policy-agent/opa/releases/v0.17.2) Wasm
+
+[`object.get`](#builtin-object-objectget)
+
+`value := object.get(object, key, default)`
+
+Returns value of an object’s key if present, otherwise a default. If the supplied `key` is an `array`, then `object.get` will search through a nested object or array using each key in turn. For example: `object.get({"a": [{ "b": true }]}, ["a", 0, "b"], false)` results in `true`.
+
+`object`
+
+(object\[any: any\])
+
+object to get `key` from
+
+`key`
+
+(any)
+
+key to lookup in `object`
+
+`default`
+
+(any)
+
+default to use when lookup fails
+
+Returns:
+
+`value`
+
+(any)
+
+`object[key]` if present, otherwise `default`
+
+Wasm
+
+[`object.keys`](#builtin-object-objectkeys)
+
+`value := object.keys(object)`
+
+Returns a set of an object’s keys. For example: `object.keys({"a": 1, "b": true, "c": "d")` results in `{"a", "b", "c"}`.
+
+`object`
+
+(object\[any: any\])
+
+object to get keys from
+
+Returns:
+
+`value`
+
+(set\[any\])
+
+set of `object`’s keys
+
+[v0.47.0](https://github.com/open-policy-agent/opa/releases/v0.47.0) Wasm
+
+[`object.remove`](#builtin-object-objectremove)
+
+`output := object.remove(object, keys)`
+
+Removes specified keys from an object.
+
+`object`
+
+(object\[any: any\])
+
+object to remove keys from
+
+`keys`
+
+(any<array\[any\], object\[any: any\], set\[any\]>)
+
+keys to remove from x
+
+Returns:
+
+`output`
+
+(any)
+
+result of removing the specified `keys` from `object`
+
+[v0.17.2](https://github.com/open-policy-agent/opa/releases/v0.17.2) Wasm
+
+[`object.subset`](#builtin-object-objectsubset)
+
+`result := object.subset(super, sub)`
+
+Determines if an object `sub` is a subset of another object `super`.Object `sub` is a subset of object `super` if and only if every key in `sub` is also in `super`, **and** for all keys which `sub` and `super` share, they have the same value. This function works with objects, sets, arrays and a set of array and set.If both arguments are objects, then the operation is recursive, e.g. `{"c": {"x": {10, 15, 20}}` is a subset of `{"a": "b", "c": {"x": {10, 15, 20, 25}, "y": "z"}`. If both arguments are sets, then this function checks if every element of `sub` is a member of `super`, but does not attempt to recurse. If both arguments are arrays, then this function checks if `sub` appears contiguously in order within `super`, and also does not attempt to recurse. If `super` is array and `sub` is set, then this function checks if `super` contains every element of `sub` with no consideration of ordering, and also does not attempt to recurse.
+
+`super`
+
+(any<array\[any\], object\[any: any\], set\[any\]>)
+
+object to test if sub is a subset of
+
+`sub`
+
+(any<array\[any\], object\[any: any\], set\[any\]>)
+
+object to test if super is a superset of
+
+Returns:
+
+`result`
+
+(any)
+
+`true` if `sub` is a subset of `super`
+
+[v0.42.0](https://github.com/open-policy-agent/opa/releases/v0.42.0) SDK-dependent
+
+[`object.union`](#builtin-object-objectunion)
+
+`output := object.union(a, b)`
+
+Creates a new object of the asymmetric union of two objects. For example: `object.union({"a": 1, "b": 2, "c": {"d": 3}}, {"a": 7, "c": {"d": 4, "e": 5}})` will result in `{"a": 7, "b": 2, "c": {"d": 4, "e": 5}}`.
+
+`a`
+
+(object\[any: any\])
+
+`b`
+
+(object\[any: any\])
+
+Returns:
+
+`output`
+
+(any)
+
+a new object which is the result of an asymmetric recursive union of two objects where conflicts are resolved by choosing the key from the right-hand object `b`
+
+[v0.17.2](https://github.com/open-policy-agent/opa/releases/v0.17.2) Wasm
+
+[`object.union_n`](#builtin-object-objectunion_n)
+
+`output := object.union_n(objects)`
+
+Creates a new object that is the asymmetric union of all objects merged from left to right. For example: `object.union_n([{"a": 1}, {"b": 2}, {"a": 3}])` will result in `{"b": 2, "a": 3}`.
+
+`objects`
+
+(array\[object\[any: any\]\])
+
+Returns:
+
+`output`
+
+(any)
+
+asymmetric recursive union of all objects in `objects`, merged from left to right, where conflicts are resolved by choosing the key from the right-hand object
+
+[v0.37.0](https://github.com/open-policy-agent/opa/releases/v0.37.0) Wasm
+
+*   When `keys` are provided as an object only the top level keys on the object will be used, values are ignored. For example: `object.remove({"a": {"b": {"c": 2}}, "x": 123}, {"a": 1}) == {"x": 123}` regardless of the value for key `a` in the keys object, the following `keys` object gives the same result `object.remove({"a": {"b": {"c": 2}}, "x": 123}, {"a": {"b": {"foo": "bar"}}}) == {"x": 123}`.
+    
+*   The `json` string `paths` may reference into array values by using index numbers. For example with the object `{"a": ["x", "y", "z"]}` the path `a/1` references `y`. Nested structures are supported as well, for example: `{"a": ["x", {"y": {"y1": {"y2": ["foo", "bar"]}}}, "z"]}` the path `a/1/y1/y2/0` references `"foo"`.
+    
+*   The `json` string `paths` support `~0`, or `~1` characters for `~` and `/` characters in key names. It does not support `-` for last index of an array. For example the path `/foo~1bar~0` will reference `baz` in `{ "foo/bar~": "baz" }`.
+    
+*   The `json` string `paths` may be an array of string path segments rather than a `/` separated string. For example the path `a/b/c` can be passed in as `["a", "b", "c"]`.
+    
+
+### Strings[](#strings)
+
+[`concat`](#builtin-strings-concat)
+
+`output := concat(delimiter, collection)`
+
+Joins a set or array of strings with a delimiter.
+
+`delimiter`
+
+(string)
+
+`collection`
+
+(any<array\[string\], set\[string\]>)
+
+strings to join
+
+Returns:
+
+`output`
+
+(string)
+
+Wasm
+
+[`contains`](#builtin-strings-contains)
+
+`result := contains(haystack, needle)`
+
+Returns `true` if the search string is included in the base string
+
+`haystack`
+
+(string)
+
+string to search in
+
+`needle`
+
+(string)
+
+substring to look for
+
+Returns:
+
+`result`
+
+(boolean)
+
+result of the containment check
+
+Wasm
+
+[`endswith`](#builtin-strings-endswith)
+
+`result := endswith(search, base)`
+
+Returns true if the search string ends with the base string.
+
+`search`
+
+(string)
+
+search string
+
+`base`
+
+(string)
+
+base string
+
+Returns:
+
+`result`
+
+(boolean)
+
+result of the suffix check
+
+Wasm
+
+[`format_int`](#builtin-strings-format_int)
+
+`output := format_int(number, base)`
+
+Returns the string representation of the number in the given base after rounding it down to an integer value.
+
+`number`
+
+(number)
+
+number to format
+
+`base`
+
+(number)
+
+base of number representation to use
+
+Returns:
+
+`output`
+
+(string)
+
+formatted number
+
+Wasm
+
+[`indexof`](#builtin-strings-indexof)
+
+`output := indexof(haystack, needle)`
+
+Returns the index of a substring contained inside a string.
+
+`haystack`
+
+(string)
+
+string to search in
+
+`needle`
+
+(string)
+
+substring to look for
+
+Returns:
+
+`output`
+
+(number)
+
+index of first occurrence, `-1` if not found
+
+Wasm
+
+[`indexof_n`](#builtin-strings-indexof_n)
+
+`output := indexof_n(haystack, needle)`
+
+Returns a list of all the indexes of a substring contained inside a string.
+
+`haystack`
+
+(string)
+
+string to search in
+
+`needle`
+
+(string)
+
+substring to look for
+
+Returns:
+
+`output`
+
+(array\[number\])
+
+all indices at which `needle` occurs in `haystack`, may be empty
+
+[v0.37.0](https://github.com/open-policy-agent/opa/releases/v0.37.0) SDK-dependent
+
+[`lower`](#builtin-strings-lower)
+
+`y := lower(x)`
+
+Returns the input string but with all characters in lower-case.
+
+`x`
+
+(string)
+
+string that is converted to lower-case
+
+Returns:
+
+`y`
+
+(string)
+
+lower-case of x
+
+Wasm
+
+[`replace`](#builtin-strings-replace)
+
+`y := replace(x, old, new)`
+
+Replace replaces all instances of a sub-string.
+
+`x`
+
+(string)
+
+string being processed
+
+`old`
+
+(string)
+
+substring to replace
+
+`new`
+
+(string)
+
+string to replace `old` with
+
+Returns:
+
+`y`
+
+(string)
+
+string with replaced substrings
+
+Wasm
+
+[`split`](#builtin-strings-split)
+
+`ys := split(x, delimiter)`
+
+Split returns an array containing elements of the input string split on a delimiter.
+
+`x`
+
+(string)
+
+string that is split
+
+`delimiter`
+
+(string)
+
+delimiter used for splitting
+
+Returns:
+
+`ys`
+
+(array\[string\])
+
+split parts
+
+Wasm
+
+[`sprintf`](#builtin-strings-sprintf)
+
+`output := sprintf(format, values)`
+
+Returns the given string, formatted.
+
+`format`
+
+(string)
+
+string with formatting verbs
+
+`values`
+
+(array\[any\])
+
+arguments to format into formatting verbs
+
+Returns:
+
+`output`
+
+(string)
+
+`format` formatted by the values in `values`
+
+SDK-dependent
+
+[`startswith`](#builtin-strings-startswith)
+
+`result := startswith(search, base)`
+
+Returns true if the search string begins with the base string.
+
+`search`
+
+(string)
+
+search string
+
+`base`
+
+(string)
+
+base string
+
+Returns:
+
+`result`
+
+(boolean)
+
+result of the prefix check
+
+Wasm
+
+[`strings.any_prefix_match`](#builtin-strings-stringsany_prefix_match)
+
+`result := strings.any_prefix_match(search, base)`
+
+Returns true if any of the search strings begins with any of the base strings.
+
+`search`
+
+(any<string, array\[string\], set\[string\]>)
+
+search string(s)
+
+`base`
+
+(any<string, array\[string\], set\[string\]>)
+
+base string(s)
+
+Returns:
+
+`result`
+
+(boolean)
+
+result of the prefix check
+
+[v0.44.0](https://github.com/open-policy-agent/opa/releases/v0.44.0) SDK-dependent
+
+[`strings.any_suffix_match`](#builtin-strings-stringsany_suffix_match)
+
+`result := strings.any_suffix_match(search, base)`
+
+Returns true if any of the search strings ends with any of the base strings.
+
+`search`
+
+(any<string, array\[string\], set\[string\]>)
+
+search string(s)
+
+`base`
+
+(any<string, array\[string\], set\[string\]>)
+
+base string(s)
+
+Returns:
+
+`result`
+
+(boolean)
+
+result of the suffix check
+
+[v0.44.0](https://github.com/open-policy-agent/opa/releases/v0.44.0) SDK-dependent
+
+[`strings.count`](#builtin-strings-stringscount)
+
+`output := strings.count(search, substring)`
+
+Returns the number of non-overlapping instances of a substring in a string.
+
+`search`
+
+(string)
+
+string to search in
+
+`substring`
+
+(string)
+
+substring to look for
+
+Returns:
+
+`output`
+
+(number)
+
+count of occurrences, `0` if not found
+
+[v0.67.0](https://github.com/open-policy-agent/opa/releases/v0.67.0) SDK-dependent
+
+[`strings.render_template`](#builtin-strings-stringsrender_template)
+
+`result := strings.render_template(value, vars)`
+
+Renders a templated string with given template variables injected. For a given templated string and key/value mapping, values will be injected into the template where they are referenced by key. For examples of templating syntax, see [https://pkg.go.dev/text/template](https://pkg.go.dev/text/template)
+
+`value`
+
+(string)
+
+a templated string
+
+`vars`
+
+(object\[string: any\])
+
+a mapping of template variable keys to values
+
+Returns:
+
+`result`
+
+(string)
+
+rendered template with template variables injected
+
+[v0.59.0](https://github.com/open-policy-agent/opa/releases/v0.59.0) SDK-dependent
+
+[`strings.replace_n`](#builtin-strings-stringsreplace_n)
+
+`output := strings.replace_n(patterns, value)`
+
+Replaces a string from a list of old, new string pairs. Replacements are performed in the order they appear in the target string, without overlapping matches. The old string comparisons are done in argument order.
+
+`patterns`
+
+(object\[string: string\])
+
+replacement pairs
+
+`value`
+
+(string)
+
+string to replace substring matches in
+
+Returns:
+
+`output`
+
+(string)
+
+Wasm
+
+[`strings.reverse`](#builtin-strings-stringsreverse)
+
+`y := strings.reverse(x)`
+
+Reverses a given string.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) Wasm
+
+[`substring`](#builtin-strings-substring)
+
+`output := substring(value, offset, length)`
+
+Returns the portion of a string for a given `offset` and a `length`. If `length < 0`, `output` is the remainder of the string.
+
+`value`
+
+(string)
+
+`offset`
+
+(number)
+
+offset, must be positive
+
+`length`
+
+(number)
+
+length of the substring starting from `offset`
+
+Returns:
+
+`output`
+
+(string)
+
+substring of `value` from `offset`, of length `length`
+
+Wasm
+
+[`trim`](#builtin-strings-trim)
+
+`output := trim(value, cutset)`
+
+Returns `value` with all leading or trailing instances of the `cutset` characters removed.
+
+`value`
+
+(string)
+
+string to trim
+
+`cutset`
+
+(string)
+
+string of characters that are cut off
+
+Returns:
+
+`output`
+
+(string)
+
+string trimmed of `cutset` characters
+
+Wasm
+
+[`trim_left`](#builtin-strings-trim_left)
+
+`output := trim_left(value, cutset)`
+
+Returns `value` with all leading instances of the `cutset` characters removed.
+
+`value`
+
+(string)
+
+string to trim
+
+`cutset`
+
+(string)
+
+string of characters that are cut off on the left
+
+Returns:
+
+`output`
+
+(string)
+
+string left-trimmed of `cutset` characters
+
+Wasm
+
+[`trim_prefix`](#builtin-strings-trim_prefix)
+
+`output := trim_prefix(value, prefix)`
+
+Returns `value` without the prefix. If `value` doesn’t start with `prefix`, it is returned unchanged.
+
+`value`
+
+(string)
+
+string to trim
+
+`prefix`
+
+(string)
+
+prefix to cut off
+
+Returns:
+
+`output`
+
+(string)
+
+string with `prefix` cut off
+
+Wasm
+
+[`trim_right`](#builtin-strings-trim_right)
+
+`output := trim_right(value, cutset)`
+
+Returns `value` with all trailing instances of the `cutset` characters removed.
+
+`value`
+
+(string)
+
+string to trim
+
+`cutset`
+
+(string)
+
+string of characters that are cut off on the right
+
+Returns:
+
+`output`
+
+(string)
+
+string right-trimmed of `cutset` characters
+
+Wasm
+
+[`trim_space`](#builtin-strings-trim_space)
+
+`output := trim_space(value)`
+
+Return the given string with all leading and trailing white space removed.
+
+`value`
+
+(string)
+
+string to trim
+
+Returns:
+
+`output`
+
+(string)
+
+string leading and trailing white space cut off
+
+Wasm
+
+[`trim_suffix`](#builtin-strings-trim_suffix)
+
+`output := trim_suffix(value, suffix)`
+
+Returns `value` without the suffix. If `value` doesn’t end with `suffix`, it is returned unchanged.
+
+`value`
+
+(string)
+
+string to trim
+
+`suffix`
+
+(string)
+
+suffix to cut off
+
+Returns:
+
+`output`
+
+(string)
+
+string with `suffix` cut off
+
+Wasm
+
+[`upper`](#builtin-strings-upper)
+
+`y := upper(x)`
+
+Returns the input string but with all characters in upper-case.
+
+`x`
+
+(string)
+
+string that is converted to upper-case
+
+Returns:
+
+`y`
+
+(string)
+
+upper-case of x
+
+Wasm
+
+When using `sprintf`, values are pre-processed and may have an unexpected type. For example, `%T` evaluates to `string` for both `string` and `boolean` types. In such cases, use `type_name` to accurately evaluate the underlying type.
+
+### Regex[](#regex)
+
+[`regex.find_all_string_submatch_n`](#builtin-regex-regexfind_all_string_submatch_n)
+
+`output := regex.find_all_string_submatch_n(pattern, value, number)`
+
+Returns all successive matches of the expression.
+
+`pattern`
+
+(string)
+
+regular expression
+
+`value`
+
+(string)
+
+string to match
+
+`number`
+
+(number)
+
+number of matches to return; `-1` means all matches
+
+Returns:
+
+`output`
+
+(array\[array\[string\]\])
+
+Wasm
+
+[`regex.find_n`](#builtin-regex-regexfind_n)
+
+`output := regex.find_n(pattern, value, number)`
+
+Returns the specified number of matches when matching the input against the pattern.
+
+`pattern`
+
+(string)
+
+regular expression
+
+`value`
+
+(string)
+
+string to match
+
+`number`
+
+(number)
+
+number of matches to return, if `-1`, returns all matches
+
+Returns:
+
+`output`
+
+(array\[string\])
+
+collected matches
+
+SDK-dependent
+
+[`regex.globs_match`](#builtin-regex-regexglobs_match)
+
+`result := regex.globs_match(glob1, glob2)`
+
+Checks if the intersection of two glob-style regular expressions matches a non-empty set of non-empty strings. The set of regex symbols is limited for this builtin: only `.`, `*`, `+`, `[`, `-`, `]` and `\` are treated as special symbols.
+
+`glob1`
+
+(string)
+
+`glob2`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+SDK-dependent
+
+[`regex.is_valid`](#builtin-regex-regexis_valid)
+
+`result := regex.is_valid(pattern)`
+
+Checks if a string is a valid regular expression: the detailed syntax for patterns is defined by [https://github.com/google/re2/wiki/Syntax](https://github.com/google/re2/wiki/Syntax).
+
+`pattern`
+
+(string)
+
+regular expression
+
+Returns:
+
+`result`
+
+(boolean)
+
+[v0.23.0](https://github.com/open-policy-agent/opa/releases/v0.23.0) Wasm
+
+[`regex.match`](#builtin-regex-regexmatch)
+
+`result := regex.match(pattern, value)`
+
+Matches a string against a regular expression.
+
+`pattern`
+
+(string)
+
+regular expression
+
+`value`
+
+(string)
+
+value to match against `pattern`
+
+Returns:
+
+`result`
+
+(boolean)
+
+[v0.23.0](https://github.com/open-policy-agent/opa/releases/v0.23.0) Wasm
+
+[`regex.replace`](#builtin-regex-regexreplace)
+
+`output := regex.replace(s, pattern, value)`
+
+Find and replaces the text using the regular expression pattern.
+
+`s`
+
+(string)
+
+string being processed
+
+`pattern`
+
+(string)
+
+regex pattern to be applied
+
+`value`
+
+(string)
+
+regex value
+
+Returns:
+
+`output`
+
+(string)
+
+[v0.45.0](https://github.com/open-policy-agent/opa/releases/v0.45.0) SDK-dependent
+
+[`regex.split`](#builtin-regex-regexsplit)
+
+`output := regex.split(pattern, value)`
+
+Splits the input string by the occurrences of the given pattern.
+
+`pattern`
+
+(string)
+
+regular expression
+
+`value`
+
+(string)
+
+string to match
+
+Returns:
+
+`output`
+
+(array\[string\])
+
+the parts obtained by splitting `value`
+
+SDK-dependent
+
+[`regex.template_match`](#builtin-regex-regextemplate_match)
+
+`result := regex.template_match(template, value, delimiter_start, delimiter_end)`
+
+Matches a string against a pattern, where there pattern may be glob-like
+
+`template`
+
+(string)
+
+template expression containing `0..n` regular expressions
+
+`value`
+
+(string)
+
+string to match
+
+`delimiter_start`
+
+(string)
+
+start delimiter of the regular expression in `template`
+
+`delimiter_end`
+
+(string)
+
+end delimiter of the regular expression in `template`
+
+Returns:
+
+`result`
+
+(boolean)
+
+SDK-dependent
+
+### Glob[](#glob)
+
+[`glob.match`](#builtin-glob-globmatch)
+
+`result := glob.match(pattern, delimiters, match)`
+
+Parses and matches strings against the glob notation. Not to be confused with `regex.globs_match`.
+
+`pattern`
+
+(string)
+
+`delimiters`
+
+(any<null, array\[string\]>)
+
+glob pattern delimiters, e.g. `[".", ":"]`, defaults to `["."]` if unset. If `delimiters` is `null`, glob match without delimiter.
+
+`match`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+true if `match` can be found in `pattern` which is separated by `delimiters`
+
+Wasm
+
+[`glob.quote_meta`](#builtin-glob-globquote_meta)
+
+`output := glob.quote_meta(pattern)`
+
+Returns a string which represents a version of the pattern where all asterisks have been escaped.
+
+`pattern`
+
+(string)
+
+Returns:
+
+`output`
+
+(string)
+
+the escaped string of `pattern`
+
+SDK-dependent
+
+The following table shows examples of how `glob.match` works:
+
+`call`
+
+`output`
+
+Description
+
+`output := glob.match("*.github.com", [], "api.github.com")`
+
+`true`
+
+A glob with the default `["."]` delimiter.
+
+`output := glob.match("*.github.com", [], "api.cdn.github.com")`
+
+`false`
+
+A glob with the default `["."]` delimiter.
+
+`output := glob.match("*hub.com", null, "api.cdn.github.com")`
+
+`true`
+
+A glob without delimiter.
+
+`output := glob.match("*:github:com", [":"], "api:github:com")`
+
+`true`
+
+A glob with delimiters `[":"]`.
+
+`output := glob.match("api.**.com", [], "api.github.com")`
+
+`true`
+
+A super glob.
+
+`output := glob.match("api.**.com", [], "api.cdn.github.com")`
+
+`true`
+
+A super glob.
+
+`output := glob.match("?at", [], "cat")`
+
+`true`
+
+A glob with a single character wildcard.
+
+`output := glob.match("?at", [], "at")`
+
+`false`
+
+A glob with a single character wildcard.
+
+`output := glob.match("[abc]at", [], "bat")`
+
+`true`
+
+A glob with character-list matchers.
+
+`output := glob.match("[abc]at", [], "cat")`
+
+`true`
+
+A glob with character-list matchers.
+
+`output := glob.match("[abc]at", [], "lat")`
+
+`false`
+
+A glob with character-list matchers.
+
+`output := glob.match("[!abc]at", [], "cat")`
+
+`false`
+
+A glob with negated character-list matchers.
+
+`output := glob.match("[!abc]at", [], "lat")`
+
+`true`
+
+A glob with negated character-list matchers.
+
+`output := glob.match("[a-c]at", [], "cat")`
+
+`true`
+
+A glob with character-range matchers.
+
+`output := glob.match("[a-c]at", [], "lat")`
+
+`false`
+
+A glob with character-range matchers.
+
+`output := glob.match("[!a-c]at", [], "cat")`
+
+`false`
+
+A glob with negated character-range matchers.
+
+`output := glob.match("[!a-c]at", [], "lat")`
+
+`true`
+
+A glob with negated character-range matchers.
+
+`output := glob.match("{cat,bat,[fr]at}", [], "cat")`
+
+`true`
+
+A glob with pattern-alternatives matchers.
+
+`output := glob.match("{cat,bat,[fr]at}", [], "bat")`
+
+`true`
+
+A glob with pattern-alternatives matchers.
+
+`output := glob.match("{cat,bat,[fr]at}", [], "rat")`
+
+`true`
+
+A glob with pattern-alternatives matchers.
+
+`output := glob.match("{cat,bat,[fr]at}", [], "at")`
+
+`false`
+
+A glob with pattern-alternatives matchers.
+
+### Bitwise[](#bits)
+
+[`bits.and`](#builtin-bits-bitsand)
+
+`z := bits.and(x, y)`
+
+Returns the bitwise “AND” of two integers.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`bits.lsh`](#builtin-bits-bitslsh)
+
+`z := bits.lsh(x, s)`
+
+Returns a new integer with its bits shifted `s` bits to the left.
+
+`x`
+
+(number)
+
+`s`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`bits.negate`](#builtin-bits-bitsnegate)
+
+`z := bits.negate(x)`
+
+Returns the bitwise negation (flip) of an integer.
+
+`x`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`bits.or`](#builtin-bits-bitsor)
+
+`z := bits.or(x, y)`
+
+Returns the bitwise “OR” of two integers.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`bits.rsh`](#builtin-bits-bitsrsh)
+
+`z := bits.rsh(x, s)`
+
+Returns a new integer with its bits shifted `s` bits to the right.
+
+`x`
+
+(number)
+
+`s`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+[`bits.xor`](#builtin-bits-bitsxor)
+
+`z := bits.xor(x, y)`
+
+Returns the bitwise “XOR” (exclusive-or) of two integers.
+
+`x`
+
+(number)
+
+`y`
+
+(number)
+
+Returns:
+
+`z`
+
+(number)
+
+[v0.18.0](https://github.com/open-policy-agent/opa/releases/v0.18.0) Wasm
+
+### Conversions[](#conversions)
+
+[`to_number`](#builtin-conversions-to_number)
+
+`num := to_number(x)`
+
+Converts a string, bool, or number value to a number: Strings are converted to numbers using `strconv.Atoi`, Boolean `false` is converted to 0 and `true` is converted to 1.
+
+`x`
+
+(any<null, boolean, number, string>)
+
+Returns:
+
+`num`
+
+(number)
+
+Wasm
+
+### Units[](#units)
+
+[`units.parse`](#builtin-units-unitsparse)
+
+`y := units.parse(x)`
+
+Converts strings like “10G”, “5K”, “4M”, “1500m” and the like into a number. This number can be a non-integer, such as 1.5, 0.22, etc. Supports standard metric decimal and binary SI units (e.g., K, Ki, M, Mi, G, Gi etc.) m, K, M, G, T, P, and E are treated as decimal units and Ki, Mi, Gi, Ti, Pi, and Ei are treated as binary units.
+
+Note that ’m’ and ‘M’ are case-sensitive, to allow distinguishing between “milli” and “mega” units respectively. Other units are case-insensitive.
+
+`x`
+
+(string)
+
+the unit to parse
+
+Returns:
+
+`y`
+
+(number)
+
+the parsed number
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`units.parse_bytes`](#builtin-units-unitsparse_bytes)
+
+`y := units.parse_bytes(x)`
+
+Converts strings like “10GB”, “5K”, “4mb” into an integer number of bytes. Supports standard byte units (e.g., KB, KiB, etc.) KB, MB, GB, and TB are treated as decimal units and KiB, MiB, GiB, and TiB are treated as binary units. The bytes symbol (b/B) in the unit is optional and omitting it wil give the same result (e.g. Mi and MiB).
+
+`x`
+
+(string)
+
+the byte unit to parse
+
+Returns:
+
+`y`
+
+(number)
+
+the parsed number
+
+SDK-dependent
+
+### Types[](#types)
+
+[`is_array`](#builtin-types-is_array)
+
+`result := is_array(x)`
+
+Returns `true` if the input value is an array.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is an array, `false` otherwise.
+
+Wasm
+
+[`is_boolean`](#builtin-types-is_boolean)
+
+`result := is_boolean(x)`
+
+Returns `true` if the input value is a boolean.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is an boolean, `false` otherwise.
+
+Wasm
+
+[`is_null`](#builtin-types-is_null)
+
+`result := is_null(x)`
+
+Returns `true` if the input value is null.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is null, `false` otherwise.
+
+Wasm
+
+[`is_number`](#builtin-types-is_number)
+
+`result := is_number(x)`
+
+Returns `true` if the input value is a number.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is a number, `false` otherwise.
+
+Wasm
+
+[`is_object`](#builtin-types-is_object)
+
+`result := is_object(x)`
+
+Returns true if the input value is an object
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is an object, `false` otherwise.
+
+Wasm
+
+[`is_set`](#builtin-types-is_set)
+
+`result := is_set(x)`
+
+Returns `true` if the input value is a set.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is a set, `false` otherwise.
+
+Wasm
+
+[`is_string`](#builtin-types-is_string)
+
+`result := is_string(x)`
+
+Returns `true` if the input value is a string.
+
+`x`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is a string, `false` otherwise.
+
+Wasm
+
+[`type_name`](#builtin-types-type_name)
+
+`type := type_name(x)`
+
+Returns the type of its input value.
+
+`x`
+
+(any)
+
+Returns:
+
+`type`
+
+(string)
+
+one of “null”, “boolean”, “number”, “string”, “array”, “object”, “set”
+
+Wasm
+
+### Encoding[](#encoding)
+
+[`base64.decode`](#builtin-encoding-base64decode)
+
+`y := base64.decode(x)`
+
+Deserializes the base64 encoded input string.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+base64 deserialization of `x`
+
+Wasm
+
+[`base64.encode`](#builtin-encoding-base64encode)
+
+`y := base64.encode(x)`
+
+Serializes the input string into base64 encoding.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+base64 serialization of `x`
+
+Wasm
+
+[`base64.is_valid`](#builtin-encoding-base64is_valid)
+
+`result := base64.is_valid(x)`
+
+Verifies the input string is base64 encoded.
+
+`x`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is valid base64 encoded value, `false` otherwise
+
+[v0.24.0](https://github.com/open-policy-agent/opa/releases/v0.24.0) Wasm
+
+[`base64url.decode`](#builtin-encoding-base64urldecode)
+
+`y := base64url.decode(x)`
+
+Deserializes the base64url encoded input string.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+base64url deserialization of `x`
+
+Wasm
+
+[`base64url.encode`](#builtin-encoding-base64urlencode)
+
+`y := base64url.encode(x)`
+
+Serializes the input string into base64url encoding.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+base64url serialization of `x`
+
+Wasm
+
+[`base64url.encode_no_pad`](#builtin-encoding-base64urlencode_no_pad)
+
+`y := base64url.encode_no_pad(x)`
+
+Serializes the input string into base64url encoding without padding.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+base64url serialization of `x`
+
+[v0.25.0-rc2](https://github.com/open-policy-agent/opa/releases/v0.25.0-rc2) SDK-dependent
+
+[`hex.decode`](#builtin-encoding-hexdecode)
+
+`y := hex.decode(x)`
+
+Deserializes the hex-encoded input string.
+
+`x`
+
+(string)
+
+a hex-encoded string
+
+Returns:
+
+`y`
+
+(string)
+
+deserialized from `x`
+
+[v0.25.0-rc2](https://github.com/open-policy-agent/opa/releases/v0.25.0-rc2) SDK-dependent
+
+[`hex.encode`](#builtin-encoding-hexencode)
+
+`y := hex.encode(x)`
+
+Serializes the input string using hex-encoding.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+serialization of `x` using hex-encoding
+
+[v0.25.0-rc2](https://github.com/open-policy-agent/opa/releases/v0.25.0-rc2) SDK-dependent
+
+[`json.is_valid`](#builtin-encoding-jsonis_valid)
+
+`result := json.is_valid(x)`
+
+Verifies the input string is a valid JSON document.
+
+`x`
+
+(string)
+
+a JSON string
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is valid JSON, `false` otherwise
+
+[v0.25.0-rc1](https://github.com/open-policy-agent/opa/releases/v0.25.0-rc1) Wasm
+
+[`json.marshal`](#builtin-encoding-jsonmarshal)
+
+`y := json.marshal(x)`
+
+Serializes the input term to JSON.
+
+`x`
+
+(any)
+
+the term to serialize
+
+Returns:
+
+`y`
+
+(string)
+
+the JSON string representation of `x`
+
+Wasm
+
+[`json.marshal_with_options`](#builtin-encoding-jsonmarshal_with_options)
+
+`y := json.marshal_with_options(x, opts)`
+
+Serializes the input term JSON, with additional formatting options via the `opts` parameter. `opts` accepts keys `pretty` (enable multi-line/formatted JSON), `prefix` (string to prefix lines with, default empty string) and `indent` (string to indent with, default `\t`).
+
+`x`
+
+(any)
+
+the term to serialize
+
+`opts`
+
+(object<indent: string, prefix: string, pretty: boolean>\[string: any\])
+
+encoding options
+
+Returns:
+
+`y`
+
+(string)
+
+the JSON string representation of `x`, with configured prefix/indent string(s) as appropriate
+
+[v0.64.0](https://github.com/open-policy-agent/opa/releases/v0.64.0) SDK-dependent
+
+[`json.unmarshal`](#builtin-encoding-jsonunmarshal)
+
+`y := json.unmarshal(x)`
+
+Deserializes the input string.
+
+`x`
+
+(string)
+
+a JSON string
+
+Returns:
+
+`y`
+
+(any)
+
+the term deserialized from `x`
+
+Wasm
+
+[`urlquery.decode`](#builtin-encoding-urlquerydecode)
+
+`y := urlquery.decode(x)`
+
+Decodes a URL-encoded input string.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+URL-encoding deserialization of `x`
+
+SDK-dependent
+
+[`urlquery.decode_object`](#builtin-encoding-urlquerydecode_object)
+
+`object := urlquery.decode_object(x)`
+
+Decodes the given URL query string into an object.
+
+`x`
+
+(string)
+
+the query string
+
+Returns:
+
+`object`
+
+(object\[string: array\[string\]\])
+
+the resulting object
+
+[v0.24.0](https://github.com/open-policy-agent/opa/releases/v0.24.0) SDK-dependent
+
+[`urlquery.encode`](#builtin-encoding-urlqueryencode)
+
+`y := urlquery.encode(x)`
+
+Encodes the input string into a URL-encoded string.
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+URL-encoding serialization of `x`
+
+SDK-dependent
+
+[`urlquery.encode_object`](#builtin-encoding-urlqueryencode_object)
+
+`y := urlquery.encode_object(object)`
+
+Encodes the given object into a URL encoded query string.
+
+`object`
+
+(object\[string: any<string, array\[string\], set\[string\]>\])
+
+Returns:
+
+`y`
+
+(string)
+
+the URL-encoded serialization of `object`
+
+SDK-dependent
+
+[`yaml.is_valid`](#builtin-encoding-yamlis_valid)
+
+`result := yaml.is_valid(x)`
+
+Verifies the input string is a valid YAML document.
+
+`x`
+
+(string)
+
+a YAML string
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `x` is valid YAML, `false` otherwise
+
+[v0.25.0-rc1](https://github.com/open-policy-agent/opa/releases/v0.25.0-rc1) SDK-dependent
+
+[`yaml.marshal`](#builtin-encoding-yamlmarshal)
+
+`y := yaml.marshal(x)`
+
+Serializes the input term to YAML.
+
+`x`
+
+(any)
+
+the term to serialize
+
+Returns:
+
+`y`
+
+(string)
+
+the YAML string representation of `x`
+
+SDK-dependent
+
+[`yaml.unmarshal`](#builtin-encoding-yamlunmarshal)
+
+`y := yaml.unmarshal(x)`
+
+Deserializes the input string.
+
+`x`
+
+(string)
+
+a YAML string
+
+Returns:
+
+`y`
+
+(any)
+
+the term deserialized from `x`
+
+SDK-dependent
+
+The `json.marshal_with_options` builtin’s `opts` parameter accepts the following properties:
+
+Field
+
+Required
+
+Type
+
+Default
+
+Description
+
+`pretty`
+
+No
+
+`bool`
+
+`true` if `indent` or `prefix` are declared,  
+`false` otherwise
+
+Enables multi-line, human-readable JSON output (“pretty-printing”).  
+If this property is `true`, then objects will be marshaled into multi-line JSON with either user-specified or default indent/prefix options. If this property is `false`, `indent`/`prefix` will be ignored and this builtin functions identically to `json.marshal()`.
+
+`indent`
+
+No
+
+`string`
+
+`"\t"`  
+(Horizontal tab, character 0x09)
+
+The string to use when indenting nested keys in the emitted JSON. One or more copies of this string will be included before child elements in every object or array.
+
+`prefix`
+
+No
+
+`string`
+
+`""`  
+(empty)
+
+The string to prefix lines with in the emitted JSON. One copy of this string will be prepended to each line.
+
+Default values will be used if:
+
+*   `opts` is an empty object.
+*   `opts` does not contain the named property.
+
+### Token Signing[](#tokensign)
+
+[`io.jwt.encode_sign`](#builtin-tokensign-iojwtencode_sign)
+
+`output := io.jwt.encode_sign(headers, payload, key)`
+
+Encodes and optionally signs a JSON Web Token. Inputs are taken as objects, not encoded strings (see `io.jwt.encode_sign_raw`).
+
+`headers`
+
+(object\[string: any\])
+
+JWS Protected Header
+
+`payload`
+
+(object\[string: any\])
+
+JWS Payload
+
+`key`
+
+(object\[string: any\])
+
+JSON Web Key (RFC7517)
+
+Returns:
+
+`output`
+
+(string)
+
+signed JWT
+
+SDK-dependent
+
+[`io.jwt.encode_sign_raw`](#builtin-tokensign-iojwtencode_sign_raw)
+
+`output := io.jwt.encode_sign_raw(headers, payload, key)`
+
+Encodes and optionally signs a JSON Web Token.
+
+`headers`
+
+(string)
+
+JWS Protected Header
+
+`payload`
+
+(string)
+
+JWS Payload
+
+`key`
+
+(string)
+
+JSON Web Key (RFC7517)
+
+Returns:
+
+`output`
+
+(string)
+
+signed JWT
+
+SDK-dependent
+
+OPA provides two builtins that implement JSON Web Signature [RFC7515](https://tools.ietf.org/html/rfc7515) functionality.
+
+`io.jwt.encode_sign_raw()` takes three JSON Objects (strings) as parameters and returns their JWS Compact Serialization. This builtin should be used by those that want maximum control over the signing and serialization procedure. It is important to remember that StringOrURI values are compared as case-sensitive strings with no transformations or canonicalizations applied. Therefore, line breaks and whitespaces are significant.
+
+`io.jwt.encode_sign()` takes three Rego Objects as parameters and returns their JWS Compact Serialization. This builtin should be used by those that want to use rego objects for signing during policy evaluation.
+
+Note that with `io.jwt.encode_sign` the Rego objects are serialized to JSON with standard formatting applied whereas the `io.jwt.encode_sign_raw` built-in will **not** affect whitespace of the strings passed in. This will mean that the final encoded token may have different string values, but the decoded and parsed JSON will match.
+
+The following algorithms are supported:
+
+    ES256       "ES256" // ECDSA using P-256 and SHA-256
+    ES384       "ES384" // ECDSA using P-384 and SHA-384
+    ES512       "ES512" // ECDSA using P-521 and SHA-512
+    HS256       "HS256" // HMAC using SHA-256
+    HS384       "HS384" // HMAC using SHA-384
+    HS512       "HS512" // HMAC using SHA-512
+    PS256       "PS256" // RSASSA-PSS using SHA256 and MGF1-SHA256
+    PS384       "PS384" // RSASSA-PSS using SHA384 and MGF1-SHA384
+    PS512       "PS512" // RSASSA-PSS using SHA512 and MGF1-SHA512
+    RS256       "RS256" // RSASSA-PKCS-v1.5 using SHA-256
+    RS384       "RS384" // RSASSA-PKCS-v1.5 using SHA-384
+    RS512       "RS512" // RSASSA-PKCS-v1.5 using SHA-512
+    
+
+Note that the key’s provided should be base64 URL encoded (without padding) as per the specification ([RFC7517](https://tools.ietf.org/html/rfc7517)). This differs from the plain text secrets provided with the algorithm specific verify built-ins described below.
+
+#### Token Signing Examples[](#token-signing-examples)
+
+    package jwt
+    
+
+##### Symmetric Key (HMAC with SHA-256)[](#symmetric-key-hmac-with-sha-256)
+
+    io.jwt.encode_sign({
+        "typ": "JWT",
+        "alg": "HS256"
+    }, {
+        "iss": "joe",
+        "exp": 1300819380,
+        "aud": ["bob", "saul"],
+        "http://example.com/is_root": true,
+        "privateParams": {
+            "private_one": "one",
+            "private_two": "two"
+        }
+    }, {
+        "kty": "oct",
+        "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+    })
+    
+
+##### Symmetric Key with empty JSON payload[](#symmetric-key-with-empty-json-payload)
+
+    io.jwt.encode_sign({
+        "typ": "JWT",
+        "alg": "HS256"},
+        {}, {
+        "kty": "oct",
+        "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+    })
+    
+
+##### RSA Key (RSA Signature with SHA-256)[](#rsa-key-rsa-signature-with-sha-256)
+
+    io.jwt.encode_sign({
+        "alg": "RS256"
+    }, {
+        "iss": "joe",
+        "exp": 1300819380,
+        "aud": ["bob", "saul"],
+        "http://example.com/is_root": true,
+        "privateParams": {
+            "private_one": "one",
+            "private_two": "two"
+        }
+    },
+    {
+        "kty": "RSA",
+        "n": "ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
+        "e": "AQAB",
+        "d": "Eq5xpGnNCivDflJsRQBXHx1hdR1k6Ulwe2JZD50LpXyWPEAeP88vLNO97IjlA7_GQ5sLKMgvfTeXZx9SE-7YwVol2NXOoAJe46sui395IW_GO-pWJ1O0BkTGoVEn2bKVRUCgu-GjBVaYLU6f3l9kJfFNS3E0QbVdxzubSu3Mkqzjkn439X0M_V51gfpRLI9JYanrC4D4qAdGcopV_0ZHHzQlBjudU2QvXt4ehNYTCBr6XCLQUShb1juUO1ZdiYoFaFQT5Tw8bGUl_x_jTj3ccPDVZFD9pIuhLhBOneufuBiB4cS98l2SR_RQyGWSeWjnczT0QU91p1DhOVRuOopznQ",
+        "p": "4BzEEOtIpmVdVEZNCqS7baC4crd0pqnRH_5IB3jw3bcxGn6QLvnEtfdUdiYrqBdss1l58BQ3KhooKeQTa9AB0Hw_Py5PJdTJNPY8cQn7ouZ2KKDcmnPGBY5t7yLc1QlQ5xHdwW1VhvKn-nXqhJTBgIPgtldC-KDV5z-y2XDwGUc",
+        "q": "uQPEfgmVtjL0Uyyx88GZFF1fOunH3-7cepKmtH4pxhtCoHqpWmT8YAmZxaewHgHAjLYsp1ZSe7zFYHj7C6ul7TjeLQeZD_YwD66t62wDmpe_HlB-TnBA-njbglfIsRLtXlnDzQkv5dTltRJ11BKBBypeeF6689rjcJIDEz9RWdc",
+        "dp": "BwKfV3Akq5_MFZDFZCnW-wzl-CCo83WoZvnLQwCTeDv8uzluRSnm71I3QCLdhrqE2e9YkxvuxdBfpT_PI7Yz-FOKnu1R6HsJeDCjn12Sk3vmAktV2zb34MCdy7cpdTh_YVr7tss2u6vneTwrA86rZtu5Mbr1C1XsmvkxHQAdYo0",
+        "dq": "h_96-mK1R_7glhsum81dZxjTnYynPbZpHziZjeeHcXYsXaaMwkOlODsWa7I9xXDoRwbKgB719rrmI2oKr6N3Do9U0ajaHF-NKJnwgjMd2w9cjz3_-kyNlxAr2v4IKhGNpmM5iIgOS1VZnOZ68m6_pbLBSp3nssTdlqvd0tIiTHU",
+        "qi": "IYd7DHOhrWvxkwPQsRM2tOgrjbcrfvtQJipd-DlcxyVuuM9sQLdgjVk2oy26F0EmpScGLq2MowX7fhd_QJQ3ydy5cY7YIBi87w93IKLEdfnbJtoOPLUW0ITrJReOgo1cq9SbsxYawBgfp_gh6A5603k2-ZQwVK0JKSHuLFkuQ3U"
+    })
+    
+
+##### Raw Token Signing[](#raw-token-signing)
+
+If you need to generate the signature for a serialized token you an use the `io.jwt.encode_sign_raw` built-in function which accepts JSON serialized string parameters.
+
+    io.jwt.encode_sign_raw(
+        `{"typ":"JWT","alg":"HS256"}`,
+         `{"iss":"joe","exp":1300819380,"http://example.com/is_root":true}`,
+        `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
+    )
+    
+
+### Token Verification[](#tokens)
+
+[`io.jwt.decode`](#builtin-tokens-iojwtdecode)
+
+`output := io.jwt.decode(jwt)`
+
+Decodes a JSON Web Token and outputs it as an object.
+
+`jwt`
+
+(string)
+
+JWT token to decode
+
+Returns:
+
+`output`
+
+(array<object\[any: any\], object\[any: any\], string>)
+
+`[header, payload, sig]`, where `header` and `payload` are objects; `sig` is the hexadecimal representation of the signature on the token.
+
+SDK-dependent
+
+[`io.jwt.decode_verify`](#builtin-tokens-iojwtdecode_verify)
+
+`output := io.jwt.decode_verify(jwt, constraints)`
+
+Verifies a JWT signature under parameterized constraints and decodes the claims if it is valid. Supports the following algorithms: HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384 and PS512.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified and whose claims are to be checked
+
+`constraints`
+
+(object\[string: any\])
+
+claim verification constraints
+
+Returns:
+
+`output`
+
+(array<boolean, object\[any: any\], object\[any: any\]>)
+
+`[valid, header, payload]`: if the input token is verified and meets the requirements of `constraints` then `valid` is `true`; `header` and `payload` are objects containing the JOSE header and the JWT claim set; otherwise, `valid` is `false`, `header` and `payload` are `{}`
+
+SDK-dependent
+
+[`io.jwt.verify_es256`](#builtin-tokens-iojwtverify_es256)
+
+`result := io.jwt.verify_es256(jwt, certificate)`
+
+Verifies if a ES256 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+SDK-dependent
+
+[`io.jwt.verify_es384`](#builtin-tokens-iojwtverify_es384)
+
+`result := io.jwt.verify_es384(jwt, certificate)`
+
+Verifies if a ES384 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_es512`](#builtin-tokens-iojwtverify_es512)
+
+`result := io.jwt.verify_es512(jwt, certificate)`
+
+Verifies if a ES512 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_hs256`](#builtin-tokens-iojwtverify_hs256)
+
+`result := io.jwt.verify_hs256(jwt, secret)`
+
+Verifies if a HS256 (secret) JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`secret`
+
+(string)
+
+plain text secret used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+SDK-dependent
+
+[`io.jwt.verify_hs384`](#builtin-tokens-iojwtverify_hs384)
+
+`result := io.jwt.verify_hs384(jwt, secret)`
+
+Verifies if a HS384 (secret) JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`secret`
+
+(string)
+
+plain text secret used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_hs512`](#builtin-tokens-iojwtverify_hs512)
+
+`result := io.jwt.verify_hs512(jwt, secret)`
+
+Verifies if a HS512 (secret) JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`secret`
+
+(string)
+
+plain text secret used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_ps256`](#builtin-tokens-iojwtverify_ps256)
+
+`result := io.jwt.verify_ps256(jwt, certificate)`
+
+Verifies if a PS256 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+SDK-dependent
+
+[`io.jwt.verify_ps384`](#builtin-tokens-iojwtverify_ps384)
+
+`result := io.jwt.verify_ps384(jwt, certificate)`
+
+Verifies if a PS384 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_ps512`](#builtin-tokens-iojwtverify_ps512)
+
+`result := io.jwt.verify_ps512(jwt, certificate)`
+
+Verifies if a PS512 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_rs256`](#builtin-tokens-iojwtverify_rs256)
+
+`result := io.jwt.verify_rs256(jwt, certificate)`
+
+Verifies if a RS256 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+SDK-dependent
+
+[`io.jwt.verify_rs384`](#builtin-tokens-iojwtverify_rs384)
+
+`result := io.jwt.verify_rs384(jwt, certificate)`
+
+Verifies if a RS384 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+[`io.jwt.verify_rs512`](#builtin-tokens-iojwtverify_rs512)
+
+`result := io.jwt.verify_rs512(jwt, certificate)`
+
+Verifies if a RS512 JWT signature is valid.
+
+`jwt`
+
+(string)
+
+JWT token whose signature is to be verified
+
+`certificate`
+
+(string)
+
+PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the signature is valid, `false` otherwise
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+Note that the `io.jwt.verify_XX` built-in methods verify **only** the signature. They **do not** provide any validation for the JWT payload and any claims specified. The `io.jwt.decode_verify` built-in will verify the payload and **all** standard claims.
+
+The input `string` is a JSON Web Token encoded with JWS Compact Serialization. JWE and JWS JSON Serialization are not supported. If nested signing was used, the `header`, `payload` and `signature` will represent the most deeply nested token.
+
+For `io.jwt.decode_verify`, `constraints` is an object with the following members:
+
+Name
+
+Meaning
+
+Required
+
+`cert`
+
+A PEM encoded certificate, PEM encoded public key, or a JWK key (set) containing an RSA or ECDSA public key.
+
+See below
+
+`secret`
+
+The secret key for HS256, HS384 and HS512 verification.
+
+See below
+
+`alg`
+
+The JWA algorithm name to use. If it is absent then any algorithm that is compatible with the key is accepted.
+
+Optional
+
+`iss`
+
+The issuer string. If it is present the only tokens with this issuer are accepted. If it is absent then any issuer is accepted.
+
+Optional
+
+`time`
+
+The time in nanoseconds to verify the token at. If this is present then the `exp` and `nbf` claims are compared against this value. If it is absent then they are compared against the current time.
+
+Optional
+
+`aud`
+
+The audience that the verifier identifies with. If this is present then the `aud` claim is checked against it. **If it is absent then the `aud` claim must be absent too.**
+
+Optional
+
+Exactly one of `cert` and `secret` must be present. If there are any unrecognized constraints then the token is considered invalid.
+
+#### Token Verification Examples[](#token-verification-examples)
+
+The examples below use the following token:
+
+    es256_token := "eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJFUzI1NiJ9.eyJuYmYiOiAxNDQ0NDc4NDAwLCAiaXNzIjogInh4eCJ9.lArczfN-pIL8oUU-7PU83u-zfXougXBZj6drFeKFsPEoVhy9WAyiZlRshYqjTSXdaw8yw2L-ovt4zTUZb2PWMg"
+    
+
+##### Using JWKS[](#using-jwks)
+
+This example shows a two-step process to verify the token signature and then decode it for further checks of the payload content. This approach gives more flexibility in verifying only the claims that the policy needs to enforce.
+
+    jwks := `{
+        "keys": [{
+            "kty":"EC",
+            "crv":"P-256",
+            "x":"z8J91ghFy5o6f2xZ4g8LsLH7u2wEpT2ntj8loahnlsE",
+            "y":"7bdeXLH61KrGWRdh7ilnbcGQACxykaPKfmBccTHIOUo"
+        }]
+    }`
+    
+
+    io.jwt.verify_es256(es256_token, jwks)                  # Verify the token with the JWKS
+    [header, payload, _] := io.jwt.decode(es256_token)      # Decode the token
+    payload.iss == "xxx"                                    # Ensure the issuer (`iss`) claim is the expected value
+    
+
+The next example shows doing the token signature verification, decoding, and content checks all in one call using `io.jwt.decode_verify`. Note that this gives less flexibility in validating the payload content as **all** claims defined in the JWT spec are verified with the provided constraints.
+
+    [valid, header, payload] := io.jwt.decode_verify(es256_token, {
+        "cert": jwks,
+        "iss": "xxx",
+    })
+    
+
+##### Using PEM encoded X.509 Certificate[](#using-pem-encoded-x509-certificate)
+
+The following examples will demonstrate verifying tokens using an X.509 Certificate defined as:
+
+    cert := `-----BEGIN CERTIFICATE-----
+    MIIBcDCCARagAwIBAgIJAMZmuGSIfvgzMAoGCCqGSM49BAMCMBMxETAPBgNVBAMM
+    CHdoYXRldmVyMB4XDTE4MDgxMDE0Mjg1NFoXDTE4MDkwOTE0Mjg1NFowEzERMA8G
+    A1UEAwwId2hhdGV2ZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATPwn3WCEXL
+    mjp/bFniDwuwsfu7bASlPae2PyWhqGeWwe23Xlyx+tSqxlkXYe4pZ23BkAAscpGj
+    yn5gXHExyDlKo1MwUTAdBgNVHQ4EFgQUElRjSoVgKjUqY5AXz2o74cLzzS8wHwYD
+    VR0jBBgwFoAUElRjSoVgKjUqY5AXz2o74cLzzS8wDwYDVR0TAQH/BAUwAwEB/zAK
+    BggqhkjOPQQDAgNIADBFAiEA4yQ/88ZrUX68c6kOe9G11u8NUaUzd8pLOtkKhniN
+    OHoCIHmNX37JOqTcTzGn2u9+c8NlnvZ0uDvsd1BmKPaUmjmm
+    -----END CERTIFICATE-----`
+    
+
+This example shows a two-step process to verify the token signature and then decode it for further checks of the payload content. This approach gives more flexibility in verifying only the claims that the policy needs to enforce.
+
+    io.jwt.verify_es256(es256_token, cert)                # Verify the token with the certificate
+    [header, payload, _] := io.jwt.decode(es256_token)    # Decode the token
+    payload.iss == "xxx"                                  # Ensure the issuer claim is the expected value
+    
+
+The next example shows doing the same token signature verification, decoding, and content checks but instead with a single call to `io.jwt.decode_verify`. Note that this gives less flexibility in validating the payload content as **all** claims defined in the JWT spec are verified with the provided constraints.
+
+    [valid, header, payload] := io.jwt.decode_verify(     # Decode and verify in one-step
+        es256_token,
+        {                                                 # With the supplied constraints:
+            "cert": cert,                                 #   Verify the token with the certificate
+            "iss": "xxx",                                 #   Ensure the issuer claim is the expected value
+        }
+    )
+    
+
+##### Round Trip - Sign and Verify[](#round-trip---sign-and-verify)
+
+This example shows how to encode a token, verify, and decode it with the different options available.
+
+Start with using the `io.jwt.encode_sign_raw` built-in:
+
+    raw_result_hs256 := io.jwt.encode_sign_raw(
+        `{"alg":"HS256","typ":"JWT"}`,
+        `{}`,
+        `{"kty":"oct","k":"Zm9v"}`  	# "Zm9v" == base64url.encode_no_pad("foo")
+    )
+    
+    # Important!! - Use the un-encoded plain text secret to verify and decode
+    raw_result_valid_hs256 := io.jwt.verify_hs256(raw_result_hs256, "foo")
+    raw_result_parts_hs256 := io.jwt.decode_verify(raw_result_hs256, {"secret": "foo"})
+    
+
+Now encode the and sign the same token contents but with `io.jwt.encode_sign` instead of the `raw` variant.
+
+    result_hs256 := io.jwt.encode_sign(
+        {
+            "alg":"HS256",
+            "typ":"JWT"
+        },
+        {},
+        {
+            "kty":"oct",
+            "k":"Zm9v"
+        }
+    )
+    
+    # Important!! - Use the un-encoded plain text secret to verify and decode
+    result_parts_hs256 := io.jwt.decode_verify(result_hs256, {"secret": "foo"})
+    result_valid_hs256 := io.jwt.verify_hs256(result_hs256, "foo")
+    
+
+Note that the resulting encoded token is different from the first example using `io.jwt.encode_sign_raw`. The reason is that the `io.jwt.encode_sign` function is using canonicalized formatting for the header and payload whereas `io.jwt.encode_sign_raw` does not change the whitespace of the strings passed in. The decoded and parsed JSON values are still the same.
+
+### Time[](#time)
+
+[`time.add_date`](#builtin-time-timeadd_date)
+
+`output := time.add_date(ns, years, months, days)`
+
+Returns the nanoseconds since epoch after adding years, months and days to nanoseconds. Month & day values outside their usual ranges after the operation and will be normalized - for example, October 32 would become November 1. `undefined` if the result would be outside the valid time range that can fit within an `int64`.
+
+`ns`
+
+(number)
+
+nanoseconds since the epoch
+
+`years`
+
+(number)
+
+`months`
+
+(number)
+
+`days`
+
+(number)
+
+Returns:
+
+`output`
+
+(number)
+
+nanoseconds since the epoch representing the input time, with years, months and days added
+
+[v0.19.0](https://github.com/open-policy-agent/opa/releases/v0.19.0) SDK-dependent
+
+[`time.clock`](#builtin-time-timeclock)
+
+`output := time.clock(x)`
+
+Returns the `[hour, minute, second]` of the day for the nanoseconds since epoch.
+
+`x`
+
+(any<number, array<number, string>>)
+
+a number representing the nanoseconds since the epoch (UTC); or a two-element array of the nanoseconds, and a timezone string
+
+Returns:
+
+`output`
+
+(array<number, number, number>)
+
+the `hour`, `minute` (0-59), and `second` (0-59) representing the time of day for the nanoseconds since epoch in the supplied timezone (or UTC)
+
+SDK-dependent
+
+[`time.date`](#builtin-time-timedate)
+
+`date := time.date(x)`
+
+Returns the `[year, month, day]` for the nanoseconds since epoch.
+
+`x`
+
+(any<number, array<number, string>>)
+
+a number representing the nanoseconds since the epoch (UTC); or a two-element array of the nanoseconds, and a timezone string
+
+Returns:
+
+`date`
+
+(array<number, number, number>)
+
+an array of `year`, `month` (1-12), and `day` (1-31)
+
+SDK-dependent
+
+[`time.diff`](#builtin-time-timediff)
+
+`output := time.diff(ns1, ns2)`
+
+Returns the difference between two unix timestamps in nanoseconds (with optional timezone strings).
+
+`ns1`
+
+(any<number, array<number, string>>)
+
+`ns2`
+
+(any<number, array<number, string>>)
+
+Returns:
+
+`output`
+
+(array<number, number, number, number, number, number>)
+
+difference between `ns1` and `ns2` (in their supplied timezones, if supplied, or UTC) as array of numbers: `[years, months, days, hours, minutes, seconds]`
+
+[v0.28.0](https://github.com/open-policy-agent/opa/releases/v0.28.0) SDK-dependent
+
+[`time.format`](#builtin-time-timeformat)
+
+`formatted timestamp := time.format(x)`
+
+Returns the formatted timestamp for the nanoseconds since epoch.
+
+`x`
+
+(any<number, array<number, string>, array<number, string, string>>)
+
+a number representing the nanoseconds since the epoch (UTC); or a two-element array of the nanoseconds, and a timezone string; or a three-element array of ns, timezone string and a layout string or golang defined formatting constant (see golang supported time formats)
+
+Returns:
+
+`formatted timestamp`
+
+(string)
+
+the formatted timestamp represented for the nanoseconds since the epoch in the supplied timezone (or UTC)
+
+[v0.48.0](https://github.com/open-policy-agent/opa/releases/v0.48.0) SDK-dependent
+
+[`time.now_ns`](#builtin-time-timenow_ns)
+
+`now := time.now_ns()`
+
+Returns the current time since epoch in nanoseconds.
+
+Returns:
+
+`now`
+
+(number)
+
+nanoseconds since epoch
+
+SDK-dependent
+
+[`time.parse_duration_ns`](#builtin-time-timeparse_duration_ns)
+
+`ns := time.parse_duration_ns(duration)`
+
+Returns the duration in nanoseconds represented by a string.
+
+`duration`
+
+(string)
+
+a duration like “3m”; see the [Go `time` package documentation](https://golang.org/pkg/time/#ParseDuration) for more details
+
+Returns:
+
+`ns`
+
+(number)
+
+the `duration` in nanoseconds
+
+SDK-dependent
+
+[`time.parse_ns`](#builtin-time-timeparse_ns)
+
+`ns := time.parse_ns(layout, value)`
+
+Returns the time in nanoseconds parsed from the string in the given format. `undefined` if the result would be outside the valid time range that can fit within an `int64`.
+
+`layout`
+
+(string)
+
+format used for parsing, see the [Go `time` package documentation](https://golang.org/pkg/time/#Parse) for more details
+
+`value`
+
+(string)
+
+input to parse according to `layout`
+
+Returns:
+
+`ns`
+
+(number)
+
+`value` in nanoseconds since epoch
+
+SDK-dependent
+
+[`time.parse_rfc3339_ns`](#builtin-time-timeparse_rfc3339_ns)
+
+`ns := time.parse_rfc3339_ns(value)`
+
+Returns the time in nanoseconds parsed from the string in RFC3339 format. `undefined` if the result would be outside the valid time range that can fit within an `int64`.
+
+`value`
+
+(string)
+
+Returns:
+
+`ns`
+
+(number)
+
+`value` in nanoseconds since epoch
+
+SDK-dependent
+
+[`time.weekday`](#builtin-time-timeweekday)
+
+`day := time.weekday(x)`
+
+Returns the day of the week (Monday, Tuesday, …) for the nanoseconds since epoch.
+
+`x`
+
+(any<number, array<number, string>>)
+
+a number representing the nanoseconds since the epoch (UTC); or a two-element array of the nanoseconds, and a timezone string
+
+Returns:
+
+`day`
+
+(string)
+
+the weekday represented by `ns` nanoseconds since the epoch in the supplied timezone (or UTC)
+
+SDK-dependent
+
+Multiple calls to the `time.now_ns` built-in function within a single policy evaluation query will always return the same value.
+
+Timezones can be specified as
+
+*   an [IANA Time Zone](https://www.iana.org/time-zones) string e.g. “America/New\_York”
+*   “UTC” or “”, which are equivalent to not passing a timezone (i.e. will return as UTC)
+*   “Local”, which will use the local timezone.
+
+Note that OPA will use the `time/tzdata` data if none is present on the runtime filesystem (see the [Go `time.LoadLocation()`](https://pkg.go.dev/time#LoadLocation) documentation for more information).
+
+#### Timestamp Parsing[](#timestamp-parsing)
+
+OPA can parse timestamps of nearly arbitrary formats, and currently accepts the same inputs as Go’s `time.Parse()` utility. As a result, either you will pass a supported constant, or you **must** describe the format of your timestamps using the Reference Timestamp that Go’s `time` module expects:
+
+    2006-01-02T15:04:05Z07:00
+    
+
+In other date formats, that same value is rendered as:
+
+*   January 2, 15:04:05, 2006, in time zone seven hours west of GMT
+*   Unix time: `1136239445`
+*   Unix `date` command output: `Mon Jan 2 15:04:05 MST 2006`
+*   RFC3339 timestamp: `2006-01-02T15:04:05Z07:00`
+
+Examples of valid values for each timestamp field:
+
+*   Year: `"2006"` `"06"`
+*   Month: `"Jan"` `"January"` `"01"` `"1"`
+*   Day of the week: `"Mon"` `"Monday"`
+*   Day of the month: `"2"` `"_2"` `"02"`
+*   Day of the year: `"__2"` `"002"`
+*   Hour: `"15"` `"3"` `"03"` (PM or AM)
+*   Minute: `"4"` `"04"`
+*   Second: `"5"` `"05"`
+*   AM/PM mark: `"PM"`
+
+For supported constants, formatting of nanoseconds, time zones, and other fields, see the [Go `time/format` module documentation](https://cs.opensource.google/go/go/+/master:src/time/format.go;l=9-113).
+
+#### Timestamp Parsing Example[](#timestamp-parsing-example)
+
+In OPA, we can parse a simple `YYYY-MM-DD` timestamp as follows:
+
+    ts := "1985-10-27"
+    result := time.parse_ns("2006-01-02", ts)
+    
+
+### Cryptography[](#crypto)
+
+[`crypto.hmac.equal`](#builtin-crypto-cryptohmacequal)
+
+`result := crypto.hmac.equal(mac1, mac2)`
+
+Returns a boolean representing the result of comparing two MACs for equality without leaking timing information.
+
+`mac1`
+
+(string)
+
+mac1 to compare
+
+`mac2`
+
+(string)
+
+mac2 to compare
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if the MACs are equals, `false` otherwise
+
+[v0.52.0](https://github.com/open-policy-agent/opa/releases/v0.52.0) SDK-dependent
+
+[`crypto.hmac.md5`](#builtin-crypto-cryptohmacmd5)
+
+`y := crypto.hmac.md5(x, key)`
+
+Returns a string representing the MD5 HMAC of the input message using the input key.
+
+`x`
+
+(string)
+
+input string
+
+`key`
+
+(string)
+
+key to use
+
+Returns:
+
+`y`
+
+(string)
+
+MD5-HMAC of `x`
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) SDK-dependent
+
+[`crypto.hmac.sha1`](#builtin-crypto-cryptohmacsha1)
+
+`y := crypto.hmac.sha1(x, key)`
+
+Returns a string representing the SHA1 HMAC of the input message using the input key.
+
+`x`
+
+(string)
+
+input string
+
+`key`
+
+(string)
+
+key to use
+
+Returns:
+
+`y`
+
+(string)
+
+SHA1-HMAC of `x`
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) SDK-dependent
+
+[`crypto.hmac.sha256`](#builtin-crypto-cryptohmacsha256)
+
+`y := crypto.hmac.sha256(x, key)`
+
+Returns a string representing the SHA256 HMAC of the input message using the input key.
+
+`x`
+
+(string)
+
+input string
+
+`key`
+
+(string)
+
+key to use
+
+Returns:
+
+`y`
+
+(string)
+
+SHA256-HMAC of `x`
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) SDK-dependent
+
+[`crypto.hmac.sha512`](#builtin-crypto-cryptohmacsha512)
+
+`y := crypto.hmac.sha512(x, key)`
+
+Returns a string representing the SHA512 HMAC of the input message using the input key.
+
+`x`
+
+(string)
+
+input string
+
+`key`
+
+(string)
+
+key to use
+
+Returns:
+
+`y`
+
+(string)
+
+SHA512-HMAC of `x`
+
+[v0.36.0](https://github.com/open-policy-agent/opa/releases/v0.36.0) SDK-dependent
+
+[`crypto.md5`](#builtin-crypto-cryptomd5)
+
+`y := crypto.md5(x)`
+
+Returns a string representing the input string hashed with the MD5 function
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+MD5-hash of `x`
+
+SDK-dependent
+
+[`crypto.parse_private_keys`](#builtin-crypto-cryptoparse_private_keys)
+
+`output := crypto.parse_private_keys(keys)`
+
+Returns zero or more private keys from the given encoded string containing DER certificate data.
+
+If the input is empty, the function will return null. The input string should be a list of one or more concatenated PEM blocks. The whole input of concatenated PEM blocks can optionally be Base64 encoded.
+
+`keys`
+
+(string)
+
+PEM encoded data containing one or more private keys as concatenated blocks. Optionally Base64 encoded.
+
+Returns:
+
+`output`
+
+(array\[object\[string: any\]\])
+
+parsed private keys represented as objects
+
+[v0.55.0](https://github.com/open-policy-agent/opa/releases/v0.55.0) SDK-dependent
+
+[`crypto.sha1`](#builtin-crypto-cryptosha1)
+
+`y := crypto.sha1(x)`
+
+Returns a string representing the input string hashed with the SHA1 function
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+SHA1-hash of `x`
+
+SDK-dependent
+
+[`crypto.sha256`](#builtin-crypto-cryptosha256)
+
+`y := crypto.sha256(x)`
+
+Returns a string representing the input string hashed with the SHA256 function
+
+`x`
+
+(string)
+
+Returns:
+
+`y`
+
+(string)
+
+SHA256-hash of `x`
+
+SDK-dependent
+
+[`crypto.x509.parse_and_verify_certificates`](#builtin-crypto-cryptox509parse_and_verify_certificates)
+
+`output := crypto.x509.parse_and_verify_certificates(certs)`
+
+Returns one or more certificates from the given string containing PEM or base64 encoded DER certificates after verifying the supplied certificates form a complete certificate chain back to a trusted root.
+
+The first certificate is treated as the root and the last is treated as the leaf, with all others being treated as intermediates.
+
+`certs`
+
+(string)
+
+base64 encoded DER or PEM data containing two or more certificates where the first is a root CA, the last is a leaf certificate, and all others are intermediate CAs
+
+Returns:
+
+`output`
+
+(array<boolean, array\[object\[string: any\]\]>)
+
+array of `[valid, certs]`: if the input certificate chain could be verified then `valid` is `true` and `certs` is an array of X.509 certificates represented as objects; if the input certificate chain could not be verified then `valid` is `false` and `certs` is `[]`
+
+[v0.31.0](https://github.com/open-policy-agent/opa/releases/v0.31.0) SDK-dependent
+
+[`crypto.x509.parse_and_verify_certificates_with_options`](#builtin-crypto-cryptox509parse_and_verify_certificates_with_options)
+
+`output := crypto.x509.parse_and_verify_certificates_with_options(certs, options)`
+
+Returns one or more certificates from the given string containing PEM or base64 encoded DER certificates after verifying the supplied certificates form a complete certificate chain back to a trusted root. A config option passed as the second argument can be used to configure the validation options used.
+
+The first certificate is treated as the root and the last is treated as the leaf, with all others being treated as intermediates.
+
+`certs`
+
+(string)
+
+base64 encoded DER or PEM data containing two or more certificates where the first is a root CA, the last is a leaf certificate, and all others are intermediate CAs
+
+`options`
+
+(object\[string: any\])
+
+object containing extra configs to verify the validity of certificates. `options` object supports four fields which maps to same fields in [x509.VerifyOptions struct](https://pkg.go.dev/crypto/x509#VerifyOptions). `DNSName`, `CurrentTime`: Nanoseconds since the Unix Epoch as a number, `MaxConstraintComparisons` and `KeyUsages`. `KeyUsages` is list and can have possible values as in: `"KeyUsageAny"`, `"KeyUsageServerAuth"`, `"KeyUsageClientAuth"`, `"KeyUsageCodeSigning"`, `"KeyUsageEmailProtection"`, `"KeyUsageIPSECEndSystem"`, `"KeyUsageIPSECTunnel"`, `"KeyUsageIPSECUser"`, `"KeyUsageTimeStamping"`, `"KeyUsageOCSPSigning"`, `"KeyUsageMicrosoftServerGatedCrypto"`, `"KeyUsageNetscapeServerGatedCrypto"`, `"KeyUsageMicrosoftCommercialCodeSigning"`, `"KeyUsageMicrosoftKernelCodeSigning"`
+
+Returns:
+
+`output`
+
+(array<boolean, array\[object\[string: any\]\]>)
+
+array of `[valid, certs]`: if the input certificate chain could be verified then `valid` is `true` and `certs` is an array of X.509 certificates represented as objects; if the input certificate chain could not be verified then `valid` is `false` and `certs` is `[]`
+
+[v0.63.0](https://github.com/open-policy-agent/opa/releases/v0.63.0) SDK-dependent
+
+[`crypto.x509.parse_certificate_request`](#builtin-crypto-cryptox509parse_certificate_request)
+
+`output := crypto.x509.parse_certificate_request(csr)`
+
+Returns a PKCS #10 certificate signing request from the given PEM-encoded PKCS#10 certificate signing request.
+
+`csr`
+
+(string)
+
+base64 string containing either a PEM encoded or DER CSR or a string containing a PEM CSR
+
+Returns:
+
+`output`
+
+(object\[string: any\])
+
+X.509 CSR represented as an object
+
+[v0.21.0](https://github.com/open-policy-agent/opa/releases/v0.21.0) SDK-dependent
+
+[`crypto.x509.parse_certificates`](#builtin-crypto-cryptox509parse_certificates)
+
+`output := crypto.x509.parse_certificates(certs)`
+
+Returns zero or more certificates from the given encoded string containing DER certificate data.
+
+If the input is empty, the function will return null. The input string should be a list of one or more concatenated PEM blocks. The whole input of concatenated PEM blocks can optionally be Base64 encoded.
+
+`certs`
+
+(string)
+
+base64 encoded DER or PEM data containing one or more certificates or a PEM string of one or more certificates
+
+Returns:
+
+`output`
+
+(array\[object\[string: any\]\])
+
+parsed X.509 certificates represented as objects
+
+SDK-dependent
+
+[`crypto.x509.parse_keypair`](#builtin-crypto-cryptox509parse_keypair)
+
+`output := crypto.x509.parse_keypair(cert, pem)`
+
+Returns a valid key pair
+
+`cert`
+
+(string)
+
+string containing PEM or base64 encoded DER certificates
+
+`pem`
+
+(string)
+
+string containing PEM or base64 encoded DER keys
+
+Returns:
+
+`output`
+
+(object\[string: any\])
+
+if key pair is valid, returns the tls.certificate([https://pkg.go.dev/crypto/tls#Certificate](https://pkg.go.dev/crypto/tls#Certificate)) as an object. If the key pair is invalid, nil and an error are returned.
+
+[v0.53.0](https://github.com/open-policy-agent/opa/releases/v0.53.0) SDK-dependent
+
+[`crypto.x509.parse_rsa_private_key`](#builtin-crypto-cryptox509parse_rsa_private_key)
+
+`output := crypto.x509.parse_rsa_private_key(pem)`
+
+Returns a JWK for signing a JWT from the given PEM-encoded RSA private key.
+
+`pem`
+
+(string)
+
+base64 string containing a PEM encoded RSA private key
+
+Returns:
+
+`output`
+
+(object\[string: any\])
+
+JWK as an object
+
+[v0.33.0](https://github.com/open-policy-agent/opa/releases/v0.33.0) SDK-dependent
+
+### Graphs[](#graph)
+
+[`graph.reachable`](#builtin-graph-graphreachable)
+
+`output := graph.reachable(graph, initial)`
+
+Computes the set of reachable nodes in the graph from a set of starting nodes.
+
+`graph`
+
+(object\[any: any<array\[any\], set\[any\]>\])
+
+object containing a set or array of neighboring vertices
+
+`initial`
+
+(any<array\[any\], set\[any\]>)
+
+set or array of root vertices
+
+Returns:
+
+`output`
+
+(set\[any\])
+
+set of vertices reachable from the `initial` vertices in the directed `graph`
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) Wasm
+
+[`graph.reachable_paths`](#builtin-graph-graphreachable_paths)
+
+`output := graph.reachable_paths(graph, initial)`
+
+Computes the set of reachable paths in the graph from a set of starting nodes.
+
+`graph`
+
+(object\[any: any<array\[any\], set\[any\]>\])
+
+object containing a set or array of root vertices
+
+`initial`
+
+(any<array\[any\], set\[any\]>)
+
+initial paths
+
+Returns:
+
+`output`
+
+(set\[array\[any\]\])
+
+paths reachable from the `initial` vertices in the directed `graph`
+
+[v0.37.0](https://github.com/open-policy-agent/opa/releases/v0.37.0) SDK-dependent
+
+[`walk`](#builtin-graph-walk)
+
+`walk(x, output)`
+
+Generates `[path, value]` tuples for all nested documents of `x` (recursively). Queries can use `walk` to traverse documents nested under `x`.
+
+`x`
+
+(any)
+
+Returns:
+
+`output`
+
+(array<array\[any\], any>)
+
+pairs of `path` and `value`: `path` is an array representing the pointer to `value` in `x`. If `path` is assigned a wildcard (`_`), the `walk` function will skip path creation entirely for faster evaluation.
+
+Wasm
+
+A common class of recursive rules can be reduced to a graph reachability problem, so `graph.reachable` is useful for more than just graph analysis. This usually requires some pre- and postprocessing. The following example shows you how to “flatten” a hierarchy of access permissions.
+
+    package graph_reachable_example
+    
+    org_chart_data := {
+      "ceo": {},
+      "human_resources": {"owner": "ceo", "access": ["salaries", "complaints"]},
+      "staffing": {"owner": "human_resources", "access": ["interviews"]},
+      "internships": {"owner": "staffing", "access": ["blog"]}
+    }
+    
+    org_chart_graph[entity_name] := edges {
+      org_chart_data[entity_name]
+      edges := {neighbor | org_chart_data[neighbor].owner == entity_name}
+    }
+    
+    org_chart_permissions[entity_name] := access {
+      org_chart_data[entity_name]
+      reachable := graph.reachable(org_chart_graph, {entity_name})
+      access := {item | reachable[k]; item := org_chart_data[k].access[_]}
+    }
+    
+
+    org_chart_permissions[entity_name]
+    
+
+It may be useful to find all reachable paths from a root element. `graph.reachable_paths` can be used for this. Note that cyclical paths will terminate on the repeated node. If an element references a nonexistent element, the path will be terminated, and excludes the nonexistent node.
+
+    package graph_reachable_paths_example
+    
+    path_data := {
+        "aTop": [],
+        "cMiddle": ["aTop"],
+        "bBottom": ["cMiddle"],
+        "dIgnored": []
+    }
+    
+    all_paths[root] := paths {
+        path_data[root]
+        paths := graph.reachable_paths(path_data, {root})
+    }
+    
+
+    all_paths[entity_name]
+    
+
+### GraphQL[](#graphql)
+
+[`graphql.is_valid`](#builtin-graphql-graphqlis_valid)
+
+`output := graphql.is_valid(query, schema)`
+
+Checks that a GraphQL query is valid against a given schema. The query and/or schema can be either GraphQL strings or AST objects from the other GraphQL builtin functions.
+
+`query`
+
+(any<string, object\[any: any\]>)
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+Returns:
+
+`output`
+
+(boolean)
+
+`true` if the query is valid under the given schema. `false` otherwise.
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`graphql.parse`](#builtin-graphql-graphqlparse)
+
+`output := graphql.parse(query, schema)`
+
+Returns AST objects for a given GraphQL query and schema after validating the query against the schema. Returns undefined if errors were encountered during parsing or validation. The query and/or schema can be either GraphQL strings or AST objects from the other GraphQL builtin functions.
+
+`query`
+
+(any<string, object\[any: any\]>)
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+Returns:
+
+`output`
+
+(array<object\[any: any\], object\[any: any\]>)
+
+`output` is of the form `[query_ast, schema_ast]`. If the GraphQL query is valid given the provided schema, then `query_ast` and `schema_ast` are objects describing the ASTs for the query and schema.
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`graphql.parse_and_verify`](#builtin-graphql-graphqlparse_and_verify)
+
+`output := graphql.parse_and_verify(query, schema)`
+
+Returns a boolean indicating success or failure alongside the parsed ASTs for a given GraphQL query and schema after validating the query against the schema. The query and/or schema can be either GraphQL strings or AST objects from the other GraphQL builtin functions.
+
+`query`
+
+(any<string, object\[any: any\]>)
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+Returns:
+
+`output`
+
+(array<boolean, object\[any: any\], object\[any: any\]>)
+
+`output` is of the form `[valid, query_ast, schema_ast]`. If the query is valid given the provided schema, then `valid` is `true`, and `query_ast` and `schema_ast` are objects describing the ASTs for the GraphQL query and schema. Otherwise, `valid` is `false` and `query_ast` and `schema_ast` are `{}`.
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`graphql.parse_query`](#builtin-graphql-graphqlparse_query)
+
+`output := graphql.parse_query(query)`
+
+Returns an AST object for a GraphQL query.
+
+`query`
+
+(string)
+
+Returns:
+
+`output`
+
+(object\[any: any\])
+
+AST object for the GraphQL query.
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`graphql.parse_schema`](#builtin-graphql-graphqlparse_schema)
+
+`output := graphql.parse_schema(schema)`
+
+Returns an AST object for a GraphQL schema.
+
+`schema`
+
+(string)
+
+Returns:
+
+`output`
+
+(object\[any: any\])
+
+AST object for the GraphQL schema.
+
+[v0.41.0](https://github.com/open-policy-agent/opa/releases/v0.41.0) SDK-dependent
+
+[`graphql.schema_is_valid`](#builtin-graphql-graphqlschema_is_valid)
+
+`output := graphql.schema_is_valid(schema)`
+
+Checks that the input is a valid GraphQL schema. The schema can be either a GraphQL string or an AST object from the other GraphQL builtin functions.
+
+`schema`
+
+(any<string, object\[any: any\]>)
+
+Returns:
+
+`output`
+
+(boolean)
+
+`true` if the schema is a valid GraphQL schema. `false` otherwise.
+
+[v0.46.0](https://github.com/open-policy-agent/opa/releases/v0.46.0) SDK-dependent
+
+Custom [GraphQL `@directive`](http://spec.graphql.org/October2021/#sec-Language.Directives) definitions defined by your GraphQL framework will need to be included manually as part of your GraphQL schema string in order for validation to work correctly on GraphQL queries using those directives.
+
+Directives defined as part of the GraphQL specification (`@skip`, `@include`, `@deprecated`, and `@specifiedBy`) are supported by default, and do not need to be added to your schema manually.
+
+#### GraphQL Custom `@directive` Example[](#graphql-custom-directive-example)
+
+New `@directive` definitions can be defined separately from your schema, so long as you `concat` them onto the schema definition before attempting to validate a query/schema using those custom directives. In the following example, a custom directive is defined, and then used in the schema to annotate an argument on one of the allowed query types.
+
+    package graphql_custom_directive_example
+    
+    custom_directives := `
+    directive @customDeprecatedArgs(
+      reason: String
+    ) on ARGUMENT_DEFINITION
+    `
+    
+    schema := `
+    type Query {
+        foo(name: String! @customDeprecatedArgs(reason: "example reason")): String,
+        bar: String!
+    }
+    `
+    
+    query := `query { foo(name: "example") }`
+    
+    p {
+        graphql.is_valid(query,  concat("", [custom_directives, schema]))
+    }
+    
+
+### HTTP[](#http)
+
+[`http.send`](#builtin-http-httpsend)
+
+`response := http.send(request)`
+
+Returns a HTTP response to the given HTTP request.
+
+`request`
+
+(object\[string: any\])
+
+Returns:
+
+`response`
+
+(object\[any: any\])
+
+SDK-dependent
+
+Similar to other built-in functions, multiple calls to the `http.send` built-in function for a given request object within a single policy evaluation query will always return the same value.
+
+This built-in function **must not** be used for effecting changes in external systems as OPA does not guarantee that the statement will be executed due to automatic performance optimizations that are applied during policy evaluation.
+
+The `request` object parameter may contain the following fields:
+
+Field
+
+Required
+
+Type
+
+Description
+
+`url`
+
+yes
+
+`string`
+
+HTTP URL to specify in the request (e.g., `"https://www.openpolicyagent.org"`).
+
+`method`
+
+yes
+
+`string`
+
+HTTP method to specify in request (e.g., `"GET"`, `"POST"`, `"PUT"`, etc.)
+
+`body`
+
+no
+
+`any`
+
+HTTP message body to include in request. The value will be serialized to JSON.
+
+`raw_body`
+
+no
+
+`string`
+
+HTTP message body to include in request. The value WILL NOT be serialized. Use this for non-JSON messages.
+
+`headers`
+
+no
+
+`object`
+
+HTTP headers to include in the request (e.g,. `{"X-Opa": "rules"}`).
+
+`enable_redirect`
+
+no
+
+`boolean`
+
+Follow HTTP redirects. Default: `false`.
+
+`force_json_decode`
+
+no
+
+`boolean`
+
+Decode the HTTP response message body as JSON even if the `Content-Type` header is missing. Default: `false`.
+
+`force_yaml_decode`
+
+no
+
+`boolean`
+
+Decode the HTTP response message body as YAML even if the `Content-Type` header is missing. Default: `false`.
+
+`tls_use_system_certs`
+
+no
+
+`boolean`
+
+Use the system certificate pool. Default: `true` when `tls_ca_cert`, `tls_ca_cert_file`, `tls_ca_cert_env_variable` are unset. **Ignored on Windows** due to the system certificate pool not being accessible in the same way as it is for other platforms.
+
+`tls_ca_cert`
+
+no
+
+`string`
+
+String containing a root certificate in PEM encoded format.
+
+`tls_ca_cert_file`
+
+no
+
+`string`
+
+Path to file containing a root certificate in PEM encoded format.
+
+`tls_ca_cert_env_variable`
+
+no
+
+`string`
+
+Environment variable containing a root certificate in PEM encoded format.
+
+`tls_client_cert`
+
+no
+
+`string`
+
+String containing a client certificate in PEM encoded format.
+
+`tls_client_cert_file`
+
+no
+
+`string`
+
+Path to file containing a client certificate in PEM encoded format.
+
+`tls_client_cert_env_variable`
+
+no
+
+`string`
+
+Environment variable containing a client certificate in PEM encoded format.
+
+`tls_client_key`
+
+no
+
+`string`
+
+String containing a key in PEM encoded format.
+
+`tls_client_key_file`
+
+no
+
+`string`
+
+Path to file containing a key in PEM encoded format.
+
+`tls_client_key_env_variable`
+
+no
+
+`string`
+
+Environment variable containing a client key in PEM encoded format.
+
+`timeout`
+
+no
+
+`string` or `number`
+
+Timeout for the HTTP request with a default of 5 seconds (`5s`). Numbers provided are in nanoseconds. Strings must be a valid duration string where a duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as “300ms”, “-1.5h” or “2h45m”. Valid time units are “ns”, “us” (or “µs”), “ms”, “s”, “m”, “h”. A zero timeout means no timeout.
+
+`tls_insecure_skip_verify`
+
+no
+
+`bool`
+
+Allows for skipping TLS verification when calling a network endpoint. Not recommended for production.
+
+`tls_server_name`
+
+no
+
+`string`
+
+Sets the hostname that is sent in the client Server Name Indication and that be will be used for server certificate validation. If this is not set, the value of the `Host` header (if present) will be used. If neither are set, the host name from the requested URL is used.
+
+`cache`
+
+no
+
+`boolean`
+
+Cache HTTP response across OPA queries. Default: `false`.
+
+`force_cache`
+
+no
+
+`boolean`
+
+Cache HTTP response across OPA queries and override cache directives defined by the server. Default: `false`.
+
+`force_cache_duration_seconds`
+
+no
+
+`number`
+
+If `force_cache` is set, this field specifies the duration in seconds for the freshness of a cached response.
+
+`caching_mode`
+
+no
+
+`string`
+
+Controls the format in which items are inserted into the inter-query cache. Allowed modes are `serialized` and `deserialized`. In the `serialized` mode, items will be serialized before inserting into the cache. This mode is helpful if memory conservation is preferred over higher latency during cache lookup. This is the default mode. In the `deserialized` mode, an item will be inserted in the cache without any serialization. This means when items are fetched from the cache, there won’t be a need to decode them. This mode helps to make the cache lookup faster at the expense of more memory consumption. If this mode is enabled, the configured `caching.inter_query_builtin_cache.max_size_bytes` value will be ignored. This means an unlimited cache size will be assumed.
+
+`cache_ignored_headers`
+
+no
+
+`list`
+
+List of header keys from `headers` parameter that should not considered when interacting with the cache. Default is `nil`, meaning all headers will be considered. **Important:** Note that if a cache entry exists with a subset/superset of headers that are considered in this request, it will lead to a cache miss.
+
+`raise_error`
+
+no
+
+`bool`
+
+If `raise_error` is set, `http.send` will return an error that can halt policy evaluation when used in conjunction with the `strict-builtin-errors` option. Default: `true`.
+
+`max_retry_attempts`
+
+no
+
+`number`
+
+Number of times to retry a HTTP request when a network error is encountered. If provided, retries are performed with an exponential backoff delay. Default: `0`.
+
+If the `Host` header is included in `headers`, its value will be used as the `Host` header of the request. The `url` parameter will continue to specify the server to connect to.
+
+When sending HTTPS requests with client certificates at least one the following combinations must be included
+
+*   `tls_client_cert` and `tls_client_key`
+*   `tls_client_cert_file` and `tls_client_key_file`
+*   `tls_client_cert_env_variable` and `tls_client_key_env_variable`
+
+To validate TLS server certificates, the user must also provide trusted root CA certificates through the `tls_ca_cert`, `tls_ca_cert_file` and `tls_ca_cert_env_variable` fields. If the `tls_use_system_certs` field is `true`, the system certificate pool will be used as well as any additional CA certificates.
+
+The `response` object parameter will contain the following fields:
+
+Field
+
+Type
+
+Description
+
+`status`
+
+`string`
+
+HTTP status message (e.g., `"200 OK"`).
+
+`status_code`
+
+`number`
+
+HTTP status code (e.g., `200`). If `raise_error` is `false`, this field will be set to `0` if `http.send` encounters an error.
+
+`body`
+
+`any`
+
+Any value. If the HTTP response message body was not deserialized from JSON or YAML (by force or via the expected Content-Type headers `application/json`; or `application/yaml` or `application/x-yaml`), this field is set to `null`.
+
+`raw_body`
+
+`string`
+
+The entire raw HTTP response message body represented as a string.
+
+`headers`
+
+`object`
+
+An object containing the response headers. The values will be an array of strings, repeated headers are grouped under the same keys with all values in the array.
+
+`error`
+
+`object`
+
+If `raise_error` is `false`, this field will represent the error encountered while running `http.send`. The `error` object contains a `message` key which holds the actual error message and a `code` key which represents if the error was caused due to a network issue or during policy evaluation.
+
+By default, an error returned by `http.send` halts the policy evaluation when used in conjunction with the `strict-builtin-errors` option that can be set when running evaluation. This behaviour can be altered such that instead of halting evaluation, if `http.send` encounters an error, it can return a `response` object with `status_code` set to `0` and `error` describing the actual error. This can be activated by setting the `raise_error` field in the `request` object to `false`. Note that if the `strict-builtin-errors` option is not specified and `raise_error` field is `true` (which is the default), an error returned by `http.send` will generate an undefined result.
+
+If the `cache` field in the `request` object is `true`, `http.send` will return a cached response after it checks its freshness and validity.
+
+`http.send` uses the `Cache-Control` and `Expires` response headers to check the freshness of the cached response. Specifically if the [max-age](https://tools.ietf.org/html/rfc7234#section-5.2.2.8) `Cache-Control` directive is set, `http.send` will use it to determine if the cached response is fresh or not. If `max-age` is not set, the `Expires` header will be used instead.
+
+If the cached response is stale, `http.send` uses the `Etag` and `Last-Modified` response headers to check with the server if the cached response is in fact still fresh. If the server responds with a `200` (`OK`) response, `http.send` will update the cache with the new response. On a `304` (`Not Modified`) server response, `http.send` will update the headers in cached response with their corresponding values in the `304` response.
+
+The `force_cache` field can be used to override the cache directives defined by the server. This field is used in conjunction with the `force_cache_duration_seconds` field. If `force_cache` is `true`, then `force_cache_duration_seconds` **must** be specified and `http.send` will use this value to check the freshness of the cached response.
+
+Also, if `force_cache` is `true`, it overrides the `cache` field.
+
+`http.send` only caches responses with the following HTTP status codes: `200`, `203`, `204`, `206`, `300`, `301`, `404`, `405`, `410`, `414`, and `501`. This is behavior is as per [https://www.rfc-editor.org/rfc/rfc7231#section-6.1](https://www.rfc-editor.org/rfc/rfc7231#section-6.1) and is enforced when caching responses within a single query or across queries via the `cache` and `force_cache` request fields.
+
+`http.send` uses the `Date` response header to calculate the current age of the response by comparing it with the current time. This value is used to determine the freshness of the cached response. As per [https://tools.ietf.org/html/rfc7231#section-7.1.1.2](https://tools.ietf.org/html/rfc7231#section-7.1.1.2), an origin server MUST NOT send a `Date` header field if it does not have a clock capable of providing a reasonable approximation of the current instance in Coordinated Universal Time. Hence, if `http.send` encounters a scenario where current age of the response is represented as a negative duration, the cached response will be considered as stale.
+
+The table below shows examples of calling `http.send`:
+
+Example
+
+Comments
+
+Accessing Google using System Cert Pool
+
+`http.send({"method": "get", "url": "https://www.google.com", "tls_use_system_certs": true })`
+
+Files containing TLS material
+
+`http.send({"method": "get", "url": "https://127.0.0.1:65331", "tls_ca_cert_file": "testdata/ca.pem", "tls_client_cert_file": "testdata/client-cert.pem", "tls_client_key_file": "testdata/client-key.pem"})`
+
+Environment variables containing TLS material
+
+`http.send({"method": "get", "url": "https://127.0.0.1:65360", "tls_ca_cert_env_variable": "CLIENT_CA_ENV", "tls_client_cert_env_variable": "CLIENT_CERT_ENV", "tls_client_key_env_variable": "CLIENT_KEY_ENV"})`
+
+Unix Socket URL Format
+
+`http.send({"method": "get", "url": "unix://localhost/?socket=%F2path%F2file.socket"})`
+
+### AWS[](#providers.aws)
+
+[`providers.aws.sign_req`](#builtin-providersaws-providersawssign_req)
+
+`signed_request := providers.aws.sign_req(request, aws_config, time_ns)`
+
+Signs an HTTP request object for Amazon Web Services. Currently implements [AWS Signature Version 4 request signing](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html) by the `Authorization` header method.
+
+`request`
+
+(object\[string: any\])
+
+`aws_config`
+
+(object\[string: any\])
+
+`time_ns`
+
+(number)
+
+Returns:
+
+`signed_request`
+
+(object\[any: any\])
+
+[v0.47.0](https://github.com/open-policy-agent/opa/releases/v0.47.0) SDK-dependent
+
+The AWS Request Signing builtin in OPA implements the header-based auth, single-chunk method described in the [AWS SigV4 docs](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html). It will default to signing the payload when present, configurable via `aws_config`, and will sign most user-provided headers for the request, to ensure their integrity.
+
+Note that the `authorization`, `user-agent`, and `x-amzn-trace-id` headers, are commonly modified by proxy systems, and as such are ignored by OPA for signing.
+
+The `request` object parameter may contain any and all of the same fields as for `http.send`. The following fields will have effects on the output `Authorization` header signature:
+
+Field
+
+Required
+
+Type
+
+Description
+
+`url`
+
+yes
+
+`string`
+
+HTTP URL to specify in the request. Used in the signature.
+
+`method`
+
+yes
+
+`string`
+
+HTTP method to specify in request. Used in the signature.
+
+`body`
+
+no
+
+`any`
+
+HTTP message body. The JSON serialized version of this value will be used for the payload portion of the signature if present.
+
+`raw_body`
+
+no
+
+`string`
+
+HTTP message body. This will be used for the payload portion of the signature if present.
+
+`headers`
+
+no
+
+`object`
+
+HTTP headers to include in the request. These will be added to the list of headers to sign.
+
+The `aws_config` object parameter may contain the following fields:
+
+Field
+
+Required
+
+Type
+
+Description
+
+`aws_access_key`
+
+yes
+
+`string`
+
+AWS access key.
+
+`aws_secret_access_key`
+
+yes
+
+`string`
+
+AWS secret access key. Used in generating the signing key for the request.
+
+`aws_service`
+
+yes
+
+`string`
+
+AWS service the request will be valid for. (e.g. `"s3"`)
+
+`aws_region`
+
+yes
+
+`string`
+
+AWS region for the request. (e.g. `"us-east-1"`)
+
+`aws_session_token`
+
+no
+
+`string`
+
+AWS security token. Used for the `x-amz-security-token` request header.
+
+`disable_payload_signing`
+
+no
+
+`boolean`
+
+When `true` an `UNSIGNED-PAYLOAD` value will be used for calculating the `x-amz-content-sha256` header during signing, and will be returned in the response. Applicable only for `s3` and `glacier` service. Default: `false`.
+
+#### AWS Request Signing Examples[](#aws-request-signing-examples)
+
+##### Basic Request Signing Example[](#basic-request-signing-example)
+
+The example below shows using hard-coded AWS credentials for signing the request object for `http.send`.
+
+For deployments, a common way to provide AWS credentials is via environment variables, usually by using the results of `opa.runtime().env`.
+
+    req := {"method": "get", "url": "https://examplebucket.s3.amazonaws.com/data"}
+    aws_config := {
+        "aws_access_key": "MYAWSACCESSKEYGOESHERE",
+        "aws_secret_access_key": "MYAWSSECRETACCESSKEYGOESHERE",
+        "aws_service": "s3",
+        "aws_region": "us-east-1",
+    }
+    
+    example_verify_resource {
+        resp := http.send(providers.aws.sign_req(req, aws_config, time.now_ns()))
+        # process response from AWS ...
+    }
+    
+
+##### Unsigned Payload Request Signing Example[](#unsigned-payload-request-signing-example)
+
+The [AWS S3 request signing API](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html) supports unsigned payload signing option. This example below shows s3 request signing with payload signing disabled.
+
+    req := {"method": "get", "url": "https://examplebucket.s3.amazonaws.com/data"}
+    aws_config := {
+        "aws_access_key": "MYAWSACCESSKEYGOESHERE",
+        "aws_secret_access_key": "MYAWSSECRETACCESSKEYGOESHERE",
+        "aws_service": "s3",
+        "aws_region": "us-east-1",
+        "disable_payload_signing": true,
+    }
+    
+    example_verify_resource {
+        resp := http.send(providers.aws.sign_req(req, aws_config, time.now_ns()))
+        # process response from AWS ...
+    }
+    
+
+##### Pre-Signed Request Example[](#pre-signed-request-example)
+
+The [AWS S3 request signing API](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html) supports pre-signing requests, so that they will only be valid at a future date. To do this in OPA, simply adjust the time parameter:
+
+    env := opa.runtime().env
+    req := {"method": "get", "url": "https://examplebucket.s3.amazonaws.com/data"}
+    aws_config := {
+        "aws_access_key": env["AWS_ACCESS_KEY"],
+        "aws_secret_access_key": env["AWS_SECRET_ACCESS_KEY"],
+        "aws_service": "s3",
+        "aws_region": env["AWS_REGION"],
+    }
+    # Request will become valid 2 days from now.
+    signing_time := time.add_date(time.now_ns(), 0, 0, 2)
+    
+    pre_signed_req := providers.aws.sign_req(req, aws_config, signing_time))
+    
+
+### Net[](#net)
+
+[`net.cidr_contains`](#builtin-net-netcidr_contains)
+
+`result := net.cidr_contains(cidr, cidr_or_ip)`
+
+Checks if a CIDR or IP is contained within another CIDR. `output` is `true` if `cidr_or_ip` (e.g. `127.0.0.64/26` or `127.0.0.1`) is contained within `cidr` (e.g. `127.0.0.1/24`) and `false` otherwise. Supports both IPv4 and IPv6 notations.
+
+`cidr`
+
+(string)
+
+`cidr_or_ip`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+Wasm
+
+[`net.cidr_contains_matches`](#builtin-net-netcidr_contains_matches)
+
+`output := net.cidr_contains_matches(cidrs, cidrs_or_ips)`
+
+Checks if collections of cidrs or ips are contained within another collection of cidrs and returns matches. This function is similar to `net.cidr_contains` except it allows callers to pass collections of CIDRs or IPs as arguments and returns the matches (as opposed to a boolean result indicating a match between two CIDRs/IPs).
+
+`cidrs`
+
+(any<string, array\[any<string, array\[any\]>\], object\[string: any<string, array\[any\]>\], set\[any<string, array\[any\]>\]>)
+
+`cidrs_or_ips`
+
+(any<string, array\[any<string, array\[any\]>\], object\[string: any<string, array\[any\]>\], set\[any<string, array\[any\]>\]>)
+
+Returns:
+
+`output`
+
+(set\[array<any, any>\])
+
+tuples identifying matches where `cidrs_or_ips` are contained within `cidrs`
+
+[v0.19.0-rc1](https://github.com/open-policy-agent/opa/releases/v0.19.0-rc1) SDK-dependent
+
+[`net.cidr_expand`](#builtin-net-netcidr_expand)
+
+`hosts := net.cidr_expand(cidr)`
+
+Expands CIDR to set of hosts (e.g., `net.cidr_expand("192.168.0.0/30")` generates 4 hosts: `{"192.168.0.0", "192.168.0.1", "192.168.0.2", "192.168.0.3"}`).
+
+`cidr`
+
+(string)
+
+Returns:
+
+`hosts`
+
+(set\[string\])
+
+set of IP addresses the CIDR `cidr` expands to
+
+SDK-dependent
+
+[`net.cidr_intersects`](#builtin-net-netcidr_intersects)
+
+`result := net.cidr_intersects(cidr1, cidr2)`
+
+Checks if a CIDR intersects with another CIDR (e.g. `192.168.0.0/16` overlaps with `192.168.1.0/24`). Supports both IPv4 and IPv6 notations.
+
+`cidr1`
+
+(string)
+
+`cidr2`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+Wasm
+
+[`net.cidr_is_valid`](#builtin-net-netcidr_is_valid)
+
+`result := net.cidr_is_valid(cidr)`
+
+Parses an IPv4/IPv6 CIDR and returns a boolean indicating if the provided CIDR is valid.
+
+`cidr`
+
+(string)
+
+Returns:
+
+`result`
+
+(boolean)
+
+[v0.46.0](https://github.com/open-policy-agent/opa/releases/v0.46.0) SDK-dependent
+
+[`net.cidr_merge`](#builtin-net-netcidr_merge)
+
+`output := net.cidr_merge(addrs)`
+
+Merges IP addresses and subnets into the smallest possible list of CIDRs (e.g., `net.cidr_merge(["192.0.128.0/24", "192.0.129.0/24"])` generates `{"192.0.128.0/23"}`.This function merges adjacent subnets where possible, those contained within others and also removes any duplicates. Supports both IPv4 and IPv6 notations. IPv6 inputs need a prefix length (e.g. “/128”).
+
+`addrs`
+
+(any<array\[any<string>\], set\[string\]>)
+
+CIDRs or IP addresses
+
+Returns:
+
+`output`
+
+(set\[string\])
+
+smallest possible set of CIDRs obtained after merging the provided list of IP addresses and subnets in `addrs`
+
+[v0.24.0](https://github.com/open-policy-agent/opa/releases/v0.24.0) SDK-dependent
+
+[`net.lookup_ip_addr`](#builtin-net-netlookup_ip_addr)
+
+`addrs := net.lookup_ip_addr(name)`
+
+Returns the set of IP addresses (both v4 and v6) that the passed-in `name` resolves to using the standard name resolution mechanisms available.
+
+`name`
+
+(string)
+
+domain name to resolve
+
+Returns:
+
+`addrs`
+
+(set\[string\])
+
+IP addresses (v4 and v6) that `name` resolves to
+
+[v0.35.0](https://github.com/open-policy-agent/opa/releases/v0.35.0) SDK-dependent
+
+#### Notes on Name Resolution (`net.lookup_ip_addr`)[](#notes-on-name-resolution-netlookup_ip_addr)
+
+The lookup mechanism uses either the pure-Go, or the cgo-based resolver, depending on the operating system and availability of cgo. The latter depends on flags that can be provided when building OPA as a Go library, and can be adjusted at runtime via the GODEBUG environment variable. See [these docs on the `net` package](https://pkg.go.dev/net@go1.17.3#hdr-Name_Resolution) for details.
+
+Note that the cgo-based resolver is often **preferable**: It will take advantage of host-based DNS caching in place. This built-in function only caches DNS lookups within _a single_ policy evaluation.
+
+#### Examples of `net.cidr_contains_matches`[](#examples-of-netcidr_contains_matches)
+
+The `output := net.cidr_contains_matches(a, b)` function allows callers to supply strings, arrays, sets, or objects for either `a` or `b`. The `output` value in all cases is a set of tuples (2-element arrays) that identify matches, i.e., elements of `b` contained by elements of `a`. The first tuple element refers to the match in `a` and the second tuple element refers to the match in `b`.
+
+Input Type
+
+Output Type
+
+`string`
+
+`string`
+
+`array`
+
+`array` index
+
+`set`
+
+`set` element
+
+`object`
+
+`object` key
+
+    package netcidrcontainsmatches
+    
+
+If both operands are string values the function is similar to `net.cidr_contains`.
+
+    net.cidr_contains_matches("1.1.1.0/24", "1.1.1.128")
+    
+
+Either (or both) operand(s) may be an array, set, or object.
+
+    net.cidr_contains_matches(["1.1.1.0/24", "1.1.2.0/24"], "1.1.1.128")
+    
+
+The array/set/object elements may be arrays. In that case, the first element must be a valid CIDR/IP.
+
+    net.cidr_contains_matches([["1.1.0.0/16", "foo"], "1.1.2.0/24"], ["1.1.1.128", ["1.1.254.254", "bar"]])
+    
+
+If the operand is a set, the outputs are matching elements. If the operand is an object, the outputs are matching keys.
+
+    net.cidr_contains_matches({["1.1.0.0/16", "foo"], "1.1.2.0/24"}, {"x": "1.1.1.128", "y": ["1.1.254.254", "bar"]})
+    
+
+### UUID[](#uuid)
+
+[`uuid.parse`](#builtin-uuid-uuidparse)
+
+`result := uuid.parse(uuid)`
+
+Parses the string value as an UUID and returns an object with the well-defined fields of the UUID if valid.
+
+`uuid`
+
+(string)
+
+Returns:
+
+`result`
+
+(object\[string: any\])
+
+Properties of UUID if valid (version, variant, etc). Undefined otherwise.
+
+[v0.57.0](https://github.com/open-policy-agent/opa/releases/v0.57.0) SDK-dependent
+
+[`uuid.rfc4122`](#builtin-uuid-uuidrfc4122)
+
+`output := uuid.rfc4122(k)`
+
+Returns a new UUIDv4.
+
+`k`
+
+(string)
+
+Returns:
+
+`output`
+
+(string)
+
+a version 4 UUID; for any given `k`, the output will be consistent throughout a query evaluation
+
+[v0.20.0](https://github.com/open-policy-agent/opa/releases/v0.20.0) SDK-dependent
+
+### Semantic Versions[](#semver)
+
+[`semver.compare`](#builtin-semver-semvercompare)
+
+`result := semver.compare(a, b)`
+
+Compares valid SemVer formatted version strings.
+
+`a`
+
+(string)
+
+`b`
+
+(string)
+
+Returns:
+
+`result`
+
+(number)
+
+`-1` if `a < b`; `1` if `a > b`; `0` if `a == b`
+
+[v0.22.0](https://github.com/open-policy-agent/opa/releases/v0.22.0) SDK-dependent
+
+[`semver.is_valid`](#builtin-semver-semveris_valid)
+
+`result := semver.is_valid(vsn)`
+
+Validates that the input is a valid SemVer string.
+
+`vsn`
+
+(any)
+
+Returns:
+
+`result`
+
+(boolean)
+
+`true` if `vsn` is a valid SemVer; `false` otherwise
+
+[v0.22.0](https://github.com/open-policy-agent/opa/releases/v0.22.0) SDK-dependent
+
+#### Example of `semver.is_valid`[](#example-of-semveris_valid)
+
+The `result := semver.is_valid(vsn)` function checks to see if a version string is of the form: `MAJOR.MINOR.PATCH[-PRERELEASE][+METADATA]`, where items in square braces are optional elements.
+
+When working with Go-style semantic versions, remember to remove the leading `v` character, or the semver string will be marked as invalid!
+
+    package semverisvalid
+    
+
+    semver.is_valid("v1.1.12-rc1+foo")
+    
+
+    semver.is_valid("1.1.12-rc1+foo")
+    
+
+### Rego[](#rego)
+
+[`rego.metadata.chain`](#builtin-rego-regometadatachain)
+
+`chain := rego.metadata.chain()`
+
+Returns the chain of metadata for the active rule. Ordered starting at the active rule, going outward to the most distant node in its package ancestry. A chain entry is a JSON document with two members: “path”, an array representing the path of the node; and “annotations”, a JSON document containing the annotations declared for the node. The first entry in the chain always points to the active rule, even if it has no declared annotations (in which case the “annotations” member is not present).
+
+Returns:
+
+`chain`
+
+(array\[any\])
+
+each array entry represents a node in the path ancestry (chain) of the active rule that also has declared annotations
+
+[v0.40.0](https://github.com/open-policy-agent/opa/releases/v0.40.0) SDK-dependent
+
+[`rego.metadata.rule`](#builtin-rego-regometadatarule)
+
+`output := rego.metadata.rule()`
+
+Returns annotations declared for the active rule and using the _rule_ scope.
+
+Returns:
+
+`output`
+
+(any)
+
+“rule” scope annotations for this rule; empty object if no annotations exist
+
+[v0.40.0](https://github.com/open-policy-agent/opa/releases/v0.40.0) SDK-dependent
+
+[`rego.parse_module`](#builtin-rego-regoparse_module)
+
+`output := rego.parse_module(filename, rego)`
+
+Parses the input Rego string and returns an object representation of the AST.
+
+`filename`
+
+(string)
+
+file name to attach to AST nodes’ locations
+
+`rego`
+
+(string)
+
+Rego module
+
+Returns:
+
+`output`
+
+(object\[string: any\])
+
+SDK-dependent
+
+#### Example[](#example)
+
+Given the input document
+
+    {
+        "number": 11,
+        "subject": {
+            "name": "John doe",
+            "role": "customer"
+        }
+    }
+    
+
+the following policy
+
+    package example
+    
+    # METADATA
+    # title: Deny invalid numbers
+    # description: Numbers may not be higher than 5
+    # custom:
+    #  severity: MEDIUM
+    deny[format(rego.metadata.rule())] {
+        input.number > 5
+    }
+    
+    # METADATA
+    # title: Deny non-admin subjects
+    # description: Subject must have the 'admin' role
+    # custom:
+    #  severity: HIGH
+    deny[format(rego.metadata.rule())] {
+        input.subject.role != "admin"
+    }
+    
+    format(meta) := {"severity": meta.custom.severity, "reason": meta.description}
+    
+
+will output
+
+    deny
+    
+
+#### Metadata Merge strategies[](#metadata-merge-strategies)
+
+When multiple [annotations](../annotations) are declared along the path ancestry (chain) for a rule, how any given annotation should be selected, inherited or merged depends on the semantics of the annotation, the context of the rule, and the preferences of the developer. OPA doesn’t presume what merge strategy is appropriate; instead, this lies in the hands of the developer. The following example demonstrates how some string and list type annotations in a metadata chain can be merged into a single metadata object.
+
+    # METADATA
+    # title: My Example Package
+    # description: A set of rules illustrating how metadata annotations can be merged.
+    # authors:
+    # - John Doe <john@example.com>
+    # organizations:
+    # - Acme Corp.
+    package example
+    
+    import rego.v1
+    
+    # METADATA
+    # scope: document
+    # description: A rule that merges metadata annotations in various ways.
+    
+    # METADATA
+    # title: My Allow Rule
+    # authors:
+    # - Jane Doe <jane@example.com>
+    allow if {
+    	meta := merge(rego.metadata.chain())
+    	meta.title == "My Allow Rule" # 'title' pulled from 'rule' scope
+    	meta.description == "A rule that merges metadata annotations in various ways." # 'description' pulled from 'document' scope
+    	meta.authors == {
+    		{"email": "jane@example.com", "name": "Jane Doe"}, # 'authors' joined from 'package' and 'rule' scopes
+    		{"email": "john@example.com", "name": "John Doe"},
+    	}
+    	meta.organizations == {"Acme Corp."} # 'organizations' pulled from 'package' scope
+    }
+    
+    allow if {
+    	meta := merge(rego.metadata.chain())
+    	meta.title == null # No 'title' present in 'rule' or 'document' scopes
+    	meta.description == "A rule that merges metadata annotations in various ways." # 'description' pulled from 'document' scope
+    	meta.authors == { # 'authors' pulled from 'package' scope
+    		{"email": "john@example.com", "name": "John Doe"}
+    	}
+    	meta.organizations == {"Acme Corp."} # 'organizations' pulled from 'package' scope
+    }
+    
+    merge(chain) := meta if {
+    	ruleAndDoc := ["rule", "document"]
+    	meta := {
+    		"title": override_annot(chain, "title", ruleAndDoc), # looks for 'title' in 'rule' scope, then 'document' scope
+    		"description": override_annot(chain, "description", ruleAndDoc), # looks for 'description' in 'rule' scope, then 'document' scope
+    		"related_resources": override_annot(chain, "related_resources", ruleAndDoc), # looks for 'related_resources' in 'rule' scope, then 'document' scope
+    		"authors": merge_annot(chain, "authors"), # merges all 'authors' across all scopes
+    		"organizations": merge_annot(chain, "organizations"), # merges all 'organizations' across all scopes
+    	}
+    }
+    
+    override_annot(chain, name, scopes) := val if {
+    	val := [v |
+    		link := chain[_]
+    		link.annotations.scope in scopes
+    		v := link.annotations[name]
+    	][0]
+    } else := null
+    
+    merge_annot(chain, name) := val if {
+    	val := {v |
+    		v := chain[_].annotations[name][_]
+    	}
+    } else := null
+    
+
+### OPA[](#opa)
+
+[`opa.runtime`](#builtin-opa-oparuntime)
+
+`output := opa.runtime()`
+
+Returns an object that describes the runtime environment where OPA is deployed.
+
+Returns:
+
+`output`
+
+(object\[string: any\])
+
+includes a `config` key if OPA was started with a configuration file; an `env` key containing the environment variables that the OPA process was started with; includes `version` and `commit` keys containing the version and build commit of OPA.
+
+SDK-dependent
+
+Policies that depend on the output of `opa.runtime` may return different answers depending on how OPA was started. If possible, prefer using an explicit `input` or `data` value instead of `opa.runtime`.
+
+### Debugging[](#debugging)
+
+Built-in
+
+Description
+
+Details
+
+`print(...)`
+
+`print` is used to output the values of variables for debugging purposes. `print` calls have no effect on the result of queries or rules. All variables passed to `print` must be assigned inside of the query or rule. If any of the `print` arguments are undefined, their values are represented as `<undefined>` in the output stream. Because policies can be invoked via different interfaces (e.g., CLI, HTTP API, etc.) the exact output format differs. See the table below for details.
+
+[v0.34.0](https://github.com/open-policy-agent/opa/releases/v0.34.0) SDK-dependent
+
+API
+
+Output
+
+Memo
+
+`opa eval`
+
+`stderr`
+
+`opa run` (REPL)
+
+`stderr`
+
+`opa test`
+
+`stdout`
+
+Specify `-v` to see output for passing tests. Output for failing tests is displayed automatically.
+
+`opa run -s` (server)
+
+`stderr`
+
+Specify `--log-level=info` (default) or higher. Output is sent to the log stream. Use `--log-format=text` for pretty output.
+
+Go (library)
+
+`io.Writer`
+
+[https://pkg.go.dev/github.com/open-policy-agent/opa/rego#example-Rego-Print\_statements](https://pkg.go.dev/github.com/open-policy-agent/opa/rego#example-Rego-Print_statements)
+
+### Tracing[](#tracing)
+
+[`trace`](#builtin-tracing-trace)
+
+`result := trace(note)`
+
+Emits `note` as a `Note` event in the query explanation. Query explanations show the exact expressions evaluated by OPA during policy execution. For example, `trace("Hello There!")` includes `Note "Hello There!"` in the query explanation. To include variables in the message, use `sprintf`. For example, `person := "Bob"; trace(sprintf("Hello There! %v", [person]))` will emit `Note "Hello There! Bob"` inside of the explanation.
+
+`note`
+
+(string)
+
+the note to include
+
+Returns:
+
+`result`
+
+(boolean)
+
+always `true`
+
+SDK-dependent
+
+By default, explanations are disabled. The following table summarizes how you can enable tracing:
+
+API
+
+Parameter
+
+Example
+
+CLI
+
+`--explain`
+
+`opa eval --explain=notes --format=pretty 'trace("hello world")'`
+
+HTTP
+
+`explain=notes`
+
+`curl localhost:8181/v1/data/example/allow?explain=notes&pretty`
+
+REPL
+
+n/a
+
+`trace notes`
+
+Reserved Names[](#reserved-names)
+---------------------------------
+
+The following words are reserved and cannot be used as variable names, rule names, or dot-access style reference arguments:
+
+    as
+    contains
+    data
+    default
+    else
+    every
+    false
+    if
+    in
+    import
+    input
+    package
+    not
+    null
+    some
+    true
+    with
+    
+
+Grammar[](#grammar)
+-------------------
+
+Rego’s syntax is defined by the following grammar:
+
+    module          = package { import } policy
+    package         = "package" ref
+    import          = "import" ref [ "as" var ]
+    policy          = { rule }
+    rule            = [ "default" ] rule-head { rule-body }
+    rule-head       = ( ref | var ) ( rule-head-set | rule-head-obj | rule-head-func | rule-head-comp )
+    rule-head-comp  = [ assign-operator term ] [ "if" ]
+    rule-head-obj   = "[" term "]" [ assign-operator term ] [ "if" ]
+    rule-head-func  = "(" rule-args ")" [ assign-operator term ] [ "if" ]
+    rule-head-set   = "contains" term [ "if" ] | "[" term "]"
+    rule-args       = term { "," term }
+    rule-body       = [ "else" [ assign-operator term ] [ "if" ] ] ( "{" query "}" ) | literal
+    query           = literal { ( ";" | ( [CR] LF ) ) literal }
+    literal         = ( some-decl | expr | "not" expr ) { with-modifier }
+    with-modifier   = "with" term "as" term
+    some-decl       = "some" term { "," term } { "in" expr }
+    expr            = term | expr-call | expr-infix | expr-every | expr-parens | unary-expr
+    expr-call       = var [ "." var ] "(" [ expr { "," expr } ] ")"
+    expr-infix      = expr infix-operator expr
+    expr-every      = "every" var { "," var } "in" ( term | expr-call | expr-infix ) "{" query "}"
+    expr-parens     = "(" expr ")"
+    unary-expr      = "-" expr
+    membership      = term [ "," term ] "in" term
+    term            = ref | var | scalar | array | object | set | membership | array-compr | object-compr | set-compr
+    array-compr     = "[" term "|" query "]"
+    set-compr       = "{" term "|" query "}"
+    object-compr    = "{" object-item "|" query "}"
+    infix-operator  = assign-operator | bool-operator | arith-operator | bin-operator
+    bool-operator   = "==" | "!=" | "<" | ">" | ">=" | "<="
+    arith-operator  = "+" | "-" | "*" | "/" | "%"
+    bin-operator    = "&" | "|"
+    assign-operator = ":=" | "="
+    ref             = ( var | array | object | set | array-compr | object-compr | set-compr | expr-call ) { ref-arg }
+    ref-arg         = ref-arg-dot | ref-arg-brack
+    ref-arg-brack   = "[" ( scalar | var | array | object | set | "_" ) "]"
+    ref-arg-dot     = "." var
+    var             = ( ALPHA | "_" ) { ALPHA | DIGIT | "_" }
+    scalar          = string | NUMBER | TRUE | FALSE | NULL
+    string          = STRING | raw-string
+    raw-string      = "`" { CHAR-"`" } "`"
+    array           = "[" term { "," term } "]"
+    object          = "{" object-item { "," object-item } "}"
+    object-item     = ( scalar | ref | var ) ":" term
+    set             = empty-set | non-empty-set
+    non-empty-set   = "{" term { "," term } "}"
+    empty-set       = "set(" ")"
+    
+
+Note that the grammar corresponds to Rego with `rego.v1` enabled (See ([OPA v1.0](../opa-1) for more info).
+
+The grammar defined above makes use of the following syntax. See [the Wikipedia page on EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form) for more details:
+
+    []     optional (zero or one instances)
+    {}     repetition (zero or more instances)
+    |      alternation (one of the instances)
+    ()     grouping (order of expansion)
+    STRING JSON string
+    NUMBER JSON number
+    TRUE   JSON true
+    FALSE  JSON false
+    NULL   JSON null
+    CHAR   Unicode character
+    ALPHA  ASCII characters A-Z and a-z
+    DIGIT  ASCII characters 0-9
+    CR     Carriage Return
+    LF     Line Feed
+    

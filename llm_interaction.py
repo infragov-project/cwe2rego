@@ -80,7 +80,7 @@ if __name__ == "__main__":
     print("CWE Condition Explanation:")
     print(cwe_condition)
     
-    with open(base_dir / "prompt_data/glitch_lib.rego", "r") as f:
+    with open(base_dir / "prompt_data/rego_library/glitch_lib.rego", "r") as f:
         rego_lib = f.read()
         
     with open(base_dir / "prompt_data/inter.txt", "r") as f:
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         with open(output_path, "w") as f:
             f.write(rego_rule)
         
-        error = opa_check(str(base_dir / "prompt_data/glitch_lib.rego"), str(output_path))
+        error = opa_check(str(base_dir / "prompt_data/rego_library/glitch_lib.rego"), str(output_path))
         
         if error is not None:
             rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
