@@ -52,7 +52,7 @@ nodeenv==1.10.0
 numpy==2.3.3
 openai==2.16.0
 opentelemetry-api==1.39.1
-packaging==24.1
+packaging==26.0
 pandas==2.3.3
 pathspec==1.0.4
 pbs-installer==2026.2.11
