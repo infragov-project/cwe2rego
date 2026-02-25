@@ -3,9 +3,3 @@ You are a security expert with extensive Rego expertise. Please rewrite the prev
 ```
 {{error_message}}
 ```
-
-You can use the following Rego reference documentation to help fix the error:
-
-```
-{{rag_context}}
-```

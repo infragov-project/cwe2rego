@@ -2,35 +2,33 @@ package glitch
 
 import data.glitch_lib
 
-lb_listener_types := {"aws_lb_listener", "aws_alb_listener"}
+lookup_functions := {"lookup", "find_in_map", "findInMap"}
 
-provisioner_types := {"local-exec", "remote-exec"}
-
-has_default_in_chain(stmt) {
-    walk(stmt, [_, node])
+chain_has_default(cond) {
+    walk(cond, [_, node])
     node.ir_type == "ConditionalStatement"
     node.is_default == true
 }
 
-has_attr_named(node, name) {
-    attrs := glitch_lib.all_attributes(node)
+has_default_attribute(unit) {
+    attrs := glitch_lib.all_attributes(unit)
     attr := attrs[_]
-    lower(attr.name) == name
+    attr.name == "default"
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    conditions := glitch_lib.all_conditional_statements(parent)
-    stmt := conditions[_]
-    stmt.is_top == true
-    stmt.type == "SWITCH"
-    not has_default_in_chain(stmt)
+    conds := glitch_lib.all_conditional_statements(parent)
+    cond := conds[_]
+    cond.is_top == true
+    cond.else_statement != null
+    not chain_has_default(cond)
     result := {
         "type": "sec_no_default_switch",
-        "element": stmt,
+        "element": cond,
         "path": parent.path,
-        "description": "Missing default case in switch/case/match statement - Conditional expressions should include a catch-all default case to handle unexpected inputs. (CWE-478)"
+        "description": "Missing Default Case in Multiple Condition Expression - Conditional chain with multiple branches lacks a default/else branch to handle unexpected values. (CWE-478)"
     }
 }
 
@@ -39,42 +37,30 @@ Glitch_Analysis[result] {
     parent.path != ""
     walk(parent, [_, node])
     node.ir_type == "FunctionCall"
-    lower(node.name) == "lookup"
+    node.name == lookup_functions[_]
     count(node.args) < 3
     result := {
         "type": "sec_no_default_switch",
         "element": node,
         "path": parent.path,
-        "description": "Missing default value in lookup() function call - Map access operations should provide a default fallback to avoid unhandled missing key states. (CWE-478)"
+        "description": "Missing Default Case - Lookup/map function called without a default fallback argument, which may fail on unexpected keys. (CWE-478)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-    node.type == lb_listener_types[_]
-    not has_attr_named(node, "default_action")
+    all_units := glitch_lib.all_atomic_units(parent)
+    unit := all_units[_]
+    glitch_lib.contains(unit.type, "variable")
+    nested_units := glitch_lib.all_atomic_units(unit)
+    nested := nested_units[_]
+    glitch_lib.contains(nested.type, "validation")
+    not has_default_attribute(unit)
     result := {
         "type": "sec_no_default_switch",
-        "element": node,
+        "element": unit,
         "path": parent.path,
-        "description": "Missing default_action in load balancer listener - Listener rules should define a default_action to handle all unmatched requests. (CWE-478)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-    node.type == provisioner_types[_]
-    not has_attr_named(node, "on_failure")
-    result := {
-        "type": "sec_no_default_switch",
-        "element": node,
-        "path": parent.path,
-        "description": "Missing on_failure handler in provisioner block - Provisioners should specify on_failure behavior to handle unexpected execution states. (CWE-478)"
+        "description": "Missing Default Case - Variable with validation constraint has no default value, leaving unspecified states without handling. (CWE-478)"
     }
 }

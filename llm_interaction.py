@@ -2,6 +2,7 @@
 Interact with LLM via Pydantic framework (main file).
 """
 import re
+import logging
 from pathlib import Path
 from llm_interaction.conversation_templated import ask_model_prompt
 from llm_interaction.conversation_templated import initialize_model, initialize_model_settings
@@ -10,6 +11,11 @@ import os
 from argparse import ArgumentParser
 from validation.semantinc_checking import semantic_check
 from validation.syntax_checking import opa_check
+from rag.rag import build_rag_index, retrieve_from_index, format_chunks
+
+# Suppress HTTP request logs (must come after imports that configure logging)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 @ask_model_prompt("prompts/cwecondition.md")
 def get_cwe_condition(cwe: str, chat_history=None) -> str:
@@ -21,9 +27,14 @@ def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, ex
     """Get a Rego generation from the LLM."""
     ...
 
+@ask_model_prompt("prompts/syntaxerrorgeneration_norag.md")
+def get_syntax_error_generation_norag(error_message: str, chat_history=None) -> str:
+    """Get a syntax error regeneration without RAG assistance."""
+    ...
+
 @ask_model_prompt("prompts/syntaxerrorgeneration.md")
-def get_syntax_error_generation(error_message: str, chat_history=None) -> str:
-    """Get a syntax error regeneration of the rule from the LLM."""
+def get_syntax_error_generation(error_message: str, rag_context: str, chat_history=None) -> str:
+    """Get a syntax error regeneration with RAG assistance."""
     ...
     
 @ask_model_prompt("prompts/semanticerrorgeneration.md")
@@ -58,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
     parser.add_argument("--cwe", help="Choose CWE to use")
     parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=True)
+    parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     args = parser.parse_args()
     
     load_dotenv()
@@ -72,6 +84,16 @@ if __name__ == "__main__":
     initialize_model(OPENROUTER_API_KEY, args.model)
 
     base_dir = Path(__file__).parent
+    
+    # Build Rego RAG index if enabled
+    rego_index = None
+    if args.use_rag:
+        print("Building Rego RAG index...")
+        rego_index = build_rag_index(
+            source_dir=base_dir / "rag/rego",
+            api_key=OPENROUTER_API_KEY,
+            name="rego_syntax"
+        )
     
     with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
         cwe_text = f.read()
@@ -121,7 +143,20 @@ if __name__ == "__main__":
         error = opa_check(str(base_dir / "prompt_data/rego_library/glitch_lib.rego"), str(output_path))
         
         if error is not None:
-            rego_rule = get_syntax_error_generation(error_message=error, chat_history=conversation_history)
+            # Use appropriate syntax error generation based on RAG flag
+            if args.use_rag and rego_index is not None:
+                rag_chunks = retrieve_from_index(rego_index, error, top_k=3)
+                rag_context = format_chunks(rag_chunks)
+                rego_rule = get_syntax_error_generation(
+                    error_message=error,
+                    rag_context=rag_context,
+                    chat_history=conversation_history
+                )
+            else:
+                rego_rule = get_syntax_error_generation_norag(
+                    error_message=error,
+                    chat_history=conversation_history
+                )
             continue
         
         failures = semantic_check(rego_rule, args.type_name, str(args.cwe))
