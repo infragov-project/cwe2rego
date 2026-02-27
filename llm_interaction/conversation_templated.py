@@ -23,6 +23,7 @@ def initialize_model(api_key: str, model: str):
     model_instance = OpenRouterModel(model, provider=provider)
 
 def initialize_model_settings():
+    """Initialize model settings."""
     global model_settings
     model_settings = OpenRouterModelSettings(
         openrouter_reasoning={
@@ -32,7 +33,6 @@ def initialize_model_settings():
             'include': True,
         }
     )
-
 
 def ask_model_prompt(template_path: str):
     """Decorator for model interactions using prompt templates.
@@ -70,8 +70,13 @@ def ask_model_prompt(template_path: str):
 
             global model_instance
             global model_settings
+            
             # Create agent with appropriate output type
-            agent = InfraAgent(model=model_instance, model_settings=model_settings, output_type=return_type)
+            agent = InfraAgent(
+                model=model_instance, 
+                model_settings=model_settings, 
+                output_type=return_type
+            )
             
             # Add tools to the agent
             for tool_func in functions:

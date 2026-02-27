@@ -4,8 +4,16 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from pydantic_ai.exceptions import UsageLimitExceeded, UnexpectedModelBehavior
 from pydantic_ai.models.openrouter import OpenRouterModelSettings
 import asyncio
-from typing import Callable, List
+from typing import Callable, List, Any, Optional
 from pydantic_ai.messages import ModelMessage
+
+
+def _usage_get(obj: Any, key: str, default=None):
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
 class InfraAgent:
     def __init__(self, model, model_settings: OpenRouterModelSettings={}, output_type: type = None):
@@ -37,7 +45,23 @@ class InfraAgent:
         print()
         
         usage_data = result.usage() if hasattr(result, 'usage') else None
-        print(usage_data)
+        
+        # Debug: print raw usage structure
+        print(f"🔍 Raw usage_data: {usage_data}")
+        if hasattr(usage_data, '__dict__'):
+            print(f"🔍 Usage attributes: {usage_data.__dict__}")
+        
+        prompt_tokens = _usage_get(usage_data, 'input_tokens', 0)
+        completion_tokens = _usage_get(usage_data, 'output_tokens', 0)
+
+        usage_details = _usage_get(usage_data, 'details', {}) or {}
+        
+        cache_read_tokens = _usage_get(usage_data, 'cache_read_tokens', 0) or 0
+
+        print(
+            f"📊 Usage: prompt={prompt_tokens}, completion={completion_tokens}, "
+            f"cache_read_tokens={cache_read_tokens}"
+        )
         
         return response, usage_data
 

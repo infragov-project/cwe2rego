@@ -98,10 +98,6 @@ if __name__ == "__main__":
     with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
         cwe_text = f.read()
     
-    cwe_condition = get_cwe_condition(cwe=cwe_text)
-    print("CWE Condition Explanation:")
-    print(cwe_condition)
-    
     with open(base_dir / "prompt_data/rego_library/glitch_lib.rego", "r") as f:
         rego_lib = f.read()
         
@@ -113,6 +109,10 @@ if __name__ == "__main__":
         
     with open(base_dir / "prompt_data/example_queries/sec_obsolete_command.rego", "r") as f:
         example_rule_2 = f.read()
+    
+    cwe_condition = get_cwe_condition(cwe=cwe_text)
+    print("CWE Condition Explanation:")
+    print(cwe_condition)
     
     conversation_history = []
     rego_rule = get_rego_generation(
@@ -127,15 +127,18 @@ if __name__ == "__main__":
 
     model_name = args.model.split("/")[-1]
     
+    MAX_VALIDATION_ATTEMPTS = 20
     i = 1    
-    while True:
-        print(f"--- Validation Attempt {i} ---")
+    while i <= MAX_VALIDATION_ATTEMPTS:
+        print(f"--- Validation Attempt {i}/{MAX_VALIDATION_ATTEMPTS} ---")
         i += 1
         
         # Replace the type name with the desired one
         rego_rule = replace_type_name(rego_rule, args.type_name)
         
-        output_path = base_dir / f"generated_rego/CWE-{args.cwe}-{model_name}-generated.rego"
+        model_directory = base_dir / "generated_rego" / model_name
+        model_directory.mkdir(parents=True, exist_ok=True)
+        output_path = model_directory / f"cwe_{args.cwe}.rego"
         
         with open(output_path, "w") as f:
             f.write(rego_rule)
@@ -175,6 +178,13 @@ if __name__ == "__main__":
             continue
         
         break
+    
+    # Check if we hit the validation limit
+    if i > MAX_VALIDATION_ATTEMPTS:
+        print(f"\n⚠️ Reached maximum validation attempts ({MAX_VALIDATION_ATTEMPTS})")
+        print(f"Final rule written to: {output_path}")
+        print("Validation did not pass - manual review required")
+        exit(1)
     
     
     
