@@ -146,6 +146,9 @@ if __name__ == "__main__":
         error = opa_check(str(base_dir / "prompt_data/rego_library/glitch_lib.rego"), str(output_path))
         
         if error is not None:
+            # If at max attempts, don't regenerate - just exit
+            if i > MAX_VALIDATION_ATTEMPTS:
+                break
             # Use appropriate syntax error generation based on RAG flag
             if args.use_rag and rego_index is not None:
                 rag_chunks = retrieve_from_index(rego_index, error, top_k=3)
@@ -165,6 +168,9 @@ if __name__ == "__main__":
         failures = semantic_check(rego_rule, args.type_name, str(args.cwe))
         
         if failures:
+            # If at max attempts, don't regenerate - just exit
+            if i > MAX_VALIDATION_ATTEMPTS:
+                break
             # Format failures for the prompt
             formatted_failures = [
                 {
