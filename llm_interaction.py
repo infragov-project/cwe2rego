@@ -64,6 +64,28 @@ def replace_type_name(rego_code: str, desired_type: str) -> str:
     
     return re.sub(pattern, replacement, rego_code)
 
+def clean_rego_code(rego_code: str) -> str:
+    """
+    Remove markdown code fence markers from Rego code.
+    
+    Strips: ```rego, ```, ` from start and end of the code.
+    
+    Args:
+        rego_code: The Rego code that may contain markdown markers
+    
+    Returns:
+        Cleaned Rego code without markdown markers
+    """
+    code = rego_code.strip()
+    
+    # Remove opening fence: ```rego or ```
+    code = re.sub(r'^```+\s*rego?\s*\n?', '', code)
+    
+    # Remove closing fence: ```
+    code = re.sub(r'\n?```+\s*$', '', code)
+    
+    return code.strip()
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
@@ -132,6 +154,9 @@ if __name__ == "__main__":
     while i <= MAX_VALIDATION_ATTEMPTS:
         print(f"--- Validation Attempt {i}/{MAX_VALIDATION_ATTEMPTS} ---")
         i += 1
+        
+        # Clean markdown code fences from LLM-generated code
+        rego_rule = clean_rego_code(rego_rule)
         
         # Replace the type name with the desired one
         rego_rule = replace_type_name(rego_rule, args.type_name)

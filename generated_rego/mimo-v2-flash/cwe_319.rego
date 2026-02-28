@@ -2,301 +2,310 @@ package glitch
 
 import data.glitch_lib
 
-# Keywords indicating cleartext transmission protocols
-protocol_keywords := {"protocol", "scheme", "connection_protocol"}
-# Risk values for cleartext protocols
-protocol_risk_values := {"HTTP", "FTP", "Telnet", "SMTP", "TCP", "LDAP"}
-# Keywords indicating encryption flags
-encryption_keywords := {"ssl", "tls", "https_only", "encryption_enabled", "secure_transport"}
-# Risk values for disabled encryption
-encryption_risk_values := {"false", "disabled", "off", "none", "0"}
-# Keywords for endpoints/URIs
-endpoint_keywords := {"endpoint", "uri", "url", "host"}
-# Keywords for insecure ports
-port_keywords := {"port"}
-# Risk port values
-insecure_ports := {80, 21, 23, 389}
-# Risk patterns for cleartext URI schemes
-cleartext_schemes := {"http://", "ftp://", "telnet://"}
+insecure_protocols := {"http://", "ftp://", "telnet://", "smtp://", "tcp://", "udp://"}
 
-# Check for cleartext protocol in String values
-check_string_protocol(value) {
-    value.ir_type == "String"
-    regex.match(sprintf("(?i)^(%s)$", [concat("|", protocol_risk_values)]), value.value)
+insecure_keywords := {"insecure", "plaintext", "unauthenticated", "no_encryption", "disable_https", "disabled", "false", "allow_unencrypted", "non_ssl"}
+
+encryption_flags := {"ssl_enabled", "tls_disabled", "https_only", "allow_unencrypted", "ssl_enforcement", "tls_policy", "secure_connection_required", "require_ssl", "tls_enforcement", "secure_transfer"}
+
+has_insecure_protocol(expr) {
+    walk(expr, [_, node])
+    node.ir_type == "String"
+    some i
+    protocol := insecure_protocols[i]
+    contains(lower(node.value), protocol)
 }
 
-# Check for cleartext scheme in String values
-check_string_scheme(value) {
-    value.ir_type == "String"
-    cleartext_schemes[_] == value.value
+has_insecure_keyword(expr) {
+    walk(expr, [_, node])
+    node.ir_type == "String"
+    some i
+    keyword := insecure_keywords[i]
+    contains(lower(node.value), keyword)
 }
 
-# Check for cleartext protocol in Sum values (including nested Sums)
-check_sum_protocol(sum, root) {
-    sum.ir_type == "Sum"
-    sum.left.ir_type == "String"
-    check_string_protocol(sum.left)
-} else {
-    sum.ir_type == "Sum"
-    sum.right.ir_type == "String"
-    check_string_protocol(sum.right)
-} else {
-    sum.ir_type == "Sum"
-    sum.left.ir_type == "Sum"
-    check_sum_protocol(sum.left, root)
-} else {
-    sum.ir_type == "Sum"
-    sum.right.ir_type == "Sum"
-    check_sum_protocol(sum.right, root)
-}
-
-# Check for cleartext scheme in Sum values (including nested Sums)
-check_sum_scheme(sum, root) {
-    sum.ir_type == "Sum"
-    sum.left.ir_type == "String"
-    check_string_scheme(sum.left)
-} else {
-    sum.ir_type == "Sum"
-    sum.right.ir_type == "String"
-    check_string_scheme(sum.right)
-} else {
-    sum.ir_type == "Sum"
-    sum.left.ir_type == "Sum"
-    check_sum_scheme(sum.left, root)
-} else {
-    sum.ir_type == "Sum"
-    sum.right.ir_type == "Sum"
-    check_sum_scheme(sum.right, root)
-}
-
-# Check for disabled encryption in Attribute values
-check_attr_encryption(attr, root) {
-    attr.ir_type == "Attribute"
-    encryption_keywords[attr.name]
-    attr.value.ir_type == "String"
-    encryption_risk_values[attr.value.value]
-}
-
-# Check for disabled encryption in Variable values
-check_var_encryption(var, root) {
-    var.ir_type == "Variable"
-    encryption_keywords[var.name]
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    variables := glitch_lib.all_variables(parent)
+    var := variables[_]
     var.value.ir_type == "String"
-    encryption_risk_values[var.value.value]
-}
-
-# Check for insecure port in Attribute values
-check_attr_port(attr, root) {
-    attr.ir_type == "Attribute"
-    port_keywords[attr.name]
-    attr.value.ir_type == "Integer"
-    insecure_ports[attr.value.value]
-}
-
-# Check for insecure port in Variable values
-check_var_port(var, root) {
-    var.ir_type == "Variable"
-    port_keywords[var.name]
-    var.value.ir_type == "Integer"
-    insecure_ports[var.value.value]
-}
-
-# Rule for cleartext protocol detection in Attributes
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-    attrs := glitch_lib.all_attributes(node)
-    attr := attrs[_]
-    protocol_keywords[attr.name]
-    check_string_protocol(attr.value)
+    has_insecure_protocol(var.value)
+    
     result := {
         "type": "sec_https",
-        "element": attr,
+        "element": var,
         "path": parent.path,
-        "description": "Cleartext Transmission Protocol - Usage of unencrypted protocols (HTTP, FTP, Telnet, etc.) in communication channels. (CWE-319)"
+        "description": "Variable contains insecure protocol URL. (CWE-319)"
     }
 }
 
-# Rule for cleartext protocol detection in Attributes with Sum
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-    attrs := glitch_lib.all_attributes(node)
-    attr := attrs[_]
-    protocol_keywords[attr.name]
-    check_sum_protocol(attr.value, parent)
-    result := {
-        "type": "sec_https",
-        "element": attr,
-        "path": parent.path,
-        "description": "Cleartext Transmission Protocol - Usage of unencrypted protocols (HTTP, FTP, Telnet, etc.) in communication channels. (CWE-319)"
-    }
-}
-
-# Rule for cleartext protocol detection in Variables
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     variables := glitch_lib.all_variables(parent)
     var := variables[_]
-    protocol_keywords[var.name]
-    check_string_protocol(var.value)
+    var.value.ir_type == "Sum"
+    has_insecure_protocol(var.value)
+    
     result := {
         "type": "sec_https",
         "element": var,
         "path": parent.path,
-        "description": "Cleartext Transmission Protocol - Usage of unencrypted protocols (HTTP, FTP, Telnet, etc.) in communication channels. (CWE-319)"
+        "description": "Variable contains insecure protocol in concatenation. (CWE-319)"
     }
 }
 
-# Rule for cleartext protocol detection in Variables with Sum
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     variables := glitch_lib.all_variables(parent)
     var := variables[_]
-    protocol_keywords[var.name]
-    check_sum_protocol(var.value, parent)
+    has_insecure_keyword(var.value)
+    
     result := {
         "type": "sec_https",
         "element": var,
         "path": parent.path,
-        "description": "Cleartext Transmission Protocol - Usage of unencrypted protocols (HTTP, FTP, Telnet, etc.) in communication channels. (CWE-319)"
+        "description": "Variable contains insecure keyword. (CWE-319)"
     }
 }
 
-# Rule for cleartext endpoint URI detection in Attributes
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attributes := glitch_lib.all_attributes(parent)
+    attr := attributes[_]
+    attr.value.ir_type == "String"
+    has_insecure_protocol(attr.value)
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Attribute contains insecure protocol URL. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attributes := glitch_lib.all_attributes(parent)
+    attr := attributes[_]
+    attr.value.ir_type == "Sum"
+    has_insecure_protocol(attr.value)
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Attribute contains insecure protocol in concatenation. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attributes := glitch_lib.all_attributes(parent)
+    attr := attributes[_]
+    has_insecure_keyword(attr.value)
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Attribute contains insecure keyword. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attributes := glitch_lib.all_attributes(parent)
+    attr := attributes[_]
+    lower(attr.name) == encryption_flags[_]
+    attr.value.ir_type == "Boolean"
+    attr.value.value == false
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Encryption explicitly disabled. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attributes := glitch_lib.all_attributes(parent)
+    attr := attributes[_]
+    lower(attr.name) == encryption_flags[_]
+    attr.value.ir_type == "String"
+    attr.value.value == "false"
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Encryption flag set to 'false'. (CWE-319)"
+    }
+}
+
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
+    node.type == "file_line"
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
-    endpoint_keywords[attr.name]
-    check_string_scheme(attr.value)
+    attr.name == "line"
+    has_insecure_protocol(attr.value)
+    
     result := {
         "type": "sec_https",
         "element": attr,
         "path": parent.path,
-        "description": "Cleartext Endpoint URI - Usage of cleartext protocols (http://, ftp://, telnet://) in endpoint URIs. (CWE-319)"
+        "description": "File line contains insecure protocol URL. (CWE-319)"
     }
 }
 
-# Rule for cleartext endpoint URI detection in Attributes with Sum
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
+    node.type == "uri"
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
-    endpoint_keywords[attr.name]
-    check_sum_scheme(attr.value, parent)
+    attr.name == "url"
+    has_insecure_protocol(attr.value)
+    
     result := {
         "type": "sec_https",
         "element": attr,
         "path": parent.path,
-        "description": "Cleartext Endpoint URI - Usage of cleartext protocols (http://, ftp://, telnet://) in endpoint URIs. (CWE-319)"
+        "description": "URI task uses insecure protocol. (CWE-319)"
     }
 }
 
-# Rule for cleartext endpoint URI detection in Variables
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    variables := glitch_lib.all_variables(parent)
-    var := variables[_]
-    endpoint_keywords[var.name]
-    check_string_scheme(var.value)
-    result := {
-        "type": "sec_https",
-        "element": var,
-        "path": parent.path,
-        "description": "Cleartext Endpoint URI - Usage of cleartext protocols (http://, ftp://, telnet://) in endpoint URIs. (CWE-319)"
-    }
-}
-
-# Rule for cleartext endpoint URI detection in Variables with Sum
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    variables := glitch_lib.all_variables(parent)
-    var := variables[_]
-    endpoint_keywords[var.name]
-    check_sum_scheme(var.value, parent)
-    result := {
-        "type": "sec_https",
-        "element": var,
-        "path": parent.path,
-        "description": "Cleartext Endpoint URI - Usage of cleartext protocols (http://, ftp://, telnet://) in endpoint URIs. (CWE-319)"
-    }
-}
-
-# Rule for disabled encryption detection in Attributes
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
+    node.type == "azurerm_storage_account"
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
-    check_attr_encryption(attr, parent)
+    attr.name == "enable_https_traffic_only"
+    attr.value.ir_type == "Boolean"
+    attr.value.value == false
+    
     result := {
         "type": "sec_https",
         "element": attr,
         "path": parent.path,
-        "description": "Disabled Encryption Flag - SSL/TLS or encryption flags are explicitly disabled (false, disabled, off). (CWE-319)"
+        "description": "Storage account configured without HTTPS-only traffic. (CWE-319)"
     }
 }
 
-# Rule for disabled encryption detection in Variables
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    variables := glitch_lib.all_variables(parent)
-    var := variables[_]
-    check_var_encryption(var, parent)
-    result := {
-        "type": "sec_https",
-        "element": var,
-        "path": parent.path,
-        "description": "Disabled Encryption Flag - SSL/TLS or encryption flags are explicitly disabled (false, disabled, off). (CWE-319)"
-    }
-}
-
-# Rule for insecure port detection in Attributes
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
+    node.type == "aws_db_instance"
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
-    check_attr_port(attr, parent)
+    attr.name == "ssl_mode"
+    attr.value.ir_type == "String"
+    attr.value.value == "disabled"
+    
     result := {
         "type": "sec_https",
         "element": attr,
         "path": parent.path,
-        "description": "Insecure Port Configuration - Usage of insecure ports (80, 21, 23, 389) for data transmission without encryption. (CWE-319)"
+        "description": "Database instance has SSL/TLS disabled. (CWE-319)"
     }
 }
 
-# Rule for insecure port detection in Variables
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    variables := glitch_lib.all_variables(parent)
-    var := variables[_]
-    check_var_port(var, parent)
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    node.type == "aws_db_instance"
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    attr.name == "ssl_mode"
+    attr.value.ir_type == "String"
+    attr.value.value == "allow_non_ssl"
+    
     result := {
         "type": "sec_https",
-        "element": var,
+        "element": attr,
         "path": parent.path,
-        "description": "Insecure Port Configuration - Usage of insecure ports (80, 21, 23, 389) for data transmission without encryption. (CWE-319)"
+        "description": "Database instance allows non-SSL connections. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    node.type == "aws_lb_listener"
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    attr.name == "protocol"
+    attr.value.ir_type == "String"
+    attr.value.value == "http"
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Load balancer listener using HTTP. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    node.type == "aws_lb_listener"
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    attr.name == "protocol"
+    attr.value.ir_type == "String"
+    attr.value.value == "ftp"
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "Load balancer listener using FTP. (CWE-319)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    node.type == "aws_api_gateway_rest_api"
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    attr.name == "protocol_type"
+    attr.value.ir_type == "String"
+    attr.value.value == "http"
+    
+    result := {
+        "type": "sec_https",
+        "element": attr,
+        "path": parent.path,
+        "description": "API Gateway configured with HTTP instead of HTTPS. (CWE-319)"
     }
 }
