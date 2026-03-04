@@ -18,3 +18,9 @@ The intermediate representation in GLITCH is:
 {% endfor %}
 
 The code you generate must be capable of capturing this smell in all of these scenarios and many others of the same type, so do not hardcode to this and try to generalize for several IaC technologies such as Ansible, Chef and Puppet.
+
+Things to pay attention:
+- Avoid referencing data.security module with sets that are not confirmed to exist.
+- Avoid generating too large rego scripts to avoid syntatic and semantic errors.
+- Avoid referencing names and objects specific to certain providers such as AWS and Azure for the representation, since the IR is independent of such.
+- In the Glitch IR, complex Values may also contain other complex Values, such as Hash within Hash and Hash within Array, besides containing primitive Values like String and Integer.
