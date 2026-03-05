@@ -48,12 +48,12 @@ def _verify_examples(
     example: Dict[str, Any],
     type_name: str,
     csv_path: Path,
-) -> Tuple[str, str, List[int]] | None:
+) -> Tuple[str, str, List[int], List[int]] | None:
     """
     Verify a single example.
     
     Returns:
-        Tuple of (ir_file, iac_language, missing_lines) if validation fails, None if passes
+        Tuple of (ir_file, iac_language, missing_lines, false_positives) if validation fails, None if passes
     """
     file_name = example.get("file")
     if not file_name:
@@ -118,17 +118,23 @@ def _verify_examples(
         csv_path.unlink()
 
     detected_set = set(detected_lines)
+    expected_set = set(expected_lines)
     missing = [line for line in expected_lines if line not in detected_set]
-    if missing:
-        print(f"    ❌ Missing detections on lines: {missing}")
+    false_positives = [line for line in detected_lines if line not in expected_set]
+    
+    if missing or false_positives:
         ir = extract_ir(str(script_path), unit_type)
-        return (ir, file_type.value, missing)
+        if missing:
+            print(f"    ❌ Missing detections on lines: {missing}")
+        if false_positives:
+            print(f"    ❌ False positives on lines: {false_positives}")
+        return (ir, file_type.value, missing, false_positives)
 
     print(f"    ✅ All expected lines detected")
     return None
 
 
-def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tuple[str, str, List[int]]]:
+def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tuple[str, str, List[int], List[int]]]:
     """
     Load the JSON examples manifest for a CWE folder and verify all examples.
     
@@ -157,7 +163,7 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tupl
 
     runner = CliRunner()
     csv_path = Path.cwd() / "glitch_lint.csv"
-    failures: List[Tuple[str, str, List[int]]] = []
+    failures: List[Tuple[str, str, List[int], List[int]]] = []
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")

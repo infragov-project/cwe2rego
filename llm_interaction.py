@@ -201,6 +201,7 @@ if __name__ == "__main__":
                 {
                     "iac_language": f[1],
                     "missing_lines": f[2],
+                    "false_positives": f[3],
                     "ir_file": f[0]
                 }
                 for f in failures
