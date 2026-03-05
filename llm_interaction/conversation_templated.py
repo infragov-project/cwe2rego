@@ -12,6 +12,7 @@ from .prompt_loader import get_prompt_loader
 T = TypeVar('T')
 
 model_instance: OpenRouterModel = None
+examples_model_instance: OpenRouterModel = None
 model_settings: OpenRouterModelSettings = None
 
 def initialize_model(api_key: str, model: str):
@@ -21,6 +22,12 @@ def initialize_model(api_key: str, model: str):
     )
     global model_instance
     model_instance = OpenRouterModel(model, provider=provider)
+
+def initialize_examples_model(api_key: str, model: str):
+    """Initialize the model used for generating semantic-check examples."""
+    provider = OpenRouterProvider(api_key=api_key)
+    global examples_model_instance
+    examples_model_instance = OpenRouterModel(model, provider=provider)
 
 def initialize_model_settings():
     """Initialize model settings."""
