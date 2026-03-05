@@ -4,8 +4,12 @@ Interact with LLM via Pydantic framework (main file).
 import re
 import logging
 from pathlib import Path
-from llm_interaction.conversation_templated import ask_model_prompt
-from llm_interaction.conversation_templated import initialize_model, initialize_model_settings
+from llm_interaction.conversation_templated import (
+    ask_model_prompt,
+    initialize_model,
+    initialize_examples_model,
+    initialize_model_settings,
+)
 from dotenv import load_dotenv
 import os
 from argparse import ArgumentParser
@@ -92,18 +96,22 @@ if __name__ == "__main__":
     parser.add_argument("--cwe", help="Choose CWE to use")
     parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=True)
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
+    parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
+    parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
     args = parser.parse_args()
-    
+
     load_dotenv()
 
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
     if not OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY environment variable not set")
-    
+
     initialize_model_settings()
     if not args.model:
         raise ValueError("Model argument is required")
     initialize_model(OPENROUTER_API_KEY, args.model)
+    if getattr(args, "use_llm_examples", False):
+        initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
 
     base_dir = Path(__file__).parent
     
@@ -147,7 +155,7 @@ if __name__ == "__main__":
             chat_history=conversation_history
         )
 
-    model_name = args.model.split("/")[-1]
+    model_name = args.model.split("/")[-1].replace(":", "_")
     
     MAX_VALIDATION_ATTEMPTS = 20
     i = 1    
@@ -168,7 +176,10 @@ if __name__ == "__main__":
         with open(output_path, "w") as f:
             f.write(rego_rule)
         
-        error = opa_check(str(base_dir / "prompt_data/rego_library/glitch_lib.rego"), str(output_path))
+        error = opa_check(
+            str((base_dir / "prompt_data/rego_library/glitch_lib.rego").resolve()),
+            str(output_path.resolve()),
+        )
         
         if error is not None:
             # If at max attempts, don't regenerate - just exit
@@ -190,7 +201,16 @@ if __name__ == "__main__":
                 )
             continue
         
-        failures = semantic_check(rego_rule, args.type_name, str(args.cwe))
+        failures = semantic_check(
+            rego_rule,
+            args.type_name,
+            str(args.cwe),
+            use_llm_examples=getattr(args, "use_llm_examples", False),
+            cwe_text=cwe_text if getattr(args, "use_llm_examples", False) else None,
+            api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
+            examples_model=getattr(args, "examples_model", None),
+            model_directory=model_directory if getattr(args, "use_llm_examples", False) else None,
+        )
         
         if failures:
             # If at max attempts, don't regenerate - just exit

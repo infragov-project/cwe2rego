@@ -1,7 +1,7 @@
 import csv
 import json
 import sys
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Optional
 from enum import Enum
 from pathlib import Path
 from click.testing import CliRunner
@@ -95,8 +95,14 @@ def _verify_examples(
             str(csv_path),
         ],
     )
-    if result.exception:
-        raise result.exception
+    if result.stderr:
+        print(result.stderr, end="", flush=True)
+    if result.exception or result.exit_code != 0:
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+        if result.exception:
+            raise result.exception
+        raise RuntimeError(f"glitch lint exited with code {result.exit_code}")
 
     if not csv_path.exists():
         raise FileNotFoundError(f"GLITCH did not produce CSV: {csv_path}")
@@ -134,17 +140,32 @@ def _verify_examples(
     return None
 
 
-def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tuple[str, str, List[int], List[int]]]:
+def semantic_check(
+    rego_rule: str,
+    type_name: str,
+    cwe_number: str,
+    use_llm_examples: bool = False,
+    cwe_text: Optional[str] = None,
+    api_key: Optional[str] = None,
+    examples_model: Optional[str] = None,
+    model_directory: Optional[Path] = None,
+) -> List[Tuple[str, str, List[int], List[int]]]:
     """
     Load the JSON examples manifest for a CWE folder and verify all examples.
-    
+    If use_llm_examples is True, generate examples via LLM and save under model_directory/generated_examples/CWE-<cwe_number>/.
+
     Args:
         rego_rule: The generated Rego rule content
         type_name: The smell code name (e.g., 'sec_hardcoded_secret')
         cwe_number: CWE number (e.g., "1327")
-        
+        use_llm_examples: If True, generate examples via LLM instead of loading from manifest
+        cwe_text: CWE description/summary (required when use_llm_examples is True)
+        api_key: API key for the LLM (required when use_llm_examples and examples_model are set)
+        examples_model: Model to use for generating examples (default: same as main)
+        model_directory: Directory for this run (required when use_llm_examples); examples go under <dir>/generated_examples/CWE-<cwe_number>/
+
     Returns:
-        List of tuples (ir_file, iac_language, missing_lines) for failed files.
+        List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
         Empty list if all files pass.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
@@ -157,11 +178,34 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tupl
         f.write(rego_rule)
     print(f"  Wrote rule to {rule_path}")
 
-    folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
-    examples = _load_examples(folder, cwe_number)
-    print(f"  Loaded {len(examples)} example(s) from {folder}")
+    if use_llm_examples:
+        if not cwe_text:
+            raise ValueError("cwe_text required when use_llm_examples is True")
+        if not model_directory:
+            raise ValueError("model_directory required when use_llm_examples is True")
+        from llm_interaction.example_generation import get_llm_examples
+        examples = get_llm_examples(
+            cwe_text=cwe_text,
+            type_name=type_name,
+            cwe_number=cwe_number,
+            model_override=examples_model,
+            api_key=api_key,
+        )
+        folder = Path(model_directory) / "generated_examples" / f"CWE-{cwe_number}"
+        folder.mkdir(parents=True, exist_ok=True)
+        for ex in examples:
+            path = folder / ex["file"]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(ex.get("content", ""), encoding="utf-8")
+        manifest = [{"file": ex["file"], "lines": ex["lines"]} for ex in examples]
+        (folder / f"cwe-{cwe_number}.json").write_text(json.dumps({"examples": manifest}, indent=2), encoding="utf-8")
+        print(f"  Generated {len(examples)} example(s) via LLM, saved to {folder}")
+    else:
+        folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
+        examples = _load_examples(folder, cwe_number)
+        print(f"  Loaded {len(examples)} example(s) from {folder}")
 
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / "glitch_lint.csv"
     failures: List[Tuple[str, str, List[int], List[int]]] = []
 
@@ -170,7 +214,6 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tupl
         failure = _verify_examples(runner, folder, example, type_name, csv_path)
         if failure is not None:
             failures.append(failure)
-            # Stop early if we have 3 failures
             if len(failures) >= 3:
                 print(f"  Reached maximum of 3 failures, stopping verification")
                 break
@@ -178,7 +221,6 @@ def semantic_check(rego_rule: str, type_name: str, cwe_number: str) -> List[Tupl
     if failures:
         print(f"Semantic check failed ❌ ({len(failures)} file(s) failed)")
         return failures
-    
     print(f"Semantic check passed ✅")
     return []
 
