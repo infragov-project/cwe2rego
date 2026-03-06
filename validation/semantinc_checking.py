@@ -42,6 +42,22 @@ def _load_examples(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
     raise ValueError("Unsupported manifest format; expected list or dict with 'examples'")
 
 
+def _write_generated_examples(folder: Path, cwe_number: str, examples: List[Dict[str, Any]]) -> None:
+    folder.mkdir(parents=True, exist_ok=True)
+    manifest: List[Dict[str, Any]] = []
+
+    for ex in examples:
+        path = folder / ex["file"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(ex.get("content", ""), encoding="utf-8")
+
+        manifest_entry: Dict[str, Any] = {"file": ex["file"], "lines": ex["lines"]}
+        manifest.append(manifest_entry)
+
+    manifest_path = folder / f"cwe-{cwe_number}.json"
+    manifest_path.write_text(json.dumps({"examples": manifest}, indent=2), encoding="utf-8")
+
+
 def _verify_examples(
     runner: CliRunner,
     folder: Path,
@@ -140,8 +156,7 @@ def _verify_examples(
     return None
 
 
-def semantic_check(
-    rego_rule: str,
+def prepare_semantic_examples(
     type_name: str,
     cwe_number: str,
     use_llm_examples: bool = False,
@@ -150,43 +165,14 @@ def semantic_check(
     examples_model: Optional[str] = None,
     model_directory: Optional[Path] = None,
     generated_examples_dir: Optional[Path] = None,
-) -> List[Tuple[str, str, List[int], List[int]]]:
-    """
-    Load the JSON examples manifest for a CWE folder and verify all examples.
-    If use_llm_examples is True, generate examples via LLM and save under
-    generated_examples_dir. For backward compatibility, model_directory can be
-    provided instead and examples will be written under
-    model_directory/generated_examples/CWE-<cwe_number>/.
-
-    Args:
-        rego_rule: The generated Rego rule content
-        type_name: The smell code name (e.g., 'sec_hardcoded_secret')
-        cwe_number: CWE number (e.g., "1327")
-        use_llm_examples: If True, generate examples via LLM instead of loading from manifest
-        cwe_text: CWE description/summary (required when use_llm_examples is True)
-        api_key: API key for the LLM (required when use_llm_examples and examples_model are set)
-        examples_model: Model to use for generating examples (default: same as main)
-        model_directory: Optional fallback directory for generated examples
-        generated_examples_dir: Explicit directory for generated examples
-
-    Returns:
-        List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
-        Empty list if all files pass.
-    """
-    print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
-    
-    # Write rule to GLITCH security directory using type_name
-    glitch_dir = Path(__file__).parent / "GLITCH"
-    rule_path = glitch_dir / "glitch" / "rego" / "queries" / "security" / f"{type_name}.rego"
-    rule_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(rule_path, "w") as f:
-        f.write(rego_rule)
-    print(f"  Wrote rule to {rule_path}")
-
+) -> Tuple[Path, List[Dict[str, Any]]]:
+    """Prepare semantic-check examples once and return the folder and manifest entries."""
     if use_llm_examples:
         if not cwe_text:
             raise ValueError("cwe_text required when use_llm_examples is True")
+
         from llm_interaction.example_generation import get_llm_examples
+
         examples = get_llm_examples(
             cwe_text=cwe_text,
             type_name=type_name,
@@ -202,18 +188,51 @@ def semantic_check(
             raise ValueError(
                 "generated_examples_dir or model_directory required when use_llm_examples is True"
             )
-        folder.mkdir(parents=True, exist_ok=True)
-        for ex in examples:
-            path = folder / ex["file"]
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(ex.get("content", ""), encoding="utf-8")
-        manifest = [{"file": ex["file"], "lines": ex["lines"]} for ex in examples]
-        (folder / f"cwe-{cwe_number}.json").write_text(json.dumps({"examples": manifest}, indent=2), encoding="utf-8")
+
+        _write_generated_examples(folder, cwe_number, examples)
         print(f"  Generated {len(examples)} example(s) via LLM, saved to {folder}")
-    else:
-        folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
-        examples = _load_examples(folder, cwe_number)
-        print(f"  Loaded {len(examples)} example(s) from {folder}")
+        return folder, examples
+
+    folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
+    examples = _load_examples(folder, cwe_number)
+    print(f"  Loaded {len(examples)} example(s) from {folder}")
+    return folder, examples
+
+
+def semantic_check(
+    rego_rule: str,
+    type_name: str,
+    cwe_number: str,
+    examples_folder: Path,
+    examples: List[Dict[str, Any]],
+) -> List[Tuple[str, str, List[int], List[int]]]:
+    """
+    Verify all examples for a CWE using a preloaded examples manifest.
+
+    Args:
+        rego_rule: The generated Rego rule content
+        type_name: The smell code name (e.g., 'sec_hardcoded_secret')
+        cwe_number: CWE number (e.g., "1327")
+        examples_folder: Root folder where referenced example files live
+        examples: Preloaded example manifest entries
+
+    Returns:
+        List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
+        Empty list if all files pass.
+    """
+    print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
+    
+    # Write rule to GLITCH security directory using type_name
+    glitch_dir = Path(__file__).parent / "GLITCH"
+    rule_path = glitch_dir / "glitch" / "rego" / "queries" / "security" / f"{type_name}.rego"
+    rule_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(rule_path, "w") as f:
+        f.write(rego_rule)
+    print(f"  Wrote rule to {rule_path}")
+
+    folder = Path(examples_folder)
+    if not examples:
+        raise ValueError("No semantic examples provided")
 
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / "glitch_lint.csv"

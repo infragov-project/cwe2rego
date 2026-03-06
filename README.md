@@ -33,9 +33,11 @@ Example:
 python llm_interaction.py xiaomi/mimo-v2-flash --cwe 250 --type-name sec_def_admin --experiment-name false_positives --use-llm-examples
 ```
 
-This writes outputs grouped under `generated_rego/<experiment_name>/<model_name>/`.
-The Rego filename is `cwe_<cwe>.rego` and logs are written under `generated_rego/<experiment_name>/<model_name>/logs/`.
+This writes outputs grouped under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/`.
+Each `run_id` is sequential (`run_001`, `run_002`, ...).
+For each CWE, the system reuses the first previous run where that CWE is missing.
+A new run is created only after that CWE already exists in all previous runs.
 
-Outputs are grouped first by experiment and then by model, under `generated_rego/<experiment_name>/<model_name>/`.
+The Rego filename is `cwe_<cwe>.rego` and logs are written under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/logs/`.
 
-When `--use-llm-examples` is enabled, generated examples are saved under `generated_rego/<experiment_name>/<model_name>/generated_examples/CWE-<cwe>/`.
+When `--use-llm-examples` is enabled, generated examples are saved under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/generated_examples/CWE-<cwe>/`.

@@ -8,6 +8,7 @@ from typing import Any
 
 _INVALID_TOKEN_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _DUPLICATE_SEPARATORS = re.compile(r"[_-]{2,}")
+_RUN_DIRECTORY_PATTERN = re.compile(r"^run_(\d+)$")
 
 
 def _normalize_file_token(value: str) -> str:
@@ -42,6 +43,48 @@ def model_to_directory_name(model: str) -> str:
     return sanitize_file_token(model_tail, fallback="model")
 
 
+def _extract_run_index(directory_name: str) -> int | None:
+    match = _RUN_DIRECTORY_PATTERN.fullmatch(directory_name)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def _list_run_indices(runs_directory: Path) -> list[int]:
+    if not runs_directory.exists():
+        return []
+
+    indices: list[int] = []
+    for entry in runs_directory.iterdir():
+        if not entry.is_dir():
+            continue
+        run_index = _extract_run_index(entry.name)
+        if run_index is None:
+            continue
+        indices.append(run_index)
+    return sorted(indices)
+
+
+def _run_contains_cwe(run_directory: Path, cwe: str) -> bool:
+    # Rego output is the source of truth for whether this run already contains a CWE.
+    rego_file = run_directory / f"cwe_{cwe}.rego"
+    return rego_file.exists()
+
+
+def build_run_id(runs_directory: Path, cwe: str) -> str:
+    """Pick the first prior run missing this CWE, else allocate the next run."""
+    run_indices = _list_run_indices(runs_directory)
+    if not run_indices:
+        return "run_001"
+
+    for run_index in run_indices:
+        run_directory = runs_directory / f"run_{run_index:03d}"
+        if not _run_contains_cwe(run_directory, cwe):
+            return f"run_{run_index:03d}"
+
+    return f"run_{run_indices[-1] + 1:03d}"
+
+
 def build_run_paths(
     base_dir: Path,
     model: str,
@@ -54,17 +97,22 @@ def build_run_paths(
     """
     model_name = model_to_directory_name(model)
     experiment_token = sanitize_file_token(experiment_name, fallback="")
-    run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     model_directory = base_dir / "generated_rego" / experiment_token / model_name
-    output_path = model_directory / f"cwe_{cwe}.rego"
-    log_path = model_directory / "logs" / f"cwe_{cwe}__model_{model_name}__{run_timestamp}.json"
-    generated_examples_dir = model_directory / "generated_examples" / f"CWE-{cwe}"
+    runs_directory = model_directory / "runs"
+    run_id = build_run_id(runs_directory, cwe)
+    run_directory = runs_directory / run_id
+
+    output_path = run_directory / f"cwe_{cwe}.rego"
+    log_path = run_directory / "logs" / f"cwe_{cwe}__model_{model_name}__{run_id}.json"
+    generated_examples_dir = run_directory / "generated_examples" / f"CWE-{cwe}"
 
     return {
         "model_name": model_name,
         "experiment_name": experiment_token,
+        "run_id": run_id,
         "model_directory": model_directory,
+        "run_directory": run_directory,
         "output_path": output_path,
         "log_path": log_path,
         "generated_examples_dir": generated_examples_dir,
@@ -73,6 +121,8 @@ def build_run_paths(
 
 def create_generation_log(
     *,
+    run_id: str,
+    run_directory: Path,
     cwe: str,
     type_name: str,
     model_used: str,
@@ -86,7 +136,9 @@ def create_generation_log(
 ) -> dict[str, Any]:
     """Create the initial generation log payload."""
     return {
+        "run_id": run_id,
         "run_started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "run_directory": str(run_directory.resolve()),
         "experiment_name": experiment_name,
         "cwe": cwe,
         "type_name": type_name,

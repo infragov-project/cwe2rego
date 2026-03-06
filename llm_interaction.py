@@ -22,7 +22,7 @@ from llm_interaction.generation_logging import (
 from dotenv import load_dotenv
 import os
 from argparse import ArgumentParser
-from validation.semantinc_checking import semantic_check
+from validation.semantinc_checking import prepare_semantic_examples, semantic_check
 from validation.syntax_checking import opa_check
 from rag.rag import build_rag_index, retrieve_from_index, format_chunks
 
@@ -176,14 +176,18 @@ if __name__ == "__main__":
         experiment_name=args.experiment_name,
     )
     model_directory = run_paths["model_directory"]
-    model_directory.mkdir(parents=True, exist_ok=True)
+    run_directory = run_paths["run_directory"]
+    run_directory.mkdir(parents=True, exist_ok=True)
     output_path = run_paths["output_path"]
     log_path = run_paths["log_path"]
     generated_examples_dir = run_paths["generated_examples_dir"]
     experiment_name = run_paths["experiment_name"]
+    run_id = run_paths["run_id"]
     examples_model_used = getattr(args, "examples_model", None) or args.model
 
     generation_log = create_generation_log(
+        run_id=run_id,
+        run_directory=run_directory,
         cwe=str(args.cwe),
         type_name=args.type_name,
         model_used=args.model,
@@ -196,6 +200,20 @@ if __name__ == "__main__":
         experiment_name=experiment_name,
     )
     persist_generation_log(log_path, generation_log)
+
+    examples_folder, semantic_examples = prepare_semantic_examples(
+        type_name=args.type_name,
+        cwe_number=str(args.cwe),
+        use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
+        cwe_text=cwe_text if getattr(args, "use_llm_examples", False) else None,
+        api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
+        examples_model=getattr(args, "examples_model", None),
+        model_directory=model_directory,
+        generated_examples_dir=generated_examples_dir,
+    )
+    if getattr(args, "use_llm_examples", False):
+        generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
+        persist_generation_log(log_path, generation_log)
     
     MAX_VALIDATION_ATTEMPTS = 20
     validation_passed = False
@@ -263,15 +281,9 @@ if __name__ == "__main__":
             rego_rule,
             args.type_name,
             str(args.cwe),
-            use_llm_examples=getattr(args, "use_llm_examples", False),
-            cwe_text=cwe_text if getattr(args, "use_llm_examples", False) else None,
-            api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
-            examples_model=getattr(args, "examples_model", None),
-            generated_examples_dir=generated_examples_dir,
+            examples_folder=examples_folder,
+            examples=semantic_examples,
         )
-
-        if getattr(args, "use_llm_examples", False):
-            generation_log["example_generation"]["files"] = list_generated_example_files(generated_examples_dir)
         
         if failures:
             iteration_log["errors"] = serialize_semantic_failures(failures)
