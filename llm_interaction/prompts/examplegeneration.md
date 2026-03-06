@@ -12,4 +12,4 @@ Generate a JSON array of examples. Each example must be a single object with:
 - **content**: string, the full file content of the IaC snippet
 - **lines**: array of integers, the line number(s) in that file where the smell appears
 
-Produce at least 6 examples covering different technologies (Ansible, Chef, Puppet). Output only valid JSON, no markdown or explanation.
+Produce at least 6 examples covering only the different technologies (Ansible, Chef, Puppet). Output only valid JSON, no markdown or explanation.
