@@ -10,6 +10,15 @@ from llm_interaction.conversation_templated import (
     initialize_examples_model,
     initialize_model_settings,
 )
+from llm_interaction.generation_logging import (
+    build_run_paths,
+    create_generation_log,
+    list_generated_example_files,
+    persist_generation_log,
+    serialize_semantic_failures,
+    append_iteration,
+    finalize_generation_log,
+)
 from dotenv import load_dotenv
 import os
 from argparse import ArgumentParser
@@ -98,6 +107,11 @@ if __name__ == "__main__":
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
+    parser.add_argument(
+        "--experiment-name",
+        required=True,
+        help="Required experiment label used in generated file and directory paths (e.g., false_positives)",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -155,23 +169,56 @@ if __name__ == "__main__":
             chat_history=conversation_history
         )
 
-    model_name = args.model.split("/")[-1].replace(":", "_")
+    run_paths = build_run_paths(
+        base_dir=base_dir,
+        model=args.model,
+        cwe=str(args.cwe),
+        experiment_name=args.experiment_name,
+    )
+    model_directory = run_paths["model_directory"]
+    model_directory.mkdir(parents=True, exist_ok=True)
+    output_path = run_paths["output_path"]
+    log_path = run_paths["log_path"]
+    generated_examples_dir = run_paths["generated_examples_dir"]
+    experiment_name = run_paths["experiment_name"]
+    examples_model_used = getattr(args, "examples_model", None) or args.model
+
+    generation_log = create_generation_log(
+        cwe=str(args.cwe),
+        type_name=args.type_name,
+        model_used=args.model,
+        use_rag=bool(args.use_rag),
+        output_rego_path=output_path,
+        cwe_condition=cwe_condition,
+        use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
+        examples_model=examples_model_used,
+        generated_examples_dir=generated_examples_dir,
+        experiment_name=experiment_name,
+    )
+    persist_generation_log(log_path, generation_log)
     
     MAX_VALIDATION_ATTEMPTS = 20
-    i = 1    
-    while i <= MAX_VALIDATION_ATTEMPTS:
-        print(f"--- Validation Attempt {i}/{MAX_VALIDATION_ATTEMPTS} ---")
-        i += 1
+    validation_passed = False
+
+    def append_iteration_and_persist(iteration_payload: dict) -> None:
+        append_iteration(generation_log, iteration_payload, MAX_VALIDATION_ATTEMPTS)
+        persist_generation_log(log_path, generation_log)
+
+    for attempt in range(1, MAX_VALIDATION_ATTEMPTS + 1):
+        print(f"--- Validation Attempt {attempt}/{MAX_VALIDATION_ATTEMPTS} ---")
         
         # Clean markdown code fences from LLM-generated code
         rego_rule = clean_rego_code(rego_rule)
         
         # Replace the type name with the desired one
         rego_rule = replace_type_name(rego_rule, args.type_name)
-        
-        model_directory = base_dir / "generated_rego" / model_name
-        model_directory.mkdir(parents=True, exist_ok=True)
-        output_path = model_directory / f"cwe_{args.cwe}.rego"
+
+        iteration_log = {
+            "attempt": attempt,
+            "rego_code": rego_rule,
+            "errors": [],
+            "status": "in_progress",
+        }
         
         with open(output_path, "w") as f:
             f.write(rego_rule)
@@ -182,9 +229,20 @@ if __name__ == "__main__":
         )
         
         if error is not None:
+            iteration_log["errors"].append(
+                {
+                    "error_type": "syntactic",
+                    "annotation": "OPA syntax/type check failure",
+                    "message": error,
+                }
+            )
+            iteration_log["status"] = "syntactic_error"
+            append_iteration_and_persist(iteration_log)
+
             # If at max attempts, don't regenerate - just exit
-            if i > MAX_VALIDATION_ATTEMPTS:
+            if attempt >= MAX_VALIDATION_ATTEMPTS:
                 break
+
             # Use appropriate syntax error generation based on RAG flag
             if args.use_rag and rego_index is not None:
                 rag_chunks = retrieve_from_index(rego_index, error, top_k=3)
@@ -209,13 +267,21 @@ if __name__ == "__main__":
             cwe_text=cwe_text if getattr(args, "use_llm_examples", False) else None,
             api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
             examples_model=getattr(args, "examples_model", None),
-            model_directory=model_directory if getattr(args, "use_llm_examples", False) else None,
+            generated_examples_dir=generated_examples_dir,
         )
+
+        if getattr(args, "use_llm_examples", False):
+            generation_log["example_generation"]["files"] = list_generated_example_files(generated_examples_dir)
         
         if failures:
+            iteration_log["errors"] = serialize_semantic_failures(failures)
+            iteration_log["status"] = "semantic_error"
+            append_iteration_and_persist(iteration_log)
+
             # If at max attempts, don't regenerate - just exit
-            if i > MAX_VALIDATION_ATTEMPTS:
+            if attempt >= MAX_VALIDATION_ATTEMPTS:
                 break
+
             # Format failures for the prompt
             formatted_failures = [
                 {
@@ -228,11 +294,19 @@ if __name__ == "__main__":
             ]
             rego_rule = get_semantic_error_generation(failures=formatted_failures, chat_history=conversation_history)
             continue
+
+        iteration_log["status"] = "passed"
+        append_iteration_and_persist(iteration_log)
+        validation_passed = True
         
         break
+
+    finalize_generation_log(generation_log, passed=validation_passed, max_attempts=MAX_VALIDATION_ATTEMPTS)
+    persist_generation_log(log_path, generation_log)
+    print(f"Generation log saved to: {log_path}")
     
     # Check if we hit the validation limit
-    if i > MAX_VALIDATION_ATTEMPTS:
+    if not validation_passed:
         print(f"\n⚠️ Reached maximum validation attempts ({MAX_VALIDATION_ATTEMPTS})")
         print(f"Final rule written to: {output_path}")
         print("Validation did not pass - manual review required")

@@ -149,10 +149,14 @@ def semantic_check(
     api_key: Optional[str] = None,
     examples_model: Optional[str] = None,
     model_directory: Optional[Path] = None,
+    generated_examples_dir: Optional[Path] = None,
 ) -> List[Tuple[str, str, List[int], List[int]]]:
     """
     Load the JSON examples manifest for a CWE folder and verify all examples.
-    If use_llm_examples is True, generate examples via LLM and save under model_directory/generated_examples/CWE-<cwe_number>/.
+    If use_llm_examples is True, generate examples via LLM and save under
+    generated_examples_dir. For backward compatibility, model_directory can be
+    provided instead and examples will be written under
+    model_directory/generated_examples/CWE-<cwe_number>/.
 
     Args:
         rego_rule: The generated Rego rule content
@@ -162,7 +166,8 @@ def semantic_check(
         cwe_text: CWE description/summary (required when use_llm_examples is True)
         api_key: API key for the LLM (required when use_llm_examples and examples_model are set)
         examples_model: Model to use for generating examples (default: same as main)
-        model_directory: Directory for this run (required when use_llm_examples); examples go under <dir>/generated_examples/CWE-<cwe_number>/
+        model_directory: Optional fallback directory for generated examples
+        generated_examples_dir: Explicit directory for generated examples
 
     Returns:
         List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
@@ -181,8 +186,6 @@ def semantic_check(
     if use_llm_examples:
         if not cwe_text:
             raise ValueError("cwe_text required when use_llm_examples is True")
-        if not model_directory:
-            raise ValueError("model_directory required when use_llm_examples is True")
         from llm_interaction.example_generation import get_llm_examples
         examples = get_llm_examples(
             cwe_text=cwe_text,
@@ -191,7 +194,14 @@ def semantic_check(
             model_override=examples_model,
             api_key=api_key,
         )
-        folder = Path(model_directory) / "generated_examples" / f"CWE-{cwe_number}"
+        if generated_examples_dir is not None:
+            folder = Path(generated_examples_dir)
+        elif model_directory is not None:
+            folder = Path(model_directory) / "generated_examples" / f"CWE-{cwe_number}"
+        else:
+            raise ValueError(
+                "generated_examples_dir or model_directory required when use_llm_examples is True"
+            )
         folder.mkdir(parents=True, exist_ok=True)
         for ex in examples:
             path = folder / ex["file"]
