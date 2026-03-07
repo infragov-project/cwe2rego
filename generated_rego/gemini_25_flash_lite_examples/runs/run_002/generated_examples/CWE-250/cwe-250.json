@@ -1,0 +1,42 @@
+{
+  "examples": [
+    {
+      "file": "config_file_cleanup.yml",
+      "lines": [
+        23
+      ]
+    },
+    {
+      "file": "app_data_setup.yml",
+      "lines": [
+        25
+      ]
+    },
+    {
+      "file": "recipes/default.rb",
+      "lines": [
+        16
+      ]
+    },
+    {
+      "file": "recipes/user_script_runner.rb",
+      "lines": [
+        22
+      ]
+    },
+    {
+      "file": "manifests/myapp.pp",
+      "lines": [
+        23,
+        24
+      ]
+    },
+    {
+      "file": "manifests/secrets_reader.pp",
+      "lines": [
+        31,
+        32
+      ]
+    }
+  ]
+}

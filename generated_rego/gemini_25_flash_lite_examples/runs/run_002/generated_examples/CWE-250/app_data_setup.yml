@@ -1,0 +1,32 @@
+---
+- name: Setup application data directory
+  hosts: app_servers
+  become: yes
+
+  vars:
+    app_user: app_service_user
+    app_data_dir: "/opt/my_app_data"
+
+  tasks:
+    - name: Ensure app user exists
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        shell: "/bin/bash"
+        state: present
+        create_home: yes
+
+    - name: Ensure application data directory is owned by app user
+      ansible.builtin.file:
+        path: "{{ app_data_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Create a dummy data file using elevated privileges (unnecessary)
+      ansible.builtin.copy:
+        content: "Initial data"
+        dest: "{{ app_data_dir }}/initial.data"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      become: yes # CWE-250: This task does not require root privileges if the directory is already owned and writable by app_user.

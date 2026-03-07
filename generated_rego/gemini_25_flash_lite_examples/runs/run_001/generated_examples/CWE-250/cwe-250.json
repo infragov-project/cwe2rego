@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "ansible/myapp_service_root.yml",
+      "lines": [
+        18,
+        19
+      ]
+    },
+    {
+      "file": "ansible/unnecessary_become.yml",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "chef/myapp_service_root.rb",
+      "lines": [
+        12,
+        13
+      ]
+    },
+    {
+      "file": "chef/ruby_block_privileged.rb",
+      "lines": [
+        15
+      ]
+    },
+    {
+      "file": "puppet/myapp_service_root.pp",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "file": "puppet/exec_unnecessary_root.pp",
+      "lines": [
+        7
+      ]
+    }
+  ]
+}

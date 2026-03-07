@@ -1,0 +1,10 @@
+---
+- name: Demonstrate unnecessary privilege escalation for a simple command
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Execute a simple echo command with unnecessary root privileges
+      ansible.builtin.command:
+        cmd: "echo 'This is a test message.'"
+      become: yes # <-- CWE-250: 'become: yes' is not required for 'echo'.

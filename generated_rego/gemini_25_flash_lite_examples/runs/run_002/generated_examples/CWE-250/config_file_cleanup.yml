@@ -1,0 +1,41 @@
+---
+- name: Setup log rotation for my_service
+  hosts: servers
+  become: yes
+  vars:
+    app_user: my_app_user
+    app_log_dir: "/var/log/my_service"
+
+  tasks:
+    - name: Ensure app log directory exists and is owned by app user
+      ansible.builtin.file:
+        path: "{{ app_log_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Create log cleanup script
+      ansible.builtin.copy:
+        dest: "/usr/local/bin/cleanup_my_service_logs.sh"
+        content: |
+          #!/bin/bash
+          LOG_DIR="{{ app_log_dir }}"
+          if [ -d "$LOG_DIR" ]; then
+            find "$LOG_DIR" -type f -mtime +7 -delete
+            echo "Logs cleaned"
+          else
+            echo "Log directory $LOG_DIR not found."
+          fi
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Schedule log cleanup job to run as root (unnecessary privilege)
+      ansible.builtin.cron:
+        name: "Cleanup my_service logs"
+        minute: "0"
+        hour: "2"
+        job: "/usr/local/bin/cleanup_my_service_logs.sh"
+        user: root # CWE-250: This job does not need root privileges as it operates on user-owned files.
+        state: present

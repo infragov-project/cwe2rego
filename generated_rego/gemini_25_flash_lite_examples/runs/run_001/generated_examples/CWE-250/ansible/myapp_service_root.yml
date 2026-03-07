@@ -1,0 +1,41 @@
+---
+- name: Deploy application with an insecure service definition
+  hosts: appservers
+  gather_facts: no
+
+  tasks:
+    - name: Create systemd service unit file for my_app running as root (CWE-250)
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/myapp.service
+        content: |
+          [Unit]
+          Description=My Debug Application
+          # This application does not need root privileges after startup.
+
+          [Service]
+          # Execute the application script
+          ExecStart=/usr/local/bin/my_app.sh
+          User=root # <-- CWE-250: Running as root unnecessarily.
+          Group=root # <-- CWE-250: Running as root unnecessarily.
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+        owner: root
+        group: root
+        mode: '0644'
+      become: yes
+      notify: Reload systemd
+
+    - name: Ensure my_app service is started and enabled
+      ansible.builtin.service:
+        name: myapp
+        state: started
+        enabled: yes
+      become: yes
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+      become: yes
