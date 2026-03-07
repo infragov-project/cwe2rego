@@ -1,0 +1,31 @@
+---
+- name: Configure Apache with weak TLS
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Apache
+      ansible.builtin.package:
+        name: httpd
+        state: present
+
+    - name: Configure weak SSL protocols and ciphers for Apache
+      ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/weak_ssl.conf
+        content: |
+          <VirtualHost *:443>
+              ServerName weakserver.example.com
+              SSLEngine on
+              # CWE-326: Inadequate Encryption Strength - TLSv1.0 and TLSv1.1 allowed
+              SSLProtocol TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3
+              # CWE-326: Inadequate Encryption Strength - RC4 and 3DES ciphers used
+              SSLCipherSuite RC4-SHA:3DES-EDE-CBC-SHA:AES128-SHA
+              SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+              SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+          </VirtualHost>
+      notify: restart httpd
+
+  handlers:
+    - name: restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted

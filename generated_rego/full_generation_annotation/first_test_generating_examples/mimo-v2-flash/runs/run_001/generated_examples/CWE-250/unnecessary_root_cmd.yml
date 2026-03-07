@@ -1,0 +1,3 @@
+- name: Echo a message into a log file as root
+  ansible.builtin.shell: echo "Service started" >> /var/log/myapp.log
+  become: yes

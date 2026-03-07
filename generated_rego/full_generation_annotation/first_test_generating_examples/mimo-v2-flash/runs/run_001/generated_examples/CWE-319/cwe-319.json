@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "ansible_http_download.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "ansible_http_api_call.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "chef_http_remote_file.rb",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "chef_http_api_post.rb",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "puppet_wget_http_exec.pp",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "puppet_insecure_client_config.pp",
+      "lines": [
+        7
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+- name: Ensure an application directory exists with root privileges
+  ansible.builtin.file:
+    path: /opt/my_app
+    state: directory
+    mode: '0755'
+  become: yes

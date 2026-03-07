@@ -1,0 +1,22 @@
+---
+- name: Generate weak self-signed certificate
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Generate a private key
+      community.crypto.openssl_privatekey:
+        path: /tmp/weak_key.pem
+        size: 1024 # CWE-326: Inadequate Encryption Strength (RSA key size 1024 bits is too small)
+        type: RSA
+    - name: Generate a self-signed certificate request
+      community.crypto.openssl_csr:
+        path: /tmp/weak_cert.csr
+        privatekey_path: /tmp/weak_key.pem
+        common_name: weak.example.com
+        digest: md5 # CWE-326: Inadequate Encryption Strength (MD5 is a weak digest algorithm)
+    - name: Sign the certificate
+      community.crypto.openssl_certificate:
+        path: /tmp/weak_cert.crt
+        csr_path: /tmp/weak_cert.csr
+        privatekey_path: /tmp/weak_key.pem
+        provider: selfsigned

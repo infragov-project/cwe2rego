@@ -1,0 +1,17 @@
+---
+- name: Configure SSH Daemon with Weak Ciphers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure sshd_config allows weak ciphers
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^Ciphers '
+        line: 'Ciphers aes128-cbc,3des-cbc,arcfour' # CWE-326: Inadequate Encryption Strength (3DES, Arcfour are weak ciphers)
+        state: present
+      notify: restart sshd
+  handlers:
+    - name: restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted

@@ -1,0 +1,8 @@
+- name: Download unencrypted archive
+  hosts: localhost
+  tasks:
+    - name: Fetch an insecure file
+      ansible.builtin.get_url:
+        url: http://artifacts.example.com/sensitive_app.tar.gz
+        dest: /tmp/sensitive_app.tar.gz
+        validate_certs: false

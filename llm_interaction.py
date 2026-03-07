@@ -205,7 +205,7 @@ if __name__ == "__main__":
         type_name=args.type_name,
         cwe_number=str(args.cwe),
         use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
-        cwe_text=cwe_text if getattr(args, "use_llm_examples", False) else None,
+        cwe_text=cwe_condition if getattr(args, "use_llm_examples", False) else None,
         api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
         examples_model=getattr(args, "examples_model", None),
         model_directory=model_directory,

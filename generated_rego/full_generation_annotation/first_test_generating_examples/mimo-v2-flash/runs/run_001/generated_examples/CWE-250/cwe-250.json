@@ -1,0 +1,48 @@
+{
+  "examples": [
+    {
+      "file": "unnecessary_root_dir.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "unnecessary_root_cmd.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "chef_app_config_as_root.rb",
+      "lines": [
+        4,
+        5
+      ]
+    },
+    {
+      "file": "chef_cleanup_execute_as_root.rb",
+      "lines": [
+        1
+      ]
+    },
+    {
+      "file": "puppet_app_config_as_root.pp",
+      "lines": [
+        5,
+        6
+      ]
+    },
+    {
+      "file": "puppet_exec_restart_as_root.pp",
+      "lines": [
+        1
+      ]
+    },
+    {
+      "file": "puppet_sudoers_admin_unrestricted.pp",
+      "lines": [
+        2
+      ]
+    }
+  ]
+}

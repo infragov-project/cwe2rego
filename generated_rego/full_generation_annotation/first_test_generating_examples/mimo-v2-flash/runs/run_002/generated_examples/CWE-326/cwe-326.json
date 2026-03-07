@@ -1,0 +1,48 @@
+{
+  "examples": [
+    {
+      "file": "apache_weak_tls.yml",
+      "lines": [
+        18,
+        20
+      ]
+    },
+    {
+      "file": "ssh_weak_config.yml",
+      "lines": [
+        19,
+        21
+      ]
+    },
+    {
+      "file": "nginx_weak_tls.rb",
+      "lines": [
+        22,
+        24
+      ]
+    },
+    {
+      "file": "ssh_weak_kex.rb",
+      "lines": [
+        35,
+        37,
+        39
+      ]
+    },
+    {
+      "file": "nginx_weak_tls.pp",
+      "lines": [
+        18,
+        20
+      ]
+    },
+    {
+      "file": "ssh_weak_config.pp",
+      "lines": [
+        32,
+        34,
+        36
+      ]
+    }
+  ]
+}

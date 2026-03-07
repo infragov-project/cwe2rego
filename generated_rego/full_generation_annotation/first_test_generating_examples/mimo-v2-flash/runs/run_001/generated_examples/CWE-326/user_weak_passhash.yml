@@ -1,0 +1,11 @@
+---
+- name: Create user with weak password hash
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add a user with a DES-hashed password (example using MD5 for demonstration)
+      ansible.builtin.user:
+        name: weakuser
+        # CWE-326: Inadequate Encryption Strength (MD5 hash for password storage is insecure)
+        password: "$1$weakSalt$P1g0oG860fC.pD.f.1YgA/" 
+        state: present

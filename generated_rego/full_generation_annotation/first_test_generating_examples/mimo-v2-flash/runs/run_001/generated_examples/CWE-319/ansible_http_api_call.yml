@@ -1,0 +1,11 @@
+- name: Send API request over HTTP
+  hosts: localhost
+  tasks:
+    - name: Post sensitive data to insecure endpoint
+      ansible.builtin.uri:
+        url: http://api.insecure.com/v1/auth
+        method: POST
+        body: '{"username": "admin", "password": "mySecretPass"}'
+        headers:
+          Content-Type: application/json
+        status_code: 200

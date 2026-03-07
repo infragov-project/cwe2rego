@@ -1,0 +1,28 @@
+---
+- name: Configure SSH with weak ciphers and MACs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure openssh-server is installed
+      ansible.builtin.package:
+        name: openssh-server
+        state: present
+
+    - name: Modify sshd_config to use weak ciphers and MACs
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^(Ciphers|MACs)'
+        line: "{{ item.option }} {{ item.value }}"
+        state: present
+      loop:
+        # CWE-326: Inadequate Encryption Strength - Using aes128-cbc
+        - { option: 'Ciphers', value: 'aes128-cbc,aes256-cbc,aes192-cbc' }
+        # CWE-326: Inadequate Encryption Strength - Using hmac-sha1
+        - { option: 'MACs', value: 'hmac-sha1,hmac-sha2-256' }
+      notify: restart sshd
+
+  handlers:
+    - name: restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
