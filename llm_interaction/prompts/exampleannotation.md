@@ -27,4 +27,5 @@ Rules:
 - Use line numbers from the numbered content prefix.
 - Return all and only files from the input.
 - If a file has no smell lines, return an empty array for `lines`.
+- When a smelly line is inside a shell script embedded in an IaC file, point to the line number where the shell script begins in the IaC file, not the actual line where the smell occurs.
 - Output valid JSON only. No markdown and no explanation.
