@@ -1,0 +1,10 @@
+- name: Run a privileged Docker container
+  hosts: all
+  become: true # Often required to interact with the Docker daemon
+  tasks:
+    - name: Create and start a privileged container
+      community.docker.docker_container:
+        name: my-privileged-app
+        image: alpine/git
+        command: sh -c "sleep infinity"
+        privileged: true # CWE-250: Container granted all capabilities to the host

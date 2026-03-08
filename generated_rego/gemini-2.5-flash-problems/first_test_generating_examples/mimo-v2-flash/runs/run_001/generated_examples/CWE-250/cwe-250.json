@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "excessive_iam_policy.yml",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "file": "privileged_docker_container.yml",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "overly_permissive_sudo.rb",
+      "lines": [
+        14
+      ]
+    },
+    {
+      "file": "unnecessary_root_execution.rb",
+      "lines": [
+        18
+      ]
+    },
+    {
+      "file": "overly_permissive_sudo.pp",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "unnecessary_root_exec.pp",
+      "lines": [
+        14
+      ]
+    }
+  ]
+}

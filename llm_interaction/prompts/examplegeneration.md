@@ -11,4 +11,4 @@ Generate a JSON array of examples. Each example must be a single object with:
 - **file**: string, filename with a supported extension (`.yml`, `.yaml`, `.rb`, or `.pp`)
 - **content**: string, the full file content of the IaC snippet
 
-Produce at least 6 examples covering only the different technologies (Ansible, Chef, Puppet). Output only valid JSON, no markdown or explanation.
+Produce at least 6 examples covering only the different technologies (Ansible, Chef, Puppet). When generating scripts, avoid examples where the smell is caused only by missing configuration or omission. Output only valid JSON, no markdown or explanation.
