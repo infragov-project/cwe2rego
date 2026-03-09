@@ -1,8 +1,11 @@
+import subprocess
 import sys
 from pathlib import Path
 from click.testing import CliRunner
 
 from validation.tools.base import AnalysisTool
+
+GLITCH_REPO = "https://github.com/sr-lab/GLITCH.git"
 
 
 class GlitchTool(AnalysisTool):
@@ -14,13 +17,30 @@ class GlitchTool(AnalysisTool):
         ".pp": "puppet",
     }
 
+    @classmethod
+    def install(cls, base_dir: Path) -> None:
+        base_dir = Path(base_dir)
+        validation_dir = base_dir / "validation"
+        glitch_dir = validation_dir / "GLITCH"
+        if not (glitch_dir.exists() and (glitch_dir / "glitch").is_dir()):
+            validation_dir.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                ["git", "clone", "--depth", "1", GLITCH_REPO, str(glitch_dir)],
+                check=True,
+                capture_output=True,
+            )
+        if not glitch_dir.exists() or not (glitch_dir / "glitch").is_dir():
+            raise FileNotFoundError(
+                f"GLITCH installation verification failed: {glitch_dir} missing or invalid."
+            )
+
     def __init__(self, base_dir: Path):
         self._base_dir = Path(base_dir)
         self._validation_dir = self._base_dir / "validation"
         glitch_dir = self._validation_dir / "GLITCH"
         if not glitch_dir.exists():
             raise FileNotFoundError(
-                f"GLITCH not found at {glitch_dir}. Clone it per README."
+                f"GLITCH not found at {glitch_dir}. Run {self.__class__.__name__}.install(base_dir) first or clone per README."
             )
         sys.path.insert(0, str(glitch_dir))
 

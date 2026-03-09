@@ -9,6 +9,11 @@ class AnalysisTool(ABC):
     name: str = ""
     supported_extensions: Dict[str, str] = {}
 
+    @classmethod
+    def install(cls, base_dir: Path) -> None:
+        """Install the tool (e.g. clone repo or fetch assets) if not already present. Idempotent. Override in subclasses."""
+        pass
+
     @abstractmethod
     def get_rego_lib_path(self) -> Path:
         """Path to the Rego helper library used for prompt construction and OPA check."""

@@ -24,7 +24,7 @@ import os
 from argparse import ArgumentParser
 from validation.semantinc_checking import prepare_semantic_examples, semantic_check
 from validation.syntax_checking import opa_check
-from validation.tools import GlitchTool
+from validation.tools import GlitchTool, KICSTool
 from rag.rag import build_rag_index, retrieve_from_index, format_chunks
 
 # Suppress HTTP request logs (must come after imports that configure logging)
@@ -39,6 +39,12 @@ def get_cwe_condition(cwe: str, chat_history=None) -> str:
 @ask_model_prompt("prompts/regogeneration.md")
 def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
     """Get a Rego generation from the LLM."""
+    ...
+
+
+@ask_model_prompt("prompts/regogeneration_kics.md")
+def get_rego_generation_kics(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2: str, chat_history=None) -> str:
+    """Get a KICS-style Rego generation (package Cx, CxPolicy[result]) from the LLM."""
     ...
 
 @ask_model_prompt("prompts/syntaxerrorgeneration_norag.md")
@@ -113,6 +119,12 @@ if __name__ == "__main__":
         required=True,
         help="Required experiment label used in generated file and directory paths (e.g., false_positives)",
     )
+    parser.add_argument(
+        "--analysis-tool",
+        choices=["glitch", "kics"],
+        default="glitch",
+        help="Analysis tool for rule deployment and semantic check (default: glitch)",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -129,7 +141,12 @@ if __name__ == "__main__":
         initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
 
     base_dir = Path(__file__).parent
-    tool = GlitchTool(base_dir)
+    if args.analysis_tool == "kics":
+        KICSTool.install(base_dir)
+        tool = KICSTool(base_dir)
+    else:
+        GlitchTool.install(base_dir)
+        tool = GlitchTool(base_dir)
 
     # Build Rego RAG index if enabled
     rego_index = None
@@ -157,16 +174,27 @@ if __name__ == "__main__":
     cwe_condition = get_cwe_condition(cwe=cwe_text)
     print("CWE Condition Explanation:")
     print(cwe_condition)
-    
+
     conversation_history = []
-    rego_rule = get_rego_generation(
+    if args.analysis_tool == "kics":
+        rego_rule = get_rego_generation_kics(
             cwe=args.cwe,
             cwe_condition=cwe_condition,
             ir=ir,
             rego_lib=rego_lib,
             example_rule_1=example_rule_1,
             example_rule_2=example_rule_2,
-            chat_history=conversation_history
+            chat_history=conversation_history,
+        )
+    else:
+        rego_rule = get_rego_generation(
+            cwe=args.cwe,
+            cwe_condition=cwe_condition,
+            ir=ir,
+            rego_lib=rego_lib,
+            example_rule_1=example_rule_1,
+            example_rule_2=example_rule_2,
+            chat_history=conversation_history,
         )
 
     run_paths = build_run_paths(
@@ -241,8 +269,11 @@ if __name__ == "__main__":
         with open(output_path, "w") as f:
             f.write(rego_rule)
         
+        lib_path = tool.get_rego_lib_path().resolve()
+        if tool.name == "kics":
+            lib_path = lib_path.parent
         error = opa_check(
-            str(tool.get_rego_lib_path().resolve()),
+            str(lib_path),
             str(output_path.resolve()),
         )
         
