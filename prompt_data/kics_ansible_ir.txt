@@ -1,0 +1,24 @@
+KICS Ansible Intermediate Representation (input to Rego)
+
+The Rego input is a JSON object with a top-level key "document", an array of parsed Ansible files.
+
+Each element of input.document has:
+- id: unique string id for this document
+- file: source file path
+- playbooks: array of playbook objects (Ansible playbooks)
+
+Playbook-level:
+- input.document[i].playbooks[_] iterates over playbooks in the i-th document
+- A playbook can have: become, become_user, tasks, and other play-level keys
+
+Task-level (use the Ansible library):
+- data.generic.ansible provides "tasks" (TasksPerDocument)
+- ansLib.tasks[id][t] is the t-th task in the document with the given id
+- Iterate over document ids and task indices to inspect all tasks
+- A task has: name, become, become_user, and module keys (e.g. ansible.builtin.uri with url, etc.)
+
+Example iteration:
+- Playbooks: playbook := input.document[i].playbooks[_]
+- Tasks: task := ansLib.tasks[id][t] where id is a document id and t is task index
+
+Use "import data.generic.ansible as ansLib" and optionally "import data.generic.common as commonLib" for helpers (valid_key, build_search_line, etc.).
