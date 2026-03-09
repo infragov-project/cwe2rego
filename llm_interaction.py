@@ -250,7 +250,7 @@ if __name__ == "__main__":
         generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
         persist_generation_log(log_path, generation_log)
     
-    MAX_VALIDATION_ATTEMPTS = 30
+    MAX_VALIDATION_ATTEMPTS = 20
     validation_passed = False
 
     def append_iteration_and_persist(iteration_payload: dict) -> None:
