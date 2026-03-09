@@ -1,31 +1,12 @@
 import csv
 import json
-import sys
-from typing import Tuple, List, Dict, Any, Optional
-from enum import Enum
 from pathlib import Path
+from typing import Tuple, List, Dict, Any, Optional
+
 from click.testing import CliRunner
 
-# Add GLITCH directory to path so glitch module can be imported
-sys.path.insert(0, str(Path(__file__).parent / "GLITCH"))
+from validation.tools.base import AnalysisTool
 
-from glitch.__main__ import repr as glitch_repr, lint as glitch_lint
-
-class FileType(Enum):
-    ANSIBLE = "ansible"
-    CHEF = "chef"
-    PUPPET = "puppet"
-
-EXTENSION_MAP = {
-    ".yml": FileType.ANSIBLE,
-    ".yaml": FileType.ANSIBLE,
-    ".rb": FileType.CHEF,
-    ".pp": FileType.PUPPET,
-}
-
-def get_file_type(file_path: str) -> FileType | None:
-    ext = Path(file_path).suffix.lower()
-    return EXTENSION_MAP.get(ext)
 
 def _load_examples(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
     manifest_path = folder / f"cwe-{cwe_number}.json"
@@ -59,6 +40,7 @@ def _write_generated_examples(folder: Path, cwe_number: str, examples: List[Dict
 
 
 def _verify_examples(
+    tool: AnalysisTool,
     runner: CliRunner,
     folder: Path,
     example: Dict[str, Any],
@@ -67,7 +49,7 @@ def _verify_examples(
 ) -> Tuple[str, str, List[int], List[int]] | None:
     """
     Verify a single example.
-    
+
     Returns:
         Tuple of (ir_file, iac_language, missing_lines, false_positives) if validation fails, None if passes
     """
@@ -85,43 +67,21 @@ def _verify_examples(
     if not expected_lines:
         raise ValueError(f"Missing expected lines for script: {script_path}")
 
-    file_type = get_file_type(str(script_path))
-    if file_type is None:
+    tech = tool.get_file_type(str(script_path))
+    if tech is None:
         raise ValueError(f"Unsupported file type: {script_path}")
 
     unit_type = example.get("type") or "unknown"
 
     print(f"  Checking {script_path.name} (type: {unit_type}, expected lines: {expected_lines})")
 
-    # Remove any previous CSV to avoid stale results.
     if csv_path.exists():
         csv_path.unlink()
 
-    result = runner.invoke(
-        glitch_lint,
-        [
-            "--tech",
-            file_type.value,
-            "--type",
-            unit_type,
-            "--csv",
-            "--smell-types",
-            "security",
-            str(script_path),
-            str(csv_path),
-        ],
-    )
-    if result.stderr:
-        print(result.stderr, end="", flush=True)
-    if result.exception or result.exit_code != 0:
-        if result.stdout:
-            print(result.stdout, end="", flush=True)
-        if result.exception:
-            raise result.exception
-        raise RuntimeError(f"glitch lint exited with code {result.exit_code}")
+    tool.run_lint(tech, unit_type, script_path, csv_path)
 
     if not csv_path.exists():
-        raise FileNotFoundError(f"GLITCH did not produce CSV: {csv_path}")
+        raise FileNotFoundError(f"{tool.name} did not produce CSV: {csv_path}")
 
     detected_lines: List[int] = []
     with open(csv_path, "r", newline="", encoding="utf-8") as f:
@@ -143,14 +103,14 @@ def _verify_examples(
     expected_set = set(expected_lines)
     missing = [line for line in expected_lines if line not in detected_set]
     false_positives = [line for line in detected_lines if line not in expected_set]
-    
+
     if missing or false_positives:
-        ir = extract_ir(str(script_path), unit_type)
+        ir = tool.extract_ir(str(script_path), unit_type)
         if missing:
             print(f"    ❌ Missing detections on lines: {missing}")
         if false_positives:
             print(f"    ❌ False positives on lines: {false_positives}")
-        return (ir, file_type.value, missing, false_positives)
+        return (ir, tech, missing, false_positives)
 
     print(f"    ✅ All expected lines detected")
     return None
@@ -200,6 +160,7 @@ def prepare_semantic_examples(
 
 
 def semantic_check(
+    tool: AnalysisTool,
     rego_rule: str,
     type_name: str,
     cwe_number: str,
@@ -210,6 +171,7 @@ def semantic_check(
     Verify all examples for a CWE using a preloaded examples manifest.
 
     Args:
+        tool: The analysis tool (e.g. GlitchTool) used to run lint and extract IR.
         rego_rule: The generated Rego rule content
         type_name: The smell code name (e.g., 'sec_hardcoded_secret')
         cwe_number: CWE number (e.g., "1327")
@@ -221,26 +183,22 @@ def semantic_check(
         Empty list if all files pass.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
-    
-    # Write rule to GLITCH security directory using type_name
-    glitch_dir = Path(__file__).parent / "GLITCH"
-    rule_path = glitch_dir / "glitch" / "rego" / "queries" / "security" / f"{type_name}.rego"
-    rule_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(rule_path, "w") as f:
-        f.write(rego_rule)
-    print(f"  Wrote rule to {rule_path}")
+
+    tool.write_rule(type_name, rego_rule)
 
     folder = Path(examples_folder)
     if not examples:
         raise ValueError("No semantic examples provided")
 
     runner = CliRunner(mix_stderr=False)
-    csv_path = Path.cwd() / "glitch_lint.csv"
+    csv_path = Path.cwd() / f"{tool.name}_lint.csv"
     failures: List[Tuple[str, str, List[int], List[int]]] = []
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
-        failure = _verify_examples(runner, folder, example, type_name, csv_path)
+        failure = _verify_examples(
+            tool, runner, folder, example, type_name, csv_path
+        )
         if failure is not None:
             failures.append(failure)
             if len(failures) >= 3:
@@ -252,44 +210,3 @@ def semantic_check(
         return failures
     print(f"Semantic check passed ✅")
     return []
-
-def extract_ir(file_path: str, file_type_glitch: str) -> str:
-    """
-    Extract the Intermediate Representation (IR) from the given file path using GLITCH's repr command via CliRunner.
-    
-    Args:
-        file_path: Path to the file to extract IR from
-        file_type_glitch: The file type as expected by GLITCH (e.g., "script", "task", "vars")
-    Returns:
-        JSON string representation of the IR
-        
-    Raises:
-        ValueError: If the file type is not supported
-        Exception: If GLITCH repr command fails
-    """
-    # Get the file type
-    file_type = get_file_type(file_path)
-    if file_type is None:
-        raise ValueError(f"Unsupported file type: {Path(file_path).suffix}")
-    
-    # Use CliRunner to invoke GLITCH repr command
-    runner = CliRunner()
-    result = runner.invoke(
-        glitch_repr,
-        [
-            "--tech",
-            file_type.value,
-            "--type",
-            file_type_glitch,
-            file_path,
-        ],
-    )
-    
-    if result.exception:
-        raise result.exception
-    
-    if result.exit_code != 0:
-        raise Exception(f"GLITCH repr command failed with exit code {result.exit_code}\nOutput: {result.output}")
-    
-    # Return the IR output directly
-    return result.output
