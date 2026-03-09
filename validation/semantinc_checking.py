@@ -166,6 +166,7 @@ def semantic_check(
     cwe_number: str,
     examples_folder: Path,
     examples: List[Dict[str, Any]],
+    technologies: Optional[List[str]] = None,
 ) -> List[Tuple[str, str, List[int], List[int]]]:
     """
     Verify all examples for a CWE using a preloaded examples manifest.
@@ -196,6 +197,12 @@ def semantic_check(
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
+        script_path = folder / (example.get("file") or "")
+        tech = tool.get_file_type(str(script_path)) if script_path else None
+        if technologies is not None:
+            if tech is None or tech not in technologies:
+                print(f"  Skipping {script_path.name} (technology {tech!r} not selected)")
+                continue
         failure = _verify_examples(
             tool, runner, folder, example, type_name, csv_path
         )

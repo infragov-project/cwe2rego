@@ -125,6 +125,13 @@ if __name__ == "__main__":
         default="glitch",
         help="Analysis tool for rule deployment and semantic check (default: glitch)",
     )
+    parser.add_argument(
+        "--technologies",
+        nargs="*",
+        default=None,
+        metavar="TECH",
+        help="Only run semantic check on these technologies (e.g. ansible chef). Omit to use all tool-supported types.",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -315,6 +322,7 @@ if __name__ == "__main__":
             str(args.cwe),
             examples_folder=examples_folder,
             examples=semantic_examples,
+            technologies=args.technologies,
         )
         
         if failures:
