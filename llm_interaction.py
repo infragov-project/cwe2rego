@@ -24,6 +24,7 @@ import os
 from argparse import ArgumentParser
 from validation.semantinc_checking import prepare_semantic_examples, semantic_check
 from validation.syntax_checking import opa_check
+from validation.tools import GlitchTool
 from rag.rag import build_rag_index, retrieve_from_index, format_chunks
 
 # Suppress HTTP request logs (must come after imports that configure logging)
@@ -128,7 +129,8 @@ if __name__ == "__main__":
         initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
 
     base_dir = Path(__file__).parent
-    
+    tool = GlitchTool(base_dir)
+
     # Build Rego RAG index if enabled
     rego_index = None
     if args.use_rag:
@@ -141,17 +143,15 @@ if __name__ == "__main__":
     
     with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
         cwe_text = f.read()
-    
-    with open(base_dir / "prompt_data/rego_library/glitch_lib.rego", "r") as f:
+
+    with open(tool.get_rego_lib_path(), "r") as f:
         rego_lib = f.read()
-        
-    with open(base_dir / "prompt_data/inter.txt", "r") as f:
+    with open(tool.get_ir_description_path(), "r") as f:
         ir = f.read()
-        
-    with open(base_dir / "prompt_data/example_queries/sec_full_permission_filesystem.rego", "r") as f:
+    example_paths = tool.get_example_rules_paths()
+    with open(example_paths[0], "r") as f:
         example_rule_1 = f.read()
-        
-    with open(base_dir / "prompt_data/example_queries/sec_obsolete_command.rego", "r") as f:
+    with open(example_paths[1], "r") as f:
         example_rule_2 = f.read()
     
     cwe_condition = get_cwe_condition(cwe=cwe_text)
@@ -242,7 +242,7 @@ if __name__ == "__main__":
             f.write(rego_rule)
         
         error = opa_check(
-            str((base_dir / "prompt_data/rego_library/glitch_lib.rego").resolve()),
+            str(tool.get_rego_lib_path().resolve()),
             str(output_path.resolve()),
         )
         
@@ -278,6 +278,7 @@ if __name__ == "__main__":
             continue
         
         failures = semantic_check(
+            tool,
             rego_rule,
             args.type_name,
             str(args.cwe),
