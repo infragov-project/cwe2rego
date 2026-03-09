@@ -1,0 +1,15 @@
+# ansible_mq_plaintext.yml
+- name: Configure Message Queue Client for Plaintext Protocol
+  hosts: mq_clients
+  become: yes
+  tasks:
+    - name: Create messaging client configuration file
+      ansible.builtin.copy:
+        content: |
+          [messaging_client]
+          broker_url = tcp://mq-broker.example.com:61616
+          protocol = PLAINTEXT # Explicitly use plaintext protocol
+          security_enabled = false # Explicitly disable security
+          in_transit_encryption = false # Explicitly disable in-transit encryption
+        dest: /etc/msgclient/config.ini
+        mode: '0644'

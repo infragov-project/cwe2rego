@@ -1,0 +1,15 @@
+--- 
+- name: Create an overly permissive IAM policy 
+  hosts: localhost 
+  connection: local 
+  tasks: 
+    - name: Ensure IAM policy exists with full access 
+      community.aws.iam_policy: 
+        policy_name: AdminPolicyFullAccess 
+        policy_document: 
+          Version: "2012-10-17" 
+          Statement: 
+            - Effect: "Allow" 
+              Action: "*" 
+              Resource: "*" 
+        state: present

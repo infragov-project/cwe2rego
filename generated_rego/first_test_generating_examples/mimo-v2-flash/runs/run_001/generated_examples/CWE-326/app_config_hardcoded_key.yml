@@ -1,0 +1,13 @@
+--- 
+- name: Deploy application configuration with static encryption key
+  hosts: webservers
+  tasks:
+    - name: Write application configuration
+      ansible.builtin.template:
+        src: templates/app_config.j2
+        dest: /etc/myapp/config.yml
+      vars:
+        app_environment: production
+        database_host: db.example.com
+        # CWE-326: Predictable/Reused Keys - Hardcoded, static encryption key should be avoided
+        application_encryption_key: "aVeryWeakAndStaticHardcodedSecretKeyForEncryption"

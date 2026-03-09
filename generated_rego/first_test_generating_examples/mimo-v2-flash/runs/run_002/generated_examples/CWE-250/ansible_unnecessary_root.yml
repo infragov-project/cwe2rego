@@ -1,0 +1,11 @@
+- name: Perform system information collection
+  hosts: all
+  tasks:
+    - name: Get current date as root (unnecessarily)
+      ansible.builtin.command: date
+      become: yes # CWE-250: Unnecessary root elevation for a read-only, non-privileged command
+      register: current_date
+
+    - name: Output date to console
+      ansible.builtin.debug:
+        var: current_date.stdout

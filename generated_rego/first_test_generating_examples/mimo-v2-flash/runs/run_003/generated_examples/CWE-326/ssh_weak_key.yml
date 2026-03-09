@@ -1,0 +1,17 @@
+---
+- name: Generate SSH key with weak key length
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure .ssh directory exists
+      ansible.builtin.file:
+        path: ~/.ssh
+        state: directory
+        mode: '0700'
+
+    - name: Generate an SSH key pair with RSA 1024
+      community.crypto.openssl_privatekey:
+        path: ~/.ssh/id_rsa_weak
+        size: 1024 # CWE-326: Inadequate Encryption Strength - Insufficient Key Length (RSA-1024 is too short)
+        type: RSA
+        mode: '0600'

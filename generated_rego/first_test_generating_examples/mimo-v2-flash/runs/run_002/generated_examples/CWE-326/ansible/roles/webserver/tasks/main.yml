@@ -1,0 +1,10 @@
+- name: Configure application with weak encryption algorithm
+  ansible.builtin.copy:
+    content: |
+      SECRET_KEY=MYVERYSECRETKEY
+      ENCRYPTION_ALGORITHM=DES # Weak Cryptographic Algorithm
+      HASH_METHOD=MD5 # Weak Cryptographic Algorithm
+    dest: /etc/webapp/config.yaml
+    owner: appuser
+    group: appuser
+    mode: '0640'

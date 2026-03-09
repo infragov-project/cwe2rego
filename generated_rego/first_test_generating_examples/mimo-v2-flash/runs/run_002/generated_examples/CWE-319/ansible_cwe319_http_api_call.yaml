@@ -1,0 +1,13 @@
+- name: Send sensitive data over HTTP
+  ansible.builtin.uri:
+    url: http://sensitive-api.example.com/data
+    method: POST
+    body_format: json
+    body:
+      username: "{{ sensitive_app_username }}"
+      password: "hardcoded_cleartext_password"
+      # CWE-319: Transmitting sensitive information (password) over unencrypted HTTP
+    headers:
+      Content-Type: "application/json"
+    validate_certs: false # This might hide underlying SSL/TLS issues as well
+  no_log: true # Attempt to hide output, but the transmission itself is insecure

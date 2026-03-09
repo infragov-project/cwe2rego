@@ -1,0 +1,17 @@
+- name: Configure Nginx with weak TLS protocols and ciphers
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: '^(\s*)ssl_protocols'
+    line: '    ssl_protocols TLSv1 TLSv1.1; # CWE-326: Outdated TLS Protocol Versions'
+    insertafter: 'ssl_certificate_key'
+  notify: restart nginx
+
+- name: Add weak SSL ciphers configuration
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: '^(\s*)ssl_ciphers'
+    line: '    ssl_ciphers "RC4-SHA:DES-CBC3-SHA:AES128-SHA";' # CWE-326: Weak or Insecure Cipher Suites - RC4 and DES ciphers
+    insertafter: 'ssl_protocols TLSv1 TLSv1.1;'
+  notify: restart nginx
+
+# Assuming a handler 'restart nginx' exists to apply changes

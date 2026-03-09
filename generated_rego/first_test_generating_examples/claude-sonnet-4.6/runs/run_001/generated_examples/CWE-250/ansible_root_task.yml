@@ -1,0 +1,8 @@
+--- 
+- name: Example Playbook with Root Execution 
+  hosts: all 
+  tasks: 
+    - name: Create a file in a privileged location 
+      ansible.builtin.shell: echo "Hello from root!" > /root/privileged_file.txt 
+      become: true 
+      become_user: root

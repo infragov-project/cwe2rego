@@ -1,0 +1,18 @@
+- name: Manage users and sudoers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create an application deployment user
+      ansible.builtin.user:
+        name: deployer_user
+        password: "{{ 'securepassword' | password_hash('sha512') }}"
+        shell: /bin/bash
+        state: present
+
+    - name: Grant full passwordless sudo access to deployer_user
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/deployer_sudo
+        create: true
+        mode: '0440'
+        line: 'deployer_user ALL=(ALL) NOPASSWD: ALL' # CWE-250: Granting broad, passwordless sudo access to a non-admin system user
+        validate: '/usr/sbin/visudo -cf %s'

@@ -1,0 +1,28 @@
+--- 
+- name: Deploy application with poor file system permissions
+  hosts: app_servers
+  tasks:
+    - name: Create data directory with world-writable permissions
+      ansible.builtin.file:
+        path: /var/data/app_uploads
+        state: directory
+        mode: '0777' # WEAKNESS: World-writable directory
+        owner: appuser
+        group: appuser
+
+    - name: Set permissions for a sensitive configuration file
+      ansible.builtin.template:
+        src: templates/sensitive_config.j2
+        dest: /etc/app/sensitive_config.json
+        mode: '0666' # WEAKNESS: World-readable/writable file
+        owner: root
+        group: root
+        # content is rendered from template, could contain secrets.
+
+    - name: Copy public access HTML file with too broad permissions
+      ansible.builtin.copy:
+        src: files/index.html
+        dest: /var/www/html/index.html
+        mode: '0666' # WEAKNESS: World-writable, even if meant to be public, write access is excessive.
+        owner: www-data
+        group: www-data

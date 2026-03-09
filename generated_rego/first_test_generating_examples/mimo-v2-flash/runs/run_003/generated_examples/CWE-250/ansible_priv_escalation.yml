@@ -1,0 +1,31 @@
+--- 
+- name: Configure application with excessive privileges
+  hosts: webservers
+  become: true # WEAKNESS: Unnecessary privilege escalation for the entire play/host group
+  tasks:
+    - name: Ensure application directory exists
+      ansible.builtin.file:
+        path: /opt/my_app
+        state: directory
+        mode: '0755'
+        owner: appuser
+        group: appuser
+
+    - name: Create a root-owned configuration file unnecessarily
+      ansible.builtin.file:
+        path: /etc/my_app_secrets.conf
+        state: touch
+        mode: '0600'
+        owner: root
+        group: root
+      # This task explicitly runs as root due to 'become: true' at play level.
+      # If the file ownership should be root, that's fine, but the *need* for 'become: true'
+      # for the entire play just for this (or similar) indicates over-privilege.
+
+    - name: Ensure system service runs (privileged operation)
+      ansible.builtin.systemd:
+        name: myapp
+        state: started
+        enabled: true
+      # Running systemd services usually requires root, reinforcing the 'become: true' part, 
+      # but if other tasks in the play do not, the play-level privilege is excessive.

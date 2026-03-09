@@ -1,0 +1,50 @@
+{
+  "examples": [
+    {
+      "file": "ansible_nginx_http.yml",
+      "lines": [
+        15,
+        16
+      ]
+    },
+    {
+      "file": "chef_apache_http.rb",
+      "lines": [
+        14,
+        22
+      ]
+    },
+    {
+      "file": "puppet_app_config_http.pp",
+      "lines": [
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "file": "ansible_mq_plaintext.yml",
+      "lines": [
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "file": "chef_redis_unencrypted.rb",
+      "lines": [
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "file": "puppet_weak_tls.pp",
+      "lines": [
+        8,
+        11
+      ]
+    }
+  ]
+}

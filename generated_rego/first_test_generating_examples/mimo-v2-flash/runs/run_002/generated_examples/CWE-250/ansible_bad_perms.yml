@@ -1,0 +1,11 @@
+- name: Configure application resources
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Create an analytics data directory with world-writable permissions
+      ansible.builtin.file:
+        path: /var/data/analytics
+        state: directory
+        mode: '0777' # CWE-250: Overly permissive file permissions
+        owner: analytical_service
+        group: analytical_group

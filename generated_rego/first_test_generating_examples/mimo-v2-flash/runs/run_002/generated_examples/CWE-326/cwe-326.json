@@ -1,0 +1,42 @@
+{
+  "examples": [
+    {
+      "file": "ansible/roles/webserver/tasks/main.yml",
+      "lines": [
+        5,
+        6
+      ]
+    },
+    {
+      "file": "ansible/roles/nginx/tasks/main.yml",
+      "lines": [
+        6,
+        7
+      ]
+    },
+    {
+      "file": "chef/cookbooks/app_security/recipes/rsa_key_gen.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "chef/cookbooks/app_secrets/recipes/hardcoded_key.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "puppet/manifests/users.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "puppet/manifests/storage.pp",
+      "lines": [
+        5
+      ]
+    }
+  ]
+}

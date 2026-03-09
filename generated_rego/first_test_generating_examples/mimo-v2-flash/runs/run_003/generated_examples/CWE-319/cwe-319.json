@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "nginx_http.yml",
+      "lines": [
+        15
+      ]
+    },
+    {
+      "file": "app_config_http.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "apache_http.rb",
+      "lines": [
+        10,
+        31
+      ]
+    },
+    {
+      "file": "ftp_cleartext.rb",
+      "lines": [
+        15,
+        28
+      ]
+    },
+    {
+      "file": "mysql_no_ssl.pp",
+      "lines": [
+        6,
+        8
+      ]
+    },
+    {
+      "file": "firewall_http.pp",
+      "lines": [
+        17
+      ]
+    }
+  ]
+}

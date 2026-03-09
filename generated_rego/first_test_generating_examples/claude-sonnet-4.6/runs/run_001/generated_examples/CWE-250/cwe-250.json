@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "ansible_root_task.yml",
+      "lines": [
+        7,
+        8
+      ]
+    },
+    {
+      "file": "ansible_iam_policy.yml",
+      "lines": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "file": "chef_root_execute.rb",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "chef_sudo_script.rb",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "puppet_root_exec.pp",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "puppet_sudo_exec.pp",
+      "lines": [
+        6
+      ]
+    }
+  ]
+}

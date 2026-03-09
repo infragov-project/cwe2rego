@@ -1,0 +1,7 @@
+- name: Generate a weak RSA private key
+  community.crypto.openssl_privatekey:
+    path: /etc/ssl/private/weak-key.pem
+    type: RSA
+    size: 1024 # CWE-326: Weak Key Length - RSA key size below 2048 bits
+    mode: '0600'
+  delegate_to: localhost

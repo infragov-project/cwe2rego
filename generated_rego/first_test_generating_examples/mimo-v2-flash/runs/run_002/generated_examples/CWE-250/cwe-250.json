@@ -1,0 +1,58 @@
+{
+  "examples": [
+    {
+      "file": "ansible_bad_perms.yml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "ansible_unnecessary_root.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "ansible_overprivileged_user.yml",
+      "lines": [
+        16
+      ]
+    },
+    {
+      "file": "chef_bad_perms.rb",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "chef_unnecessary_root.rb",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "chef_broad_sudo.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "puppet_bad_perms.pp",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "puppet_unnecessary_root.pp",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "puppet_privileged_user.pp",
+      "lines": [
+        8
+      ]
+    }
+  ]
+}

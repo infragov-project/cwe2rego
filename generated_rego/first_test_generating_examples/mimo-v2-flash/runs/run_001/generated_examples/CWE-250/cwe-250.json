@@ -1,0 +1,45 @@
+{
+  "examples": [
+    {
+      "file": "Ansible_CWE250_Ex1.yml",
+      "lines": [
+        10,
+        20
+      ]
+    },
+    {
+      "file": "Ansible_CWE250_Ex2.yml",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "Chef_CWE250_Ex1.rb",
+      "lines": [
+        4,
+        9
+      ]
+    },
+    {
+      "file": "Chef_CWE250_Ex2.rb",
+      "lines": [
+        3,
+        10
+      ]
+    },
+    {
+      "file": "Puppet_CWE250_Ex1.pp",
+      "lines": [
+        5,
+        15
+      ]
+    },
+    {
+      "file": "Puppet_CWE250_Ex2.pp",
+      "lines": [
+        2,
+        9
+      ]
+    }
+  ]
+}

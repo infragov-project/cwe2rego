@@ -1,0 +1,22 @@
+- name: Configure application with excessive permissions
+  hosts: webservers
+  connection: local
+  become: yes # Execute all tasks in this play as root
+  tasks:
+    - name: Ensure app config directory exists with wide permissions
+      ansible.builtin.file:
+        path: /opt/my_app/config
+        state: directory
+        mode: '0777' # Publicly readable, writable, and executable
+        owner: root
+        group: root
+    - name: Create sensitive app config file as root with wide permissions
+      ansible.builtin.copy:
+        content: |
+          DB_HOST=localhost
+          DB_USER=admin
+          DB_PASSWORD=supersecretkey
+        dest: /opt/my_app/config/app_config.conf
+        mode: '0666' # Publicly readable and writable, sensitive data exposed
+        owner: root
+        group: root

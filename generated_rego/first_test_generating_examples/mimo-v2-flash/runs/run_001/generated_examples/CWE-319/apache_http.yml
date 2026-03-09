@@ -1,0 +1,47 @@
+- name: Configure Apache for HTTP
+  hosts: webservers
+  tasks:
+    - name: Install Apache
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+      become: true
+
+    - name: Disable default SSL configuration
+      ansible.builtin.command: a2dismod ssl
+      ignore_errors: true
+      args:
+        warn: false
+      become: true
+
+    - name: Ensure Apache is listening on port 80
+      ansible.builtin.lineinfile:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen (80|443|.*)'
+        line: 'Listen 80 # CWE-319'
+        state: present
+      become: true
+      notify: Restart apache
+
+    - name: Create HTTP Virtual Host
+      ansible.builtin.copy:
+        content: |
+          <VirtualHost *:80> # CWE-319
+              ServerAdmin webmaster@localhost
+              DocumentRoot /var/www/html
+              ErrorLog ${APACHE_LOG_DIR}/error.log
+              CustomLog ${APACHE_LOG_DIR}/access.log combined
+          </VirtualHost>
+        dest: /etc/apache2/sites-available/000-default.conf
+        owner: root
+        group: root
+        mode: '0644'
+      become: true
+      notify: Restart apache
+
+  handlers:
+    - name: Restart apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+      become: true

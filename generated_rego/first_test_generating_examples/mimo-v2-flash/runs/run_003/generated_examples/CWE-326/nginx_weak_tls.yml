@@ -1,0 +1,29 @@
+---
+- name: Configure Nginx with weak TLS protocols
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Create Nginx config directory for testing
+      ansible.builtin.file:
+        path: /tmp/nginx_configs
+        state: directory
+        mode: '0755'
+
+    - name: Write Nginx config with weak TLS protocols
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 443 ssl;
+              listen [::]:443 ssl;
+              ssl_certificate /etc/nginx/ssl/nginx.crt;
+              ssl_certificate_key /etc/nginx/ssl/nginx.key;
+              ssl_protocols TLSv1 TLSv1.1; # CWE-326: Inadequate Encryption Strength - Deprecated TLS/SSL Versions
+              ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA384';
+              ssl_prefer_server_ciphers on;
+              location / {
+                  root /var/www/html;
+                  index index.html index.htm;
+              }
+          }
+        dest: /tmp/nginx_configs/default.conf
+        mode: '0644'

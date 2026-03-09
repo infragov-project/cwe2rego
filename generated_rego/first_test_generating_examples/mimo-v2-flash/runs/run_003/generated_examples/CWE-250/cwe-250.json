@@ -1,0 +1,49 @@
+{
+  "examples": [
+    {
+      "file": "ansible_priv_escalation.yml",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "ansible_excessive_perms.yml",
+      "lines": [
+        9,
+        17,
+        23
+      ]
+    },
+    {
+      "file": "chef_root_exec.rb",
+      "lines": [
+        7,
+        15,
+        24
+      ]
+    },
+    {
+      "file": "chef_excessive_perms.rb",
+      "lines": [
+        7,
+        14
+      ]
+    },
+    {
+      "file": "puppet_root_exec.pp",
+      "lines": [
+        7,
+        13,
+        25
+      ]
+    },
+    {
+      "file": "puppet_excessive_perms.pp",
+      "lines": [
+        8,
+        15,
+        23
+      ]
+    }
+  ]
+}

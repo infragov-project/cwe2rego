@@ -1,0 +1,13 @@
+- name: Configure Nginx with weak TLS protocol and ciphers
+  ansible.builtin.copy:
+    content: |
+      server {
+          listen 443 ssl;
+          ssl_protocols TLSv1 TLSv1.1; # Outdated Protocols
+          ssl_ciphers 'RC4-SHA:DES-CBC3-SHA'; # Weak cipher suites
+      }
+    dest: /etc/nginx/conf.d/weak-ssl.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart nginx

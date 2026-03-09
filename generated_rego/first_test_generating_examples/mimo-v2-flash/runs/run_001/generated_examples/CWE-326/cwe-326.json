@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "api_gateway_weak_tls.yml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "app_config_hardcoded_key.yml",
+      "lines": [
+        13
+      ]
+    },
+    {
+      "file": "weak_cert_key.rb",
+      "lines": [
+        11
+      ]
+    },
+    {
+      "file": "nginx_weak_ciphers.rb",
+      "lines": [
+        12,
+        13
+      ]
+    },
+    {
+      "file": "apache_weak_protocol.pp",
+      "lines": [
+        15
+      ]
+    },
+    {
+      "file": "ec2_unencrypted_ebs.pp",
+      "lines": [
+        25
+      ]
+    }
+  ]
+}

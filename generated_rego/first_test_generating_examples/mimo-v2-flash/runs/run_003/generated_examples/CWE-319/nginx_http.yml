@@ -1,0 +1,31 @@
+---
+- name: Configure Nginx for HTTP only
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Ensure nginx is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Deploy HTTP-only nginx configuration
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 80;
+              server_name example.com;
+
+              location / {
+                  root /var/www/html;
+                  index index.html;
+              }
+          }
+        dest: /etc/nginx/sites-available/default
+        mode: '0644'
+      notify: Reload nginx
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

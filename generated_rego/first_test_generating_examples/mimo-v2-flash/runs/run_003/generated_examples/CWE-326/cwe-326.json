@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "nginx_weak_tls.yml",
+      "lines": [
+        20
+      ]
+    },
+    {
+      "file": "ssh_weak_key.yml",
+      "lines": [
+        15
+      ]
+    },
+    {
+      "file": "apache_weak_cipher_suite.rb",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "db_no_encryption.rb",
+      "lines": [
+        12,
+        13
+      ]
+    },
+    {
+      "file": "service_weak_encrypt.pp",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "weak_key_derivation.pp",
+      "lines": [
+        11
+      ]
+    }
+  ]
+}

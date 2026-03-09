@@ -1,0 +1,16 @@
+- name: Execute broad system commands with root privileges
+  hosts: all
+  connection: local
+  become: yes # Running as root via sudo for system-wide operations
+  tasks:
+    - name: Update apt cache and install broad utility globally
+      ansible.builtin.apt:
+        name: ['unzip', 'curl']
+        state: present
+        update_cache: yes
+    - name: Create and modify a sensitive system file as root unnecessarily
+      ansible.builtin.shell: |
+        echo "Warning: System-wide modification by root" >> /etc/motd
+        chmod 666 /etc/motd # Granting world-writable permissions to a system file
+      args:
+        warn: false

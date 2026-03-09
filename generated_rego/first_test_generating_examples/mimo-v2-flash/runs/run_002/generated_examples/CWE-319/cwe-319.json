@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "ansible_cwe319_http_api_call.yaml",
+      "lines": [
+        3,
+        8
+      ]
+    },
+    {
+      "file": "ansible_cwe319_firewall_open_http.yaml",
+      "lines": [
+        3,
+        12
+      ]
+    },
+    {
+      "file": "chef_cwe319_nginx_http_only.rb",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "chef_cwe319_app_config_plaintext_secrets_and_disabled_ssl.rb",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "puppet_cwe319_apache_http_only.pp",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "puppet_cwe319_firewall_and_insecure_file_source.pp",
+      "lines": [
+        5,
+        13
+      ]
+    }
+  ]
+}

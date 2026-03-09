@@ -1,0 +1,42 @@
+{
+  "examples": [
+    {
+      "file": "ansible_rsa_1024_key.yml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "ansible_nginx_tls_v1_0.yml",
+      "lines": [
+        5,
+        13
+      ]
+    },
+    {
+      "file": "chef_apache_weak_ciphers.rb",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "chef_openssl_sha1_cert.rb",
+      "lines": [
+        32
+      ]
+    },
+    {
+      "file": "puppet_apache_dh_1024.pp",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "puppet_strongswan_des_sha1.pp",
+      "lines": [
+        14,
+        18
+      ]
+    }
+  ]
+}

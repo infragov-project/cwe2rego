@@ -1,0 +1,40 @@
+# ansible_nginx_http.yml
+- name: Configure Nginx for HTTP only
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Ensure Nginx is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx site to listen on port 80 only
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 80;
+              listen [::]:80;
+              server_name example.com www.example.com;
+              root /var/www/html;
+              index index.html index.htm;
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+              # Redirect to HTTPS is intentionally omitted, indicating cleartext transmission
+          }
+        dest: /etc/nginx/sites-available/default
+        mode: '0644'
+      notify: Reload Nginx
+
+    - name: Enable Nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

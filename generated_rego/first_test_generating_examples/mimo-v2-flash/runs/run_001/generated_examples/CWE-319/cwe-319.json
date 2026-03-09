@@ -1,0 +1,49 @@
+{
+  "examples": [
+    {
+      "file": "apache_http.yml",
+      "lines": [
+        11,
+        21,
+        29
+      ]
+    },
+    {
+      "file": "db_config.yml",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "loadbalancer_http.yml",
+      "lines": [
+        9,
+        12,
+        21
+      ]
+    },
+    {
+      "file": "nginx_http.rb",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "file": "app_config_plaintext.rb",
+      "lines": [
+        19,
+        20
+      ]
+    },
+    {
+      "file": "ftp_telnet_server.pp",
+      "lines": [
+        29,
+        30,
+        46,
+        58
+      ]
+    }
+  ]
+}

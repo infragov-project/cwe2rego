@@ -1,0 +1,16 @@
+- name: Configure firewall to allow HTTP traffic
+  community.general.ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+  become: yes
+  # CWE-319: Explicitly allowing cleartext HTTP traffic (port 80) on the firewall.
+  # This exposes services to potential interception if sensitive data is handled.
+
+- name: Allow HTTP access for web server (alternative example)
+  ansible.builtin.firewalld:
+    port: 80/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+  # CWE-319: Another example of opening port 80 for HTTP traffic.

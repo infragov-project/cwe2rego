@@ -1,0 +1,26 @@
+- name: Configure Load Balancer
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure an AWS ELB Target Group uses HTTP for health checks
+      amazon.aws.elb_target_group:
+        name: my-app-tg
+        port: 80
+        protocol: HTTP # CWE-319
+        vpc_id: vpc-0abcdef1234567890
+        health_check_path: /health
+        health_check_protocol: HTTP # CWE-319
+        region: us-east-1
+        state: present
+      register: tg_info
+
+    - name: Create an AWS ELB Listener for HTTP traffic
+      amazon.aws.elb_lb_listener:
+        load_balancer_arn: arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-lb/1234567890123456
+        port: 80
+        protocol: HTTP # CWE-319
+        default_actions:
+          - type: forward
+            target_group_arn: "{{ tg_info.target_group_arn }}"
+        region: us-east-1
+        state: present

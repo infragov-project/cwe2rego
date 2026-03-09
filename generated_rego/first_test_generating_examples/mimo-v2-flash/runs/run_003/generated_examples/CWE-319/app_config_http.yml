@@ -1,0 +1,29 @@
+---
+- name: Deploy application with cleartext API endpoint
+  hosts: appservers
+  become: yes
+  vars:
+    api_url: "http://api.internal.example.com/v1"
+  tasks:
+    - name: Create application configuration directory
+      ansible.builtin.file:
+        path: /etc/mywebapp
+        state: directory
+        mode: '0755'
+
+    - name: Configure application with HTTP API endpoint
+      ansible.builtin.template:
+        src: app_config.j2
+        dest: /etc/mywebapp/config.conf
+        mode: '0644'
+
+    # Note: In a real scenario, app_config.j2 would be a separate file.
+    # For this example, we inline its content conceptually.
+    - name: Create app_config.j2 template (conceptual for example)
+      ansible.builtin.copy:
+        content: |
+          [API]
+          endpoint = {{ api_url }}
+          debug_mode = true
+        dest: /tmp/app_config.j2 # This would normally be in roles/mywebapp/templates/
+        mode: '0644'
