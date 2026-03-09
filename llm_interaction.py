@@ -250,7 +250,7 @@ if __name__ == "__main__":
         generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
         persist_generation_log(log_path, generation_log)
     
-    MAX_VALIDATION_ATTEMPTS = 20
+    MAX_VALIDATION_ATTEMPTS = 30
     validation_passed = False
 
     def append_iteration_and_persist(iteration_payload: dict) -> None:
@@ -356,15 +356,11 @@ if __name__ == "__main__":
     finalize_generation_log(generation_log, passed=validation_passed, max_attempts=MAX_VALIDATION_ATTEMPTS)
     persist_generation_log(log_path, generation_log)
     print(f"Generation log saved to: {log_path}")
-    
-    # Check if we hit the validation limit
+
+    tool.remove_rule(args.type_name)
+
     if not validation_passed:
         print(f"\n⚠️ Reached maximum validation attempts ({MAX_VALIDATION_ATTEMPTS})")
         print(f"Final rule written to: {output_path}")
         print("Validation did not pass - manual review required")
         exit(1)
-    
-    
-    
-        
-    

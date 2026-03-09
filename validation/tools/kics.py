@@ -161,6 +161,15 @@ class KICSTool(AnalysisTool):
             json.dumps(metadata, indent=2), encoding="utf-8"
         )
 
+    def remove_rule(self, type_name: str) -> None:
+        query_dir = self._queries_dir / "Ansible" / "common" / type_name
+        if not query_dir.exists():
+            return
+        shutil.rmtree(query_dir)
+        for parent in (query_dir.parent, query_dir.parent.parent, self._queries_dir):
+            if parent.exists() and parent.is_dir() and not any(parent.iterdir()):
+                parent.rmdir()
+
     def run_lint(
         self,
         tech: str,
@@ -186,7 +195,8 @@ class KICSTool(AnalysisTool):
                 "--no-progress",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            if result.returncode not in (0, 1, 2):
+            VALID_EXIT_CODES = (0, 20, 30, 40, 50, 60)
+            if result.returncode not in VALID_EXIT_CODES:
                 raise RuntimeError(
                     f"kics scan failed with code {result.returncode}\n{result.stderr or result.stdout}"
                 )

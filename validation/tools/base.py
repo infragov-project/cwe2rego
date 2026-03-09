@@ -34,6 +34,10 @@ class AnalysisTool(ABC):
         """Deploy the generated rule to the tool's expected location."""
         pass
 
+    def remove_rule(self, type_name: str) -> None:
+        """Remove the deployed rule so the tool's query/rule directory stays empty. No-op if not applicable."""
+        pass
+
     @abstractmethod
     def run_lint(
         self,

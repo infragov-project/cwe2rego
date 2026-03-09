@@ -38,5 +38,6 @@ htmlcov/
 
 
 validation/GLITCH
+validation/KICS
 poetry.toml
 store

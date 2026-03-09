@@ -69,6 +69,22 @@ class GlitchTool(AnalysisTool):
         rule_path.parent.mkdir(parents=True, exist_ok=True)
         rule_path.write_text(rego_content, encoding="utf-8")
 
+    def remove_rule(self, type_name: str) -> None:
+        rule_path = (
+            self._validation_dir
+            / "GLITCH"
+            / "glitch"
+            / "rego"
+            / "queries"
+            / "security"
+            / f"{type_name}.rego"
+        )
+        if rule_path.exists():
+            rule_path.unlink()
+        for parent in (rule_path.parent, rule_path.parent.parent):
+            if parent.exists() and parent.is_dir() and not any(parent.iterdir()):
+                parent.rmdir()
+
     def run_lint(
         self,
         tech: str,
