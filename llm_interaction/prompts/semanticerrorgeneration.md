@@ -1,6 +1,6 @@
 You are a security expert with extensive Rego expertise. Please rewrite the previously generated rule since it did not correctly detect the security smell in the following intermediate representation(s) and considering this is Rego V0. Only return the Rego rule, ready to be used, and nothing else. No extra characters or words such as ` or rego, that do not conform to Rego syntax. There is no need to "present" the rule, just the code itself.
 
-The rule must detect the vulnerability across multiple IaC technologies (Ansible, Chef, Puppet). Below are the intermediate representations where detections failed:
+The rule must detect the vulnerability across {% if target_technologies|length == 1 %}this IaC technology{% else %}these IaC technologies{% endif %}: {{ target_technologies_text }}. Below are the intermediate representations where detections failed:
 
 {% for failure in failures %}
 **Language: {{failure.iac_language}}**
@@ -26,7 +26,7 @@ The intermediate representation in GLITCH is:
 
 {% endfor %}
 
-The code you generate must be capable of capturing this smell in all of these scenarios and many others of the same type, so do not hardcode to this and try to generalize for several IaC technologies such as Ansible, Chef and Puppet.
+The code you generate must be capable of capturing this smell in all of these scenarios and many others of the same type, so do not hardcode to these cases and generalize for {% if target_technologies|length == 1 %}the selected IaC technology{% else %}the selected IaC technologies{% endif %}: {{ target_technologies_text }}.
 
 Things to pay attention:
 - Avoid referencing data.security module with sets that are not confirmed to exist.

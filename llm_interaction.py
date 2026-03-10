@@ -58,11 +58,18 @@ def get_syntax_error_generation(error_message: str, rag_context: str, chat_histo
     ...
     
 @ask_model_prompt("prompts/semanticerrorgeneration.md")
-def get_semantic_error_generation(failures: list, chat_history=None) -> str:
+def get_semantic_error_generation(
+    failures: list,
+    target_technologies: list[str],
+    target_technologies_text: str,
+    chat_history=None,
+) -> str:
     """Get a semantic error regeneration of the rule from the LLM.
     
     Args:
         failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'file_name'
+        target_technologies: Technologies the rule should target
+        target_technologies_text: Human-readable technologies list for the prompt
         chat_history: Conversation history
     """
     ...
@@ -155,6 +162,17 @@ if __name__ == "__main__":
         GlitchTool.install(base_dir)
         tool = GlitchTool(base_dir)
 
+    target_technologies, unsupported_technologies = tool.resolve_technologies(
+        args.technologies
+    )
+    if unsupported_technologies:
+        print(
+            f"Warning: ignoring unsupported technologies for {tool.name}: "
+            f"{', '.join(unsupported_technologies)}"
+        )
+    target_technologies_text = tool.format_technologies(target_technologies)
+    print(f"Semantic-check technologies: {target_technologies_text}")
+
     # Build Rego RAG index if enabled
     rego_index = None
     if args.use_rag:
@@ -240,12 +258,14 @@ if __name__ == "__main__":
     examples_folder, semantic_examples = prepare_semantic_examples(
         type_name=args.type_name,
         cwe_number=str(args.cwe),
+        tool=tool,
         use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
         cwe_text=cwe_condition if getattr(args, "use_llm_examples", False) else None,
         api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
         examples_model=getattr(args, "examples_model", None),
         model_directory=model_directory,
         generated_examples_dir=generated_examples_dir,
+        target_technologies=target_technologies,
     )
     if getattr(args, "use_llm_examples", False):
         generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
@@ -323,7 +343,7 @@ if __name__ == "__main__":
             str(args.cwe),
             examples_folder=examples_folder,
             examples=semantic_examples,
-            technologies=args.technologies,
+            technologies=target_technologies,
         )
         
         if failures:
@@ -345,7 +365,12 @@ if __name__ == "__main__":
                 }
                 for f in failures
             ]
-            rego_rule = get_semantic_error_generation(failures=formatted_failures, chat_history=conversation_history)
+            rego_rule = get_semantic_error_generation(
+                failures=formatted_failures,
+                target_technologies=target_technologies,
+                target_technologies_text=target_technologies_text,
+                chat_history=conversation_history,
+            )
             continue
 
         iteration_log["status"] = "passed"
