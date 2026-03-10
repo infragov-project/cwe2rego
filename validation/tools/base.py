@@ -19,6 +19,10 @@ class AnalysisTool(ABC):
         """Path to the Rego helper library used for prompt construction and OPA check."""
         pass
 
+    def get_rego_lib_paths(self) -> list[Path]:
+        """Paths to Rego helper libraries for prompt construction. Default: single get_rego_lib_path()."""
+        return [self.get_rego_lib_path()]
+
     @abstractmethod
     def get_ir_description_path(self) -> Path:
         """Path to the file describing the tool's intermediate representation."""

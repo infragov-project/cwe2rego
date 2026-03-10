@@ -168,8 +168,9 @@ if __name__ == "__main__":
     with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
         cwe_text = f.read()
 
-    with open(tool.get_rego_lib_path(), "r") as f:
-        rego_lib = f.read()
+    rego_lib = "\n\n".join(
+        path.read_text() for path in tool.get_rego_lib_paths()
+    )
     with open(tool.get_ir_description_path(), "r") as f:
         ir = f.read()
     example_paths = tool.get_example_rules_paths()
