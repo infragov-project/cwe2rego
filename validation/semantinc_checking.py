@@ -178,6 +178,7 @@ def semantic_check(
         cwe_number: CWE number (e.g., "1327")
         examples_folder: Root folder where referenced example files live
         examples: Preloaded example manifest entries
+        technologies: If set, only run semantic check for these techs (e.g. ["ansible"]). None = all.
 
     Returns:
         List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
