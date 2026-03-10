@@ -125,6 +125,13 @@ class KICSTool(AnalysisTool):
             raise FileNotFoundError(f"KICS Ansible library not found at {path}")
         return path
 
+    def get_rego_lib_paths(self) -> list[Path]:
+        paths = [self._libraries_dir / f for f in KICS_LIBRARY_FILES]
+        for p in paths:
+            if not p.exists():
+                raise FileNotFoundError(f"KICS library not found at {p}")
+        return paths
+
     def get_ir_description_path(self) -> Path:
         return self._base_dir / "prompt_data" / "kics_ansible_ir.txt"
 

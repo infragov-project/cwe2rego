@@ -12,7 +12,7 @@ The Rego input is the KICS Ansible IR (document/playbooks/tasks). Structure:
 {{ir}}
 ```
 
-Use the following Rego library (data.generic.ansible and optionally data.generic.common) for traversing the IR:
+Use the following Rego libraries (data.generic.ansible and data.generic.common) for traversing the IR:
 
 ```
 {{rego_lib}}
@@ -30,6 +30,6 @@ Follow the shape of these KICS query examples. Your rule must use package Cx and
 
 Requirements:
 - Package must be Cx. Rule must be CxPolicy[result].
-- Use input.document[i].playbooks[_] for playbook-level checks and ansLib.tasks[id][t] for task-level checks (import data.generic.ansible as ansLib).
+- Use input.document[i].playbooks[_] for playbook-level checks and ansLib.tasks[id][t] for task-level checks (import data.generic.ansible as ansLib, data.generic.common as commonLib).
 - Keep the result object format as in the examples (documentId, searchKey, issueType, keyExpectedValue, keyActualValue).
 - Avoid overly large scripts; prefer focused conditions.
