@@ -23,9 +23,20 @@ Return a JSON array with one object per input file. Each object must have:
 - `file`: string, same file name as input
 - `lines`: array of integers with the line numbers that contain the smell
 
+Reference annotated examples from a different CWE are provided only to show the expected annotation format and granularity. Use them as examples of annotation style, not as evidence for the current CWE semantics.
+
+Reference examples from CWE {{ reference_cwe_number }}:
+{% for item in reference_examples %}
+Reference file: {{ item.file }}
+```text
+{{ item.numbered_content }}
+```
+Annotated lines: {{ item.annotated_lines }}
+{% endfor %}
+
 Rules:
 - Use line numbers from the numbered content prefix.
 - Return all and only files from the input.
 - If a file has no smell lines, return an empty array for `lines`.
-- When a smelly line is inside a shell script embedded in an IaC file, point to the line number where the shell script begins in the IaC file, not the actual line where the smell occurs.
+- When a smelly line is inside a embeded script (e.g configuration files, shell scripts) point to the line number where the shell script begins in the IaC file, not the actual line where the smell occurs
 - Output valid JSON only. No markdown and no explanation.

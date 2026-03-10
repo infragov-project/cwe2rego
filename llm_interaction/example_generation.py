@@ -1,5 +1,6 @@
 import json
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterProvider
@@ -66,6 +67,76 @@ def _normalize_annotation(raw: Dict[str, Any]) -> Dict[str, Any]:
         "file": raw.get("file"),
         "lines": _normalize_lines(raw.get("lines") or raw.get("line")),
     }
+
+
+def _load_examples_manifest(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
+    manifest_path = folder / f"cwe-{cwe_number}.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"JSON manifest not found: {manifest_path}")
+
+    with open(manifest_path, "r", encoding="utf-8") as file_handle:
+        data = json.load(file_handle)
+
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "examples" in data:
+        return data["examples"]
+    raise ValueError("Unsupported manifest format; expected list or dict with 'examples'")
+
+
+def _load_examples_with_content(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
+    examples = _load_examples_manifest(folder, cwe_number)
+    hydrated_examples: List[Dict[str, Any]] = []
+
+    for example in examples:
+        file_name = example.get("file")
+        if not file_name:
+            raise ValueError(f"Example entry missing 'file': {example}")
+
+        file_path = folder / file_name
+        if not file_path.exists():
+            raise FileNotFoundError(f"Example file not found: {file_path}")
+
+        hydrated_example = dict(example)
+        hydrated_example["content"] = file_path.read_text(encoding="utf-8")
+        hydrated_examples.append(hydrated_example)
+
+    return hydrated_examples
+
+
+def _normalize_cwe_number(cwe_number: str) -> str:
+    match = re.search(r"(\d+)", str(cwe_number))
+    if match is None:
+        raise ValueError(f"Invalid CWE number: {cwe_number}")
+    return match.group(1)
+
+
+def _get_annotation_reference_cwe(cwe_number: str) -> str:
+    normalized_cwe = _normalize_cwe_number(cwe_number)
+    return "284" if normalized_cwe == "353" else "353"
+
+
+def _load_annotation_reference_examples(cwe_number: str) -> tuple[str, List[Dict[str, Any]]]:
+    reference_cwe = _get_annotation_reference_cwe(cwe_number)
+    examples_folder = (
+        Path(__file__).resolve().parent.parent
+        / "validation"
+        / "examples"
+        / f"CWE-{reference_cwe}"
+    )
+    examples = _load_examples_with_content(examples_folder, reference_cwe)
+
+    reference_examples: List[Dict[str, Any]] = []
+    for item in examples:
+        reference_examples.append(
+            {
+                "file": item["file"],
+                "numbered_content": add_line_numbers(item["content"]),
+                "annotated_lines": _normalize_lines(item.get("lines") or item.get("line")),
+            }
+        )
+
+    return reference_cwe, reference_examples
 
 
 def _resolve_examples_model(model_override: Optional[str], api_key: Optional[str]):
@@ -224,6 +295,8 @@ def get_llm_example_annotations(
     if not numbered_files:
         raise ValueError("numbered_files must not be empty")
 
+    reference_cwe, reference_examples = _load_annotation_reference_examples(cwe_number)
+
     print(f"🤖 Annotating smelly lines for {type_name} (CWE-{cwe_number})...")
     data = _run_llm_prompt(
         agent,
@@ -231,6 +304,8 @@ def get_llm_example_annotations(
         cwe_text=cwe_text,
         type_name=type_name,
         cwe_number=cwe_number,
+        reference_cwe_number=reference_cwe,
+        reference_examples=reference_examples,
         files=numbered_files,
     )
 
