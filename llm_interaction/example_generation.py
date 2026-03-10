@@ -3,6 +3,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterProvider
+from validation.tools.base import AnalysisTool
 
 from .agent import InfraAgent
 from .conversation_templated import (
@@ -175,11 +176,23 @@ def get_llm_examples(
     cwe_text: str,
     type_name: str,
     cwe_number: str,
+    tool: AnalysisTool,
     model_override: Optional[str] = None,
     api_key: Optional[str] = None,
+    target_technologies: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     model = _resolve_examples_model(model_override, api_key)
     agent = InfraAgent(model=model, model_settings=model_settings)
+
+    resolved_technologies = (
+        list(target_technologies)
+        if target_technologies
+        else tool.get_supported_technologies()
+    )
+
+    resolved_extensions = tool.get_extensions_for_technologies(resolved_technologies)
+    target_technologies_text = tool.format_technologies(resolved_technologies)
+    supported_extensions_text = ", ".join(resolved_extensions)
     
     print(f"🤖 Generating examples for {type_name} (CWE-{cwe_number})...")
     data = _run_llm_prompt(
@@ -188,6 +201,8 @@ def get_llm_examples(
         cwe_text=cwe_text,
         type_name=type_name,
         cwe_number=cwe_number,
+        target_technologies_text=target_technologies_text,
+        supported_extensions_text=supported_extensions_text,
     )
 
     normalized = [_normalize_generated_example(item) for item in data]

@@ -62,3 +62,53 @@ class AnalysisTool(ABC):
         """Return the tech name for the file (e.g. 'ansible') from its extension, or None if unsupported."""
         ext = Path(file_path).suffix.lower()
         return self.supported_extensions.get(ext)
+
+    def get_supported_technologies(self) -> list[str]:
+        """Return the distinct technology names supported by this tool."""
+        return sorted({tech for tech in self.supported_extensions.values() if tech})
+
+    def resolve_technologies(
+        self,
+        requested_technologies: list[str] | None,
+    ) -> tuple[list[str], list[str]]:
+        """Resolve requested technologies into (selected, unsupported)."""
+        supported = self.get_supported_technologies()
+        if requested_technologies is None:
+            return supported, []
+
+        normalized: list[str] = []
+        for tech in requested_technologies:
+            tech_value = str(tech).strip().lower()
+            if tech_value and tech_value not in normalized:
+                normalized.append(tech_value)
+
+        if not normalized:
+            return supported, []
+
+        unsupported = [tech for tech in normalized if tech not in supported]
+        selected = [tech for tech in normalized if tech in supported]
+        if not selected:
+            raise ValueError(
+                "No valid technologies selected for "
+                f"{self.name}. Supported values: {', '.join(supported)}"
+            )
+
+        return selected, unsupported
+
+    def get_extensions_for_technologies(
+        self,
+        technologies: list[str] | None = None,
+    ) -> list[str]:
+        """Return supported file extensions for the provided technologies."""
+        selected = technologies if technologies is not None else self.get_supported_technologies()
+        selected_set = set(selected)
+        return sorted(
+            ext
+            for ext, tech in self.supported_extensions.items()
+            if tech in selected_set
+        )
+
+    @staticmethod
+    def format_technologies(technologies: list[str]) -> str:
+        """Format technologies for user-facing prompt/context strings."""
+        return ", ".join(tech.title() for tech in technologies)

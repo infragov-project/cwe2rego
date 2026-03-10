@@ -119,17 +119,21 @@ def _verify_examples(
 def prepare_semantic_examples(
     type_name: str,
     cwe_number: str,
+    tool: Optional[AnalysisTool] = None,
     use_llm_examples: bool = False,
     cwe_text: Optional[str] = None,
     api_key: Optional[str] = None,
     examples_model: Optional[str] = None,
     model_directory: Optional[Path] = None,
     generated_examples_dir: Optional[Path] = None,
+    target_technologies: Optional[List[str]] = None,
 ) -> Tuple[Path, List[Dict[str, Any]]]:
     """Prepare semantic-check examples once and return the folder and manifest entries."""
     if use_llm_examples:
         if not cwe_text:
             raise ValueError("cwe_text required when use_llm_examples is True")
+        if tool is None:
+            raise ValueError("tool required when use_llm_examples is True")
 
         from llm_interaction.example_generation import get_llm_examples
 
@@ -137,8 +141,10 @@ def prepare_semantic_examples(
             cwe_text=cwe_text,
             type_name=type_name,
             cwe_number=cwe_number,
+            tool=tool,
             model_override=examples_model,
             api_key=api_key,
+            target_technologies=target_technologies,
         )
         if generated_examples_dir is not None:
             folder = Path(generated_examples_dir)
@@ -200,8 +206,13 @@ def semantic_check(
         print(f" Example #{i}/{len(examples)}:")
         script_path = folder / (example.get("file") or "")
         tech = tool.get_file_type(str(script_path)) if script_path else None
+        if tech is None:
+            print(
+                f"  Skipping {script_path.name} (not supported by analysis tool '{tool.name}')"
+            )
+            continue
         if technologies is not None:
-            if tech is None or tech not in technologies:
+            if tech not in technologies:
                 print(f"  Skipping {script_path.name} (technology {tech!r} not selected)")
                 continue
         failure = _verify_examples(
