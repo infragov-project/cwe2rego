@@ -1,0 +1,11 @@
+- name: Deploy privileged container
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Run a highly privileged Docker container
+      community.docker.docker_container:
+        name: my-privileged-app
+        image: alpine/git
+        command: sh -c "echo 'Running as root in a privileged container' > /host_status.txt && sleep infinity"
+        state: started
+        privileged: true # CWE-250: running as privileged

@@ -1,0 +1,11 @@
+---
+- name: Run a highly privileged Docker container
+  community.docker.docker_container:
+    name: privileged_app
+    image: alpine:latest
+    command: sleep infinity
+    privileged: true # Full host access - CWE-250
+    security_opts:
+      - "seccomp=unconfined"
+    recreate: yes
+  register: container_output

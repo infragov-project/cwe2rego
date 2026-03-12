@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "nginx_weak_tls.yaml",
+      "lines": [
+        16
+      ]
+    },
+    {
+      "file": "apache_weak_ciphers.rb",
+      "lines": [
+        19
+      ]
+    },
+    {
+      "file": "ssh_weak_key_puppet.pp",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "luks_weak_cipher.yaml",
+      "lines": [
+        22,
+        23,
+        24
+      ]
+    },
+    {
+      "file": "weak_x509_cert.rb",
+      "lines": [
+        28
+      ]
+    },
+    {
+      "file": "rds_weak_encryption.pp",
+      "lines": [
+        21,
+        23
+      ]
+    }
+  ]
+}

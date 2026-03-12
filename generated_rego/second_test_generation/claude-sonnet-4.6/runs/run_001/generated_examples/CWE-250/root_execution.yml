@@ -1,0 +1,10 @@
+- name: Execute command as root
+  hosts: all
+  become: yes # CWE-250: Elevating to root without specified non-root become_user
+  tasks:
+    - name: Install a package as root
+      shell: |
+        echo "Installing critical software as root"
+        apt-get update && apt-get install -y some-critical-package # Assuming Debian-based
+      args:
+        warn: false

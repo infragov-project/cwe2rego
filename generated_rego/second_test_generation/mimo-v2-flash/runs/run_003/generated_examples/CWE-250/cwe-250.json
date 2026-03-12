@@ -1,0 +1,52 @@
+{
+  "examples": [
+    {
+      "file": "ansible_excessive_file_perms.yaml",
+      "lines": [
+        6,
+        11
+      ]
+    },
+    {
+      "file": "chef_excessive_file_perms.rb",
+      "lines": [
+        3,
+        11
+      ]
+    },
+    {
+      "file": "puppet_excessive_file_perms.pp",
+      "lines": [
+        5,
+        12
+      ]
+    },
+    {
+      "file": "ansible_db_all_privileges.yaml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "puppet_exec_as_root.pp",
+      "lines": [
+        1,
+        9
+      ]
+    },
+    {
+      "file": "chef_execute_with_root_privs.rb",
+      "lines": [
+        1,
+        8
+      ]
+    },
+    {
+      "file": "ansible_network_public_expose.yaml",
+      "lines": [
+        6,
+        11
+      ]
+    }
+  ]
+}

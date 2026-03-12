@@ -1,0 +1,12 @@
+---
+- name: Create a file as root in a non-root-owned directory
+  hosts: all
+  become: true # Elevating privileges unnecessarily - CWE-250
+  tasks:
+    - name: Touch a non-critical file as root
+      ansible.builtin.file:
+        path: /tmp/test_file.txt
+        state: touch
+        mode: '0644'
+        owner: nobody # Even assigning to nobody, it's run as root
+        group: nogroup

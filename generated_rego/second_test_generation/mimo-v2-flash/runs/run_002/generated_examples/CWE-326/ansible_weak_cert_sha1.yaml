@@ -1,0 +1,24 @@
+- name: Generate certificate with weak SHA1 signature
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Generate a private key
+      community.crypto.openssl_privatekey:
+        path: /tmp/signing_key.pem
+        type: RSA
+        size: 2048
+
+    - name: Generate an OpenSSL certificate signing request
+      community.crypto.openssl_csr:
+        path: /tmp/csr.csr
+        privatekey_path: /tmp/signing_key.pem
+        common_name: "weak.example.com"
+
+    - name: Create a self-signed certificate with SHA1
+      community.crypto.openssl_certificate:
+        path: /tmp/weak_cert_sha1.crt
+        csr_path: /tmp/csr.csr
+        privatekey_path: /tmp/signing_key.pem
+        provider: selfsigned
+        hash_algo: sha1 # CWE-326: Weak Certificate/Key Management (SHA1 for signatures)
+        valid_days: 365

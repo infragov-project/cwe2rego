@@ -1,0 +1,42 @@
+{
+  "examples": [
+    {
+      "file": "container_root.yml",
+      "lines": [
+        11
+      ]
+    },
+    {
+      "file": "k8s_privesc.yml",
+      "lines": [
+        19,
+        20,
+        21
+      ]
+    },
+    {
+      "file": "k8s_capabilities.pp",
+      "lines": [
+        13
+      ]
+    },
+    {
+      "file": "k8s_sa_binding.rb",
+      "lines": [
+        17
+      ]
+    },
+    {
+      "file": "permissive_file.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "root_execution.yml",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

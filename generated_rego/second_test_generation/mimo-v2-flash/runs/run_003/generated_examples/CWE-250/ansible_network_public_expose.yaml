@@ -1,0 +1,15 @@
+tasks:
+  - name: Allow all incoming traffic to sensitive port 8080
+    ansible.builtin.community.general.ufw:
+      rule: allow
+      port: '8080'
+      proto: tcp
+      src: 0.0.0.0/0
+  - name: Allow all traffic to database port 3306
+    ansible.builtin.firewalld:
+      port: 3306/tcp
+      zone: public
+      state: enabled
+      immediate: yes
+      permanent: yes
+    # This exposes the database port to the public zone without source restriction.

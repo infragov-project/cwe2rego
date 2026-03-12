@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "cert_weak_key.pp",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "apache_weak_tls.yml",
+      "lines": [
+        13
+      ]
+    },
+    {
+      "file": "nginx_weak_ciphers.rb",
+      "lines": [
+        21,
+        22
+      ]
+    },
+    {
+      "file": "openssl_csr_weak_hash.yml",
+      "lines": [
+        19
+      ]
+    },
+    {
+      "file": "ssh_key_weak_type.pp",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "openssl_dh_param_weak.yml",
+      "lines": [
+        7
+      ]
+    }
+  ]
+}

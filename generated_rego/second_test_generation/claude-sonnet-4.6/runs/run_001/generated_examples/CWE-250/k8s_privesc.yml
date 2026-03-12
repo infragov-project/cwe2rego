@@ -1,0 +1,21 @@
+- name: Deploy pod with privilege escalation allowed
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Create a pod with allowPrivilegeEscalation enabled
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: priv-escalation-pod
+          spec:
+            containers:
+              - name: my-container
+                image: busybox
+                command: ["sleep", "3600"]
+                securityContext:
+                  allowPrivilegeEscalation: true # CWE-250: Privilege escalation allowed
+                  runAsNonRoot: false
+                  runAsUser: 0

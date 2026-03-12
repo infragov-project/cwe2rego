@@ -1,0 +1,10 @@
+--- 
+- name: Download application from unsecured HTTP endpoint
+  hosts: all
+  become: true
+  tasks:
+    - name: Fetch application archive
+      ansible.builtin.get_url:
+        url: http://downloads.example.org/app.tar.gz
+        dest: /tmp/app.tar.gz
+        mode: '0644'

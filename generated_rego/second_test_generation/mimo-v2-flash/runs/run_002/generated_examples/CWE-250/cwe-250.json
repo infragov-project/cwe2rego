@@ -1,0 +1,44 @@
+{
+  "examples": [
+    {
+      "file": "ansible_unnecessary_become_task.yaml",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "ansible_overly_privileged_user.yaml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "chef_unnecessary_sudo_execute.rb",
+      "lines": [
+        7,
+        14
+      ]
+    },
+    {
+      "file": "chef_overly_privileged_user.rb",
+      "lines": [
+        10,
+        20
+      ]
+    },
+    {
+      "file": "puppet_unnecessary_sudo_exec.pp",
+      "lines": [
+        5,
+        13
+      ]
+    },
+    {
+      "file": "puppet_overly_privileged_user.pp",
+      "lines": [
+        9,
+        17
+      ]
+    }
+  ]
+}

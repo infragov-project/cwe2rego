@@ -1,0 +1,10 @@
+--- 
+- name: Deploy application
+  hosts: all
+  tasks:
+    - name: Write a temporary message
+      ansible.builtin.copy:
+        content: "Hello from Ansible!"
+        dest: /tmp/message.txt
+        mode: '0644'
+      become: yes # Unnecessary. /tmp is typically world-writable and doesn't require root.

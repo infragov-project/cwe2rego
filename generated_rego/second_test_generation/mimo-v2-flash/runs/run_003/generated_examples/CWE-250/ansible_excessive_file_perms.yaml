@@ -1,0 +1,11 @@
+tasks:
+  - name: Create a highly accessible sensitive file
+    ansible.builtin.copy:
+      content: "This is super secret data."
+      dest: /etc/app/sensitive_config.conf
+      mode: '0777'
+  - name: Create world-writable directory
+    ansible.builtin.file:
+      path: /var/log/app_logs
+      state: directory
+      mode: '0777'

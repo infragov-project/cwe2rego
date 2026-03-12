@@ -1,0 +1,10 @@
+- name: Create or update a classic load balancer with a weak security policy
+  community.aws.elb_lb:
+    name: my-classic-lb
+    state: present
+    listeners:
+      - protocol: HTTPS
+        load_balancer_port: 443
+        instance_protocol: HTTPS
+        instance_port: 443
+        security_policy: ELBSecurityPolicy-2016-08 # Inadequate TLS policy

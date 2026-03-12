@@ -1,0 +1,12 @@
+- name: Create Azure Storage Account allowing insecure transfer
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Ensure storage account exists with insecure transfer allowed
+      azure_rm_storageaccount:
+        resource_group: myResourceGroup
+        name: myinsecurestorageacc
+        location: eastus
+        sku: Standard_LRS
+        kind: StorageV2
+        secure_transfer_required: false # CWE-319: Allows HTTP traffic for Azure Storage

@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "elb_legacy_security_policy.yml",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "s3_disabled_encryption.yml",
+      "lines": [
+        4,
+        5
+      ]
+    },
+    {
+      "file": "apache_weak_ssl_protocol.rb",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "file": "weak_kms_key.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "weak_certificate_key_size.pp",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "nginx_weak_cipher_suite.pp",
+      "lines": [
+        9,
+        11
+      ]
+    }
+  ]
+}

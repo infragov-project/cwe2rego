@@ -1,0 +1,9 @@
+- name: Generate weak RSA private key
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Generate a weak RSA private key
+      community.crypto.openssl_privatekey:
+        path: /tmp/weak_rsa_key.pem
+        type: RSA
+        size: 1024 # CWE-326: Insufficient Key Sizes (RSA < 2048 bits)

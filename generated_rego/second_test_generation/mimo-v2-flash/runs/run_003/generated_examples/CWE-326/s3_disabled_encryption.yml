@@ -1,0 +1,6 @@
+- name: Create an S3 bucket with encryption disabled
+  community.aws.s3_bucket:
+    name: my-insecure-bucket
+    kms: false # Explicitly disables KMS encryption
+    server_side_encryption: false # Explicitly disables server-side encryption
+    state: present

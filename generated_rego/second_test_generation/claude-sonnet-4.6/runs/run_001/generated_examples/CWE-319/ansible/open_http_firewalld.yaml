@@ -1,0 +1,19 @@
+--- 
+- name: Open HTTP port 80 to the world using firewalld
+  hosts: all
+  become: true
+  tasks:
+    - name: Allow HTTP service in firewalld
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        zone: public
+      notify: Restart firewalld
+
+  handlers:
+    - name: Restart firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: restarted
+        enabled: true

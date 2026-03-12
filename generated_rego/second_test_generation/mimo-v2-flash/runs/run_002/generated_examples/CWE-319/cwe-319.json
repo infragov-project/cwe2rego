@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "ansible_insecure_get.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "ansible_azure_storage.yml",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "chef_insecure_remote_file.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "chef_nginx_http_only.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "puppet_apache_http_only.pp",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "puppet_insecure_wget.pp",
+      "lines": [
+        2
+      ]
+    }
+  ]
+}

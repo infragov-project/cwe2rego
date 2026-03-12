@@ -1,0 +1,5 @@
+- name: Download unencrypted config file from HTTP source
+  get_url:
+    url: http://config-storage.internal/app/prod_config.json
+    dest: /etc/app/config.json
+    mode: '0600'

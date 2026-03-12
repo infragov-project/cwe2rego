@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "ansible_http_uri.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "ansible_http_get_url.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "chef_http_remote_file.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "chef_http_request.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "puppet_http_file_source.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "puppet_http_apache_proxy.pp",
+      "lines": [
+        9,
+        10
+      ]
+    }
+  ]
+}

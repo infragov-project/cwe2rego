@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "ansible_nginx_http.yaml",
+      "lines": [
+        14
+      ]
+    },
+    {
+      "file": "ansible_postgresql_cleartext_password.yaml",
+      "lines": [
+        22
+      ]
+    },
+    {
+      "file": "chef_apache_http_only.rb",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "chef_db_ssl_disabled.rb",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "file": "puppet_apache_http_explicit.pp",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "puppet_user_plaintext_password.pp",
+      "lines": [
+        7
+      ]
+    }
+  ]
+}

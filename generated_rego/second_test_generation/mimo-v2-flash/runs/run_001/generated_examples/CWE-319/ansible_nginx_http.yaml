@@ -1,0 +1,39 @@
+--- 
+- name: Configure Nginx to serve HTTP traffic only
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Create Nginx HTTP site configuration
+      ansible.builtin.copy:
+        content: |
+          server {
+              listen 80; # CWE-319: Explicitly listening on HTTP port
+              listen [::]:80;
+              server_name example.com;
+
+              location / {
+                  root /var/www/html;
+                  index index.html;
+              }
+          }
+        dest: /etc/nginx/sites-available/default
+        mode: '0644'
+
+    - name: Symlink default site to sites-enabled
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

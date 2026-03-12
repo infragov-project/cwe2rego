@@ -1,0 +1,8 @@
+- name: Send sensitive data over HTTP
+  uri:
+    url: http://api.example.com/submit_data
+    method: POST
+    body_format: json
+    body: '{"username": "admin", "password": "insecure_password_123"}'
+    status_code: 200
+  delegate_to: localhost

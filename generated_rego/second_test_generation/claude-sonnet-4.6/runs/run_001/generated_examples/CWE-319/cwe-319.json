@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "ansible/insecure_fetch.yaml",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "chef/recipes/nginx_http_listener.rb",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "puppet/manifests/apache_weak_tls.pp",
+      "lines": [
+        8,
+        9
+      ]
+    },
+    {
+      "file": "ansible/open_http_firewalld.yaml",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "chef/recipes/insecure_remote_file.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "puppet/manifests/cleartext_app_config.pp",
+      "lines": [
+        4
+      ]
+    }
+  ]
+}

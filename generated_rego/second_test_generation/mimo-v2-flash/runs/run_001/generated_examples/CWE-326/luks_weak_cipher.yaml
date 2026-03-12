@@ -1,0 +1,26 @@
+---
+- name: Configure LUKS with weak encryption
+  hosts: storage_servers
+  become: yes
+  tasks:
+    - name: Ensure 'cryptsetup' is installed
+      ansible.builtin.apt:
+        name: cryptsetup
+        state: present
+
+    - name: Create a dummy loop device for LUKS (for demonstration)
+      community.general.filesize:
+        path: /tmp/luks_test_device.img
+        size: 1G
+        state: present
+
+    - name: Setup LUKS encrypted volume with AES-128-CBC
+      community.crypto.luks_device:
+        device: /tmp/luks_test_device.img
+        passphrase: "S3cur3P@ssw0rd!" # Dummy passphrase for example, should be from vault in a real scenario
+        # CWE-326: Weak Cryptographic Algorithms - AES-128-CBC
+        cipher: aes-128-cbc # AES-128 is weak against modern standards for highly sensitive data, and CBC is less secure than GCM
+        key_size: 128     # Explicitly setting key size to 128 for AES (insufficient for high security)
+        hash: sha1        # CWE-326: SHA-1 for key derivation (cryptographically weak)
+        state: present
+        type: luks1       # LUKS1 is an older version compared to LUKS2

@@ -1,0 +1,26 @@
+---
+- name: Configure Nginx with weak TLS protocols
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Ensure Nginx is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx SSL
+      ansible.builtin.blockinfile:
+        path: /etc/nginx/sites-available/default
+        block: |
+          listen 443 ssl;
+          ssl_protocols TLSv1 TLSv1.1;  # CWE-326: Outdated Protocols
+          ssl_certificate /etc/nginx/ssl/nginx.crt;
+          ssl_certificate_key /etc/nginx/ssl/nginx.key;
+        insertafter: "listen 80 default_server;"
+      notify: Restart nginx
+
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

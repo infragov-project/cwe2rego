@@ -1,0 +1,19 @@
+- name: Generate OpenSSL CSR with weak hash algorithm
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Generate a private key
+      community.crypto.openssl_privatekey:
+        path: /tmp/weak-key.pem
+
+    - name: Generate a CSR using SHA1
+      community.crypto.openssl_csr:
+        path: /tmp/weak-csr.csr
+        privatekey_path: /tmp/weak-key.pem
+        common_name: weak-hash.example.com
+        organization_name: Weak Org
+        country_name: US
+        state_or_province_name: CA
+        locality_name: San Francisco
+        email_address: admin@weak-hash.example.com
+        digest_algo: sha1 # CWE-326: Weak hash algorithm (SHA1)

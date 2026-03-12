@@ -1,0 +1,8 @@
+- name: Generate OpenSSL DH parameters with weak size
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Generate DH parameters with a size of 1024 bits
+      community.crypto.openssl_dhparam:
+        path: /etc/ssl/certs/dhparam.pem
+        size: 1024 # CWE-326: Weak DH parameter size (group1, modp1024)

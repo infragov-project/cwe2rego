@@ -1,0 +1,49 @@
+{
+  "examples": [
+    {
+      "file": "ansible_iam_policy.yaml",
+      "lines": [
+        12,
+        13
+      ]
+    },
+    {
+      "file": "ansible_privileged_container.yaml",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "ansible_unnecessary_sudo.yaml",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "chef_db_permissions.rb",
+      "lines": [
+        13
+      ]
+    },
+    {
+      "file": "chef_broad_firewall.rb",
+      "lines": [
+        12,
+        20
+      ]
+    },
+    {
+      "file": "puppet_unnecessary_root_exec.pp",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "puppet_broad_network.pp",
+      "lines": [
+        7,
+        13
+      ]
+    }
+  ]
+}

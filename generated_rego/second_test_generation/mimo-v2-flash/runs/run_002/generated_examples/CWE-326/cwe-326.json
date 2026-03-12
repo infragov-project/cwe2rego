@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "ansible_nginx_weak_tls.yaml",
+      "lines": [
+        12
+      ]
+    },
+    {
+      "file": "ansible_weak_rsa_key.yaml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "ansible_weak_cert_sha1.yaml",
+      "lines": [
+        23
+      ]
+    },
+    {
+      "file": "chef_apache_rc4_cipher.rb",
+      "lines": [
+        19
+      ]
+    },
+    {
+      "file": "chef_weak_openssl_csr_rsa1024.rb",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "puppet_nginx_weak_tls.pp",
+      "lines": [
+        12
+      ]
+    }
+  ]
+}

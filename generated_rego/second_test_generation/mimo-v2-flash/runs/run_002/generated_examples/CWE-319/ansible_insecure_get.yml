@@ -1,0 +1,8 @@
+- name: Download sensitive file over HTTP
+  hosts: servers
+  tasks:
+    - name: Fetch password file using HTTP
+      ansible.builtin.get_url:
+        url: http://insecure.example.com/etc/passwords.txt # CWE-319: Uses HTTP protocol
+        dest: /tmp/passwords.txt
+        validate_certs: false # Further weakens transmission, even if HTTPS, but HTTP is the primary smell

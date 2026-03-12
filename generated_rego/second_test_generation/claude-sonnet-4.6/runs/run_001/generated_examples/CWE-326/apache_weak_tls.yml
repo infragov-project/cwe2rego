@@ -1,0 +1,14 @@
+- name: Configure Apache with weak TLS protocol
+  hosts: webservers
+  tasks:
+    - name: Enable SSL module
+      community.general.apache2_module:
+        state: present
+        name: ssl
+
+    - name: Set weak SSLProtocol
+      community.general.apache2_mod_ssl:
+        state: present
+        servername: www.example.com
+        ssl_protocol: "TLSv1" # CWE-326: Weak TLS protocol version
+      notify: Reload httpd

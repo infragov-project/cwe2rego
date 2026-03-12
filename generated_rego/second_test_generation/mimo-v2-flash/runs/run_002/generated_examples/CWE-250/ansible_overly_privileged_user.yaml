@@ -1,0 +1,12 @@
+--- 
+- name: Manage application users
+  hosts: app_servers
+  tasks:
+    - name: Ensure 'devops_user' exists with full sudo privileges
+      ansible.builtin.user:
+        name: devops_user
+        password: "{{ 'some_hashed_password' | password_hash('sha512') }}"
+        groups: sudo,wheel # Granting full sudo/wheel access is an unnecessary privilege if not all tasks require it.
+        append: yes
+        state: present
+      become: yes
