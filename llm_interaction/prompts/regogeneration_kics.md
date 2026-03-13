@@ -33,3 +33,4 @@ Requirements:
 - Use input.document[i].playbooks[_] for playbook-level checks and ansLib.tasks[id][t] for task-level checks (import data.generic.ansible as ansLib, data.generic.common as commonLib).
 - Keep the result object format as in the examples (documentId, searchKey, issueType, keyExpectedValue, keyActualValue).
 - Avoid overly large scripts; prefer focused conditions.
+- The rule should be as general as possible.

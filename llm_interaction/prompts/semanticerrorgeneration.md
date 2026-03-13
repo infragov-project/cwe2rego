@@ -33,3 +33,4 @@ Things to pay attention:
 - Avoid generating too large rego scripts to avoid syntatic and semantic errors.
 - Avoid referencing names and objects specific to certain providers such as AWS and Azure for the representation, since the IR is independent of such.
 - In the Glitch IR, complex Values may also contain other complex Values, such as Hash within Hash and Hash within Array, besides containing primitive Values like String and Integer.
+- The rule should be as general as possible, avoiding hardcoding to the failures presented.
