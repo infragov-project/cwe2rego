@@ -1,0 +1,8 @@
+---
+- name: System Update
+  hosts: all
+  tasks:
+    - name: Update packages
+      shell: sudo apt-get update -y
+      args:
+        warn: false

@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "ansible_weak_tls.yml",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "chef_weak_algo.rb",
+      "lines": [
+        1,
+        2
+      ]
+    },
+    {
+      "file": "puppet_weak_key.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "ansible_hardcoded_key.yml",
+      "lines": [
+        3,
+        4
+      ]
+    },
+    {
+      "file": "chef_weak_ciphers.rb",
+      "lines": [
+        3,
+        4
+      ]
+    },
+    {
+      "file": "puppet_weak_protocol.pp",
+      "lines": [
+        2
+      ]
+    }
+  ]
+}

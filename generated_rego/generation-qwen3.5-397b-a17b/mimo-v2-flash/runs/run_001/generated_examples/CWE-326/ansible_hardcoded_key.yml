@@ -1,0 +1,9 @@
+- hosts: database
+  vars:
+    db_encryption_key: "0123456789abcdef"
+    encryption_method: "AES-128-CBC"
+  tasks:
+    - name: Set DB Encryption
+      lineinfile:
+        path: /etc/db/config
+        line: "encryption_key = {{ db_encryption_key }}"

@@ -1,0 +1,8 @@
+---
+- hosts: all
+  tasks:
+    - name: Generate weak RSA key
+      community.crypto.openssh_keypair:
+        path: /etc/ssh/ssh_host_rsa_key
+        type: rsa
+        size: 1024

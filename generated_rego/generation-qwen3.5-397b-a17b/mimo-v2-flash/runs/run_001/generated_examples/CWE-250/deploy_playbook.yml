@@ -1,0 +1,10 @@
+---
+- name: Deploy Application
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Copy user configuration
+      copy:
+        dest: "/home/appuser/.config"
+        content: "setting=value"
+        owner: "appuser"

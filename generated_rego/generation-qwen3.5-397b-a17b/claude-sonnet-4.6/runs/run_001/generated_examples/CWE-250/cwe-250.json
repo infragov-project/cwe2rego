@@ -1,0 +1,45 @@
+{
+  "examples": [
+    {
+      "file": "ssh_hardening.yml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "deploy_permissions.yml",
+      "lines": [
+        10,
+        16
+      ]
+    },
+    {
+      "file": "webserver.rb",
+      "lines": [
+        3,
+        9
+      ]
+    },
+    {
+      "file": "sudoers_config.rb",
+      "lines": [
+        8,
+        13
+      ]
+    },
+    {
+      "file": "site.pp",
+      "lines": [
+        5,
+        13
+      ]
+    },
+    {
+      "file": "database.pp",
+      "lines": [
+        2,
+        9
+      ]
+    }
+  ]
+}

@@ -41,3 +41,4 @@ validation/GLITCH
 validation/KICS
 poetry.toml
 store
+test.py

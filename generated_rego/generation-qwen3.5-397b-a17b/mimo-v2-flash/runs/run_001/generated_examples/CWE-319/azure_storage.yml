@@ -1,0 +1,9 @@
+---
+- name: Configure Azure Storage
+  hosts: localhost
+  tasks:
+    - name: Create storage account
+      azure_rm_storageaccount:
+        resource_group: myResourceGroup
+        name: mystorageaccount
+        enable_https_traffic_only: false

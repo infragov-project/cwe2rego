@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "ssh_key_generation.yml",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "load_balancer_config.yml",
+      "lines": [
+        8
+      ]
+    },
+    {
+      "file": "apache_ssl.pp",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "nginx_ciphers.pp",
+      "lines": [
+        4,
+        5
+      ]
+    },
+    {
+      "file": "weak_key_cert.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "sha1_signature.rb",
+      "lines": [
+        5
+      ]
+    }
+  ]
+}

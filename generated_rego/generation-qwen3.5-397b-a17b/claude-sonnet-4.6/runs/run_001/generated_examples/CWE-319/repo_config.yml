@@ -1,0 +1,9 @@
+---
+- hosts: webservers
+  tasks:
+    - name: Configure yum repo without HTTPS
+      ansible.builtin.yum_repository:
+        name: epel-insecure
+        baseurl: http://download.example.com/epel/$releasever/$basearch/
+        enabled: yes
+        gpgcheck: no

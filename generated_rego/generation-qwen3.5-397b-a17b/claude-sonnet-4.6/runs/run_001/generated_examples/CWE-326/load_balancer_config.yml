@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Create listener with weak TLS
+      amazon.aws.elb_listener:
+        port: 443
+        protocol: HTTPS
+        ssl_policy: ELBSecurityPolicy-TLS-1-0-2015-04

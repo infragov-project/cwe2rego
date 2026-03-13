@@ -1,0 +1,8 @@
+---
+- hosts: all
+  tasks:
+    - name: Check service status via HTTP
+      ansible.builtin.uri:
+        url: http://localhost:8080/health
+        method: GET
+        return_content: yes

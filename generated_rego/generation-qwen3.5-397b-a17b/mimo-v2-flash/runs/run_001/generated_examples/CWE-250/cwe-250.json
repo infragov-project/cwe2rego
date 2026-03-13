@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "deploy_playbook.yml",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "update_task.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "maintenance_recipe.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "install_script.rb",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "backup_manifest.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "network_config.pp",
+      "lines": [
+        2
+      ]
+    }
+  ]
+}

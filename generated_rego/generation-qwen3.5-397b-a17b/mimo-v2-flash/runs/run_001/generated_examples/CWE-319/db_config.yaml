@@ -1,0 +1,10 @@
+---
+- name: Configure Database Connection
+  hosts: db_clients
+  vars:
+    db_ssl_mode: disabled
+  tasks:
+    - name: Deploy DB config
+      template:
+        src: db.conf.j2
+        dest: /etc/db.conf

@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "playbook_insecure_uri.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "repo_config.yml",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "apt_setup.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "database_config.rb",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "download_config.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "web_server.pp",
+      "lines": [
+        2,
+        5
+      ]
+    }
+  ]
+}

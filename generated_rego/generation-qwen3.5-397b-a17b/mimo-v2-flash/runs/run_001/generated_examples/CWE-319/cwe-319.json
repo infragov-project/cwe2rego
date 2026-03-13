@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "azure_storage.yml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "db_config.yaml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "database.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "fetch_secrets.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "web_server.pp",
+      "lines": [
+        2,
+        3
+      ]
+    },
+    {
+      "file": "package_repo.pp",
+      "lines": [
+        2
+      ]
+    }
+  ]
+}

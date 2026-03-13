@@ -1,0 +1,9 @@
+- hosts: webservers
+  tasks:
+    - name: Configure Nginx SSL
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      vars:
+        ssl_protocols: TLSv1 TLSv1.1
+        ssl_ciphers: HIGH:!aNULL:!MD5
