@@ -1,0 +1,6 @@
+---
+- name: Install Dependencies
+  hosts: webservers
+  tasks:
+    - name: Install packages
+      shell: sudo apt-get update && sudo apt-get install -y nginx

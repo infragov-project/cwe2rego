@@ -1,0 +1,7 @@
+- hosts: webservers
+  tasks:
+    - name: Set SSL Ciphers
+      lineinfile:
+        path: /etc/nginx/nginx.conf
+        line: "ssl_ciphers 'RC4-SHA:DES-CBC3-SHA:AES128-GCM-SHA256';"
+        insertafter: "ssl_prefer_server_ciphers"

@@ -1,0 +1,5 @@
+- name: Start application service
+  service:
+    name: my_app
+    state: started
+    user: root

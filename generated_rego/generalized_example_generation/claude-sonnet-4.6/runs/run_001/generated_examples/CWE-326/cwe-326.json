@@ -1,0 +1,47 @@
+{
+  "examples": [
+    {
+      "file": "playbook_weak_tls.yml",
+      "lines": [
+        8,
+        10,
+        11
+      ]
+    },
+    {
+      "file": "configure_ciphers.yaml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "certificate_recipe.rb",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "app_security.rb",
+      "lines": [
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "file": "apache_ssl.pp",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "crypto_params.pp",
+      "lines": [
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  ]
+}

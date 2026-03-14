@@ -1,0 +1,45 @@
+{
+  "examples": [
+    {
+      "file": "playbook_insecure_uri.yml",
+      "lines": [
+        3,
+        4
+      ]
+    },
+    {
+      "file": "task_disable_ssl.yml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "repo_insecure.rb",
+      "lines": [
+        2,
+        4
+      ]
+    },
+    {
+      "file": "config_writer.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "webserver_insecure.pp",
+      "lines": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "file": "profile_weak_tls.pp",
+      "lines": [
+        2,
+        3
+      ]
+    }
+  ]
+}

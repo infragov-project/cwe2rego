@@ -1,0 +1,8 @@
+file { '/etc/ssl/openssl.cnf':
+  ensure  => file,
+  content => '[req]
+default_bits = 1024
+default_md = sha1
+distinguished_name = req_distinguished_name
+',
+}

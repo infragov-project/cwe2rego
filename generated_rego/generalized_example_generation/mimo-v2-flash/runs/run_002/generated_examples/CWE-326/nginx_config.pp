@@ -1,0 +1,5 @@
+class { 'nginx':
+  ssl_protocols => 'TLSv1 TLSv1.1',
+  ssl_ciphers   => 'DES-CBC3-SHA:RC4-SHA:AES128-SHA',
+  ssl_prefer_server_ciphers => on,
+}

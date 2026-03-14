@@ -1,0 +1,42 @@
+{
+  "examples": [
+    {
+      "file": "send_data.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "configure_service.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "fetch_backup.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "web_config.rb",
+      "lines": [
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "file": "repo_config.pp",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "disable_encryption.pp",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

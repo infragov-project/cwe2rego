@@ -1,0 +1,46 @@
+{
+  "examples": [
+    {
+      "file": "ssl_config.yaml",
+      "lines": [
+        8,
+        9
+      ]
+    },
+    {
+      "file": "db_encryption.yml",
+      "lines": [
+        6,
+        10
+      ]
+    },
+    {
+      "file": "ssl_certificate.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "nginx_ssl.rb",
+      "lines": [
+        4,
+        5
+      ]
+    },
+    {
+      "file": "apache_ssl.pp",
+      "lines": [
+        2,
+        3
+      ]
+    },
+    {
+      "file": "crypto_policy.pp",
+      "lines": [
+        3,
+        4,
+        5
+      ]
+    }
+  ]
+}

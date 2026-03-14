@@ -1,0 +1,12 @@
+- hosts: all
+  tasks:
+    - name: Configure SSL
+      template:
+        src: ssl.conf.j2
+        dest: /etc/ssl/openssl.cnf
+      vars:
+        min_tls_version: "TLSv1.0"
+        enabled_protocols:
+          - "TLSv1"
+          - "TLSv1.1"
+          - "TLSv1.2"

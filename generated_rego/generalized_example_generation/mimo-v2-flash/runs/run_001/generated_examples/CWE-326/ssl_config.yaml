@@ -1,0 +1,9 @@
+- hosts: webservers
+  tasks:
+    - name: Configure SSL
+      template:
+        src: ssl.conf.j2
+        dest: /etc/ssl/openssl.cnf
+      vars:
+        min_protocol: SSLv3
+        cipher_list: RC4-SHA:DES-CBC3-SHA

@@ -1,0 +1,8 @@
+---
+- name: Configure Application
+  hosts: all
+  tasks:
+    - name: Read config file
+      command: cat /etc/app/config.ini
+      become: yes
+      become_user: root

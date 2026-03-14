@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "deploy_service.yaml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "sudo_config.yml",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "webserver.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "admin_access.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "site.pp",
+      "lines": [
+        4
+      ]
+    },
+    {
+      "file": "permissions.pp",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

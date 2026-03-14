@@ -1,0 +1,7 @@
+- name: Submit sensitive data over insecure channel
+  uri:
+    url: http://api.internal.com/submit
+    method: POST
+    body: "{{ user_credentials }}"
+    headers:
+      Content-Type: application/json

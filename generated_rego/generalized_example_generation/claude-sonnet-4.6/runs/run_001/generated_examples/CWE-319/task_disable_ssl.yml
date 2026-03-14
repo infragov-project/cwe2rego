@@ -1,0 +1,6 @@
+- name: Disable SSL in app config
+  lineinfile:
+    path: /etc/myapp/config.ini
+    regexp: '^ssl_enabled'
+    line: 'ssl_enabled = false'
+  become: true

@@ -1,0 +1,6 @@
+---
+- name: Generate Certificate
+  community.crypto.x509_certificate:
+    path: /etc/ssl/certs/example.crt
+    privatekey_path: /etc/ssl/private/example.key
+    signature_algorithm: sha1

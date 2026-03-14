@@ -1,0 +1,8 @@
+---
+- hosts: all
+  tasks:
+    - name: Generate weak RSA key
+      community.crypto.openssl_privatekey:
+        path: /etc/ssl/private/weak_key.pem
+        size: 1024
+        type: RSA

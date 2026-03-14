@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "file": "playbook.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "backup_task.yaml",
+      "lines": [
+        5,
+        6
+      ]
+    },
+    {
+      "file": "certs.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "logs.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "cleanup.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "admin_tool.pp",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

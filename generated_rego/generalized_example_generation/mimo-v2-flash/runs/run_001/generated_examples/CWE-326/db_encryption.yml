@@ -1,0 +1,10 @@
+- hosts: db
+  tasks:
+    - name: Set DB Encryption
+      lineinfile:
+        path: /etc/db/config.ini
+        line: "encryption_algorithm = DES"
+    - name: Set Key Size
+      lineinfile:
+        path: /etc/db/config.ini
+        line: "key_size = 56"

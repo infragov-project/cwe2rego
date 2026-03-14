@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "playbook.yml",
+      "lines": [
+        7,
+        8
+      ]
+    },
+    {
+      "file": "deploy.yaml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "recipe.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "sudo_config.rb",
+      "lines": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "file": "site.pp",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "privileges.pp",
+      "lines": [
+        6
+      ]
+    }
+  ]
+}

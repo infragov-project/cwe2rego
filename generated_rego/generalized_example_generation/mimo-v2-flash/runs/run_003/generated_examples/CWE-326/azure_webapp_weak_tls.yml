@@ -1,0 +1,6 @@
+---
+- name: Configure Web App
+  azure_rm_webapp:
+    resource_group: myResourceGroup
+    name: myWebApp
+    min_tls_version: "1.0"

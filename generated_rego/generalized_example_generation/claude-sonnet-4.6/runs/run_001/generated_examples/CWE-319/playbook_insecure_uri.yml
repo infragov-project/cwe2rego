@@ -1,0 +1,6 @@
+- name: Fetch data from internal API
+  uri:
+    url: http://api.internal.local/data
+    validate_certs: no
+    method: GET
+  register: result

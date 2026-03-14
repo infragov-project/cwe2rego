@@ -1,0 +1,5 @@
+- name: Download Setup Script
+  get_url:
+    url: http://internal-repo.local/scripts/setup.sh
+    dest: /tmp/setup.sh
+    mode: '0755'

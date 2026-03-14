@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "storage.yml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "fetch.yml",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "remote.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "config.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "repo.pp",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "server.pp",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

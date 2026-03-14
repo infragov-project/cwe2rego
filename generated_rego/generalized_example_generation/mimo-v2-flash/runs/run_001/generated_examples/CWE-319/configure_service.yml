@@ -1,0 +1,7 @@
+- name: Configure application with cleartext protocol
+  copy:
+    content: |
+      protocol: http
+      ssl_enabled: false
+      encryption_in_transit: false
+    dest: /etc/app/config.yml

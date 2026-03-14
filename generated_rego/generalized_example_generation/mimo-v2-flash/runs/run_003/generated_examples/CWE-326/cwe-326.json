@@ -1,0 +1,44 @@
+{
+  "examples": [
+    {
+      "file": "azure_webapp_weak_tls.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "cert_sha1.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "nginx_ssl_weak.rb",
+      "lines": [
+        2,
+        3
+      ]
+    },
+    {
+      "file": "db_encryption_weak.rb",
+      "lines": [
+        3,
+        4
+      ]
+    },
+    {
+      "file": "apache_ssl_weak.pp",
+      "lines": [
+        2,
+        3
+      ]
+    },
+    {
+      "file": "openssl_key_weak.pp",
+      "lines": [
+        2,
+        3
+      ]
+    }
+  ]
+}

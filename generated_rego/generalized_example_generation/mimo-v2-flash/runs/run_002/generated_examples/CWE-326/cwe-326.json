@@ -1,0 +1,47 @@
+{
+  "examples": [
+    {
+      "file": "nginx_config.pp",
+      "lines": [
+        2,
+        3
+      ]
+    },
+    {
+      "file": "certificates.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "generate_keys.yml",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "openssl_config.pp",
+      "lines": [
+        4,
+        5
+      ]
+    },
+    {
+      "file": "tls_settings.rb",
+      "lines": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "file": "app_config.yml",
+      "lines": [
+        9,
+        10,
+        11
+      ]
+    }
+  ]
+}

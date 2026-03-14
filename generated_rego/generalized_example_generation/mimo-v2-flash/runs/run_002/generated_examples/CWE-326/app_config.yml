@@ -1,0 +1,11 @@
+---
+- hosts: web_servers
+  tasks:
+    - name: Deploy crypto config
+      template:
+        src: crypto_settings.j2
+        dest: /etc/app/crypto.conf
+      vars:
+        crypto_algorithm: '3DES'
+        crypto_key: 'static_initialization_vector_0000'
+        tls_version: 'SSLv3'

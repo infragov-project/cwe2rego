@@ -1,0 +1,6 @@
+---
+- hosts: db_servers
+  tasks:
+    - name: Run backup
+      become_user: root
+      shell: sudo /usr/bin/backup.sh
