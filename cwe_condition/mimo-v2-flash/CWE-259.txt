@@ -1,0 +1,104 @@
+### Necessary Weaknesses to Detect CWE-259 (Use of Hard-coded Password) in IaC Scripts  
+Infrastructure as Code (IaC) scripts often define resources requiring authentication (e.g., databases, VMs, APIs). Hard-coded passwords in these scripts risk exposure to unauthorized access. Below are the critical weaknesses to detect, along with keywords and attributes (agnostic of language) that imply this flaw:
+
+---
+
+#### **1. Explicit Password Literals in Configuration**  
+**Detection Focus**: Plaintext password values assigned directly to configuration fields.  
+**Keywords/Attributes**:  
+- Fields named `password`, `pwd`, `secret`, `passphrase`, `token`, or `credential`.  
+- Values that are **non-referenced strings** (e.g., `"password123"`, `"admin"`) instead of dynamic references (e.g., environment variables, secret manager lookups).  
+- Common weak passwords (e.g., `"admin"`, `"password"`, `"123456"`).  
+**Example**:  
+  ```plaintext
+  database_password = "s3cr3t!"   # Hard-coded string literal
+  ```
+
+#### **2. Default Credentials in Resource Definitions**  
+**Detection Focus**: Use of preconfigured/default credentials for services (e.g., databases, cloud instances).  
+**Keywords/Attributes**:  
+- Default usernames (e.g., `admin`, `root`, `sa`) paired with static passwords.  
+- References to `default` authentication blocks without overriding credentials.  
+- Attributes like `admin_password`, `initial_password`, or `default_credential`.  
+**Example**:  
+  ```plaintext
+  admin_username = "admin"
+  admin_password = "admin123"    # Default credentials
+  ```
+
+#### **3. Insecure Storage of Credentials in Files**  
+**Detection Focus**: Plaintext passwords stored in IaC-accessible files (e.g., configuration files, environment files).  
+**Keywords/Attributes**:  
+- File paths containing `secret`, `credential`, or `config` (e.g., `secrets.txt`, `.env`).  
+- Inline file content with `password=` or `pwd:` patterns.  
+- Unencrypted base64-encoded credentials (often mistaken as secure).  
+**Example**:  
+  ```plaintext
+  env_file = ".env"   # .env file containing: DB_PASSWORD=hardcodedpass
+  ```
+
+#### **4. Embedded Credentials in Scripts/Commands**  
+**Detection Focus**: Passwords passed as plaintext in CLI commands or scripts within IaC.  
+**Keywords/Attributes**:  
+- Commands with `--password`, `-p`, `--secret`, or similar flags followed by static values.  
+- Shell commands (e.g., `curl`, `ssh`, `db_connect`) with inline credentials.  
+- Scripts invoking authentication with literal strings.  
+**Example**:  
+  ```plaintext
+  command = "mysql -u root -p'hardcodedpass' -h db.example.com"
+  ```
+
+#### **5. Hard-coded Secrets in Variable Defaults**  
+**Detection Focus**: Variables/parameters with sensitive default values.  
+**Keywords/Attributes**:  
+- Variable declarations (e.g., `input`, `variable`, `param`) with `default` set to a password-like string.  
+- Absence of validation or secret rotation logic.  
+**Example**:  
+  ```plaintext
+  variable "db_password" {
+    default = "staticpassword"   # Hard-coded default
+  }
+  ```
+
+#### **6. Insecure References to External Systems**  
+**Detection Focus**: Hard-coded credentials for outbound connections (e.g., APIs, external services).  
+**Keywords/Attributes**:  
+- URLs or endpoints with embedded credentials (e.g., `https://user:pass@api.example.com`).  
+- `auth` blocks with static tokens or API keys.  
+**Example**:  
+  ```plaintext
+  api_endpoint = "https://user:password@service.com"   # Credentials in URL
+  ```
+
+---
+
+### Key Indicators for Automated Detection  
+1. **String Patterns**:  
+   - Password-like strings (e.g., 8+ characters with mixed case, numbers, symbols).  
+   - Base64-encoded values (may hint at "hidden" hard-coded secrets).  
+2. **Contextual Clues**:  
+   - Resources requiring authentication (e.g., databases, cloud instances, CI/CD pipelines).  
+   - Absence of secret manager integrations (e.g., AWS Secrets Manager, Azure Key Vault).  
+3. **File/Code Structure**:  
+   - Credentials in version-controlled files (e.g., Git) without encryption.  
+   - Variables marked as "sensitive" but still hard-coded (false sense of security).  
+
+### Mitigation Keywords (to Ignore)  
+Focus on weaknesses, not mitigations. Avoid patterns like:  
+- `secret_ref` (e.g., references to vaults)  
+- `dynamic` (e.g., Terraform dynamic blocks)  
+- `encrypted` (unless combined with hard-coded values).  
+
+---
+
+### Summary of Critical Weaknesses  
+| Weakness Type                     | Key Attributes to Detect                          |  
+|-----------------------------------|--------------------------------------------------|  
+| Plaintext password literals       | `password`, `pwd`, `secret` + string literals    |  
+| Default credentials               | `admin_password`, `default_credential`           |  
+| Insecure file storage             | Files with `.env`, `secrets.*`, `credentials.*`  |  
+| Embedded CLI credentials          | Commands with `-p`, `--password`, or `:pass@`    |  
+| Hard-coded variable defaults      | Variables with `default = "password123"`         |  
+| External system auth              | URLs with `user:pass@domain` or static API keys  |  
+
+By scanning for these patterns, IaC security tools can flag potential CWE-259 violations and enforce secrets management best practices (e.g., using secret stores or environment variables).

@@ -1,0 +1,69 @@
+Below are **IaC‑focused weakness patterns** that map to **CWE‑353 (Missing Support for Integrity Check)**. Use these to flag configurations where data is transmitted or retrieved **without any integrity validation**. I’ve also included **generic keywords/attributes/fields** that typically imply this weakness (no language mentioned).
+
+---
+
+## ✅ Weakness Patterns to Detect (CWE‑353)
+
+### 1. **Data Transport Uses a Protocol Without Integrity**
+**What to detect:** Data flows configured with protocols or transports that **do not provide integrity checks**, or where integrity is explicitly disabled.
+
+**Indicators (fields/values):**
+- `protocol`, `transport`, `scheme`, `listener`
+- Values such as: `http`, `udp`, `plaintext`, `cleartext`, `insecure`, `raw`
+- Presence of `tls`, `ssl`, `dtls` set to `false` or missing
+
+---
+
+### 2. **Checksum / Hash / Signature Not Enabled**
+**What to detect:** Configuration **omits checksum, hash, MAC, or signing** options for data transfer, artifact delivery, or messaging.
+
+**Keywords / attributes to inspect:**
+- `checksum`, `crc`, `hash`, `digest`, `md5`, `sha`, `etag`, `content_md5`
+- `integrity`, `message_integrity`, `data_integrity`
+- `signature`, `signing`, `signed`, `mac`, `hmac`
+- Missing values or set to: `none`, `null`, `false`, `disabled`, `off`
+
+---
+
+### 3. **Integrity Verification Explicitly Disabled**
+**What to detect:** Fields that **skip or ignore integrity checks**.
+
+**Indicators:**
+- `verify`, `validate`, `integrity_check`, `checksum_validation`
+- `skip_verify`, `ignore_integrity`, `allow_unverified`, `no_check`
+- Values: `false`, `disabled`, `skip`, `ignore`
+
+---
+
+### 4. **Artifact or Package Downloads Without Integrity Validation**
+**What to detect:** Configuration that pulls packages, images, artifacts, or data **without checksum or signature verification**.
+
+**Relevant fields/keywords:**
+- `verify_checksum`, `verify_signature`, `gpg_check`, `signature_check`
+- `integrity_check`, `checksum_required`
+- Values set to `false` or missing entirely
+
+---
+
+### 5. **Message Queue / Stream Integrity Disabled**
+**What to detect:** Messaging systems configured without **CRC / message validation / signing**.
+
+**Indicators:**
+- `enable_crc`, `checksum_enabled`, `message_integrity`, `data_validation`
+- `sign_messages`, `verify_messages`
+- Values: `false`, `off`, `disabled`
+
+---
+
+## 🔎 Summary: High‑Signal Keywords to Flag
+
+```
+checksum, crc, hash, digest, md5, sha, etag, integrity,
+signature, signing, mac, hmac, verify, validate,
+skip_verify, ignore_integrity, no_check, allow_unverified,
+protocol, transport, scheme, listener, http, udp, plaintext
+```
+
+---
+
+If these appear **missing, disabled, or set to “none/false”**, it strongly indicates **CWE‑353: Missing Support for Integrity Check** in an IaC script.

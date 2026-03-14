@@ -1,0 +1,77 @@
+# CWE-258: Empty Password in Configuration File — Detection in IaC Scripts
+
+## Core Weakness Patterns to Detect
+
+### 1. Empty String Assignment to Credential Fields
+The primary signal is a password-related attribute explicitly assigned an empty value (`""`, `''`, ` `, or left blank after an assignment operator).
+
+### 2. Null/Blank Credential Values
+Password fields set to `null`, `nil`, `none`, `~`, or whitespace-only strings that effectively act as no password.
+
+### 3. Empty Connection String Credentials
+Inline connection strings where password segments contain no value between delimiters (e.g., `pwd=;`, `password=&`, `pass="`).
+
+### 4. Unset But Referenced Credential Parameters
+Fields declared but given no value, relying on defaults that may be empty.
+
+---
+
+## Keywords, Attributes & Fields That Imply This Weakness
+
+### Password-Specific Field Names
+| Category | Keywords / Field Names |
+|---|---|
+| Generic | `password`, `passwd`, `pwd`, `pass`, `passphrase` |
+| Scoped | `db_password`, `admin_password`, `root_password`, `master_password`, `user_password` |
+| Protocol | `ldap_password`, `smtp_password`, `ftp_password`, `ssh_password` |
+| Auth | `auth_password`, `bind_password`, `login_password` |
+
+### Credential & Secret Field Names
+| Category | Keywords / Field Names |
+|---|---|
+| Secrets | `secret`, `secret_key`, `client_secret`, `shared_secret` |
+| Tokens | `token`, `auth_token`, `access_token`, `api_token` |
+| Keys | `api_key`, `access_key`, `private_key`, `encryption_key` |
+
+### Connection & Integration Patterns
+| Pattern | Examples |
+|---|---|
+| Connection strings | `connection_string`, `connectionString`, `db_uri`, `database_url`, `jdbc_url`, `dsn` |
+| Inline credential segments | `pwd=`, `password=`, `pass=`, `credentials=` embedded within a larger string value |
+
+### Empty Value Indicators (Language-Agnostic)
+```
+password = ""
+password = ''
+password =
+password:
+password: ""
+password: ''
+pwd=;
+pwd="";
+secret: ~
+secret: null
+```
+
+### Structural / Contextual Attributes
+| Attribute / Block | Relevance |
+|---|---|
+| `env`, `environment` blocks | May expose empty password env vars |
+| `credentials`, `auth`, `authentication` blocks | Sections containing empty password sub-fields |
+| `database`, `db`, `datastore` blocks | Often hold connection credentials |
+| `smtp`, `mail`, `ldap`, `ad` blocks | Protocol configs with auth fields |
+| `service_account`, `user` blocks | Identity configs with blank passwords |
+
+---
+
+## Detection Logic Summary
+
+| Signal | What to Look For |
+|---|---|
+| **Field name match** | Any field name resembling `password`, `pwd`, `secret`, `token`, `key`, `pass`, `credential` |
+| **Value is empty** | Value is `""`, `''`, whitespace-only, `null`, `nil`, `none`, `~`, or absent |
+| **Inline connection string** | Password segment between delimiters contains no characters |
+| **Hardcoded but blank** | Field is present and explicitly set (not referencing a vault/secret manager) but empty |
+| **No external reference** | Value is a literal rather than a dynamic reference (e.g., no `${VAR}`, `!Ref`, `$(secret)`, vault path) |
+
+> ⚠️ The combination of a **credential-semantics field name** + **empty/null literal value** is the definitive indicator of CWE-258 in IaC scripts.

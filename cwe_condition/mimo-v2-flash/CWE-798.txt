@@ -1,0 +1,93 @@
+### Detection of CWE-798 (Use of Hard-coded Credentials) in Infrastructure as Code (IaC)  
+To detect hard-coded credentials in IaC scripts (e.g., Terraform, CloudFormation, Kubernetes manifests), focus on **keywords, attributes, and patterns** that indicate sensitive data exposure. Below are critical indicators without language-specific references:
+
+---
+
+#### **1. Explicit Credential Fields**  
+Search for attributes that directly store secrets or keys. Keywords include:  
+- **`password`**, **`secret`**, **`token`**, **`key`** (e.g., `access_key`, `secret_key`, `api_key`)  
+- **`credential`**, **`auth`**, **`passwd`**, **`passphrase`**  
+- **`private_key`**, **`ssh_key`**, **`certificate`**  
+- **`username`** paired with a **`password`** (hard-coded combo)  
+
+**Detection Insight**:  
+- Values that are **static strings** (e.g., `password = "Admin123!"`) instead of references to external secrets managers (e.g., HashiCorp Vault, AWS Secrets Manager).  
+- Avoid values like `"changeme"` or default strings (e.g., `admin`, `root`) without enforcement of rotation.  
+
+---
+
+#### **2. Insecure Data Storage Patterns**  
+Look for these patterns in resource definitions:  
+- **Embedded credentials in scripts/configuration files**:  
+  - Environment variables (e.g., `DB_PASSWORD: "hardcoded_string"`)  
+  - User data/cloud-init scripts with credentials in plain text.  
+- **In-line credentials**:  
+  - Direct references in connection strings (e.g., `postgres://user:password@host/db`).  
+  - Hard-coded API keys or tokens in provider blocks (e.g., `api_key = "1234567890abcdef"`).  
+- **Default credentials in resource definitions**:  
+  - Database instances with pre-set admin passwords.  
+  - Storage buckets or services using static access credentials.  
+
+**Detection Insight**:  
+- Flags resources where secrets are passed as **literal values** instead of variables/parameters (e.g., `var.db_password` is acceptable; `"p@ssw0rd"` is not).  
+
+---
+
+#### **3. Cryptographic Material Exposure**  
+Identify hard-coded cryptographic elements:  
+- **Static cryptographic keys** (e.g., encryption keys, TLS certificates) embedded in code.  
+- **Pre-shared keys (PSK)** in network configurations.  
+- **Non-ephemeral secrets** (e.g., JWT signing keys, SSH private keys).  
+
+**Detection Insight**:  
+- Values that are **hex/base64 strings** (e.g., `key: "68af404b513073584c4b6f22b6c63e6b"`).  
+- Absence of key rotation mechanisms or secrets lifecycle management.  
+
+---
+
+#### **4. Provider/Platform-Specific Patterns**  
+Common vulnerable IaC resource types:  
+- **Compute/Containers**:  
+  - Environment variables in container definitions (e.g., `env: { "API_KEY": "secret123" }`).  
+  - Instance user data with bootstrap scripts containing credentials.  
+- **Databases/Storage**:  
+  - Master passwords for RDS/Cloud SQL without secrets manager integration.  
+  - Storage account access keys in configuration.  
+- **Networking**:  
+  - VPN/IPSec pre-shared keys.  
+  - Load balancer authentication tokens.  
+
+**Detection Insight**:  
+- Credentials in **non-referenceable fields** (e.g., `admin_password` vs. `admin_password_secret_ref`).  
+
+---
+
+#### **5. Insecure Defaults**  
+Flags for well-known defaults:  
+- **Default admin accounts** (e.g., `username: "admin"`, `password: "admin"`).  
+- **Publicly documented credentials** (e.g., vendor-specific defaults like `root/password`).  
+- **Unchanged default secrets** across deployments (violating uniqueness principles).  
+
+**Detection Insight**:  
+- Use of **generic credentials** without customization or rotation policies.  
+
+---
+
+### **Summary of Detection Keywords & Patterns**  
+| **Category**               | **Keywords/Attributes to Flag**                              | **Example Risk Pattern**                          |  
+|----------------------------|-------------------------------------------------------------|--------------------------------------------------|  
+| **Credentials**            | `password`, `secret`, `token`, `key`, `credential`, `auth` | `api_key = "hardcoded_value"`                    |  
+| **Secrets Storage**        | Embedded values in scripts, env vars, connection strings    | `DB_PASSWORD: "plaintext_password"`              |  
+| **Cryptographic Material** | `private_key`, `certificate`, `shared_key`                  | `encryption_key: "hex_or_base64_string"`         |  
+| **Insecure Defaults**      | `username: "admin"`, `password: "default"`                  | Database admin password = `"admin"`              |  
+
+---
+
+### **Mitigation-Driven Detection**  
+- **Reference-Based Secrets**: Flag resources that **lack references** to secrets managers (e.g., no `secretsmanager_secret` or `vault_secret`).  
+- **Parameterization**: Alert if sensitive fields use **static values** instead of IaC variables or external parameters.  
+- **Contextual Analysis**: Prioritize resources with **exposure paths** (e.g., public-facing services with hard-coded keys).  
+
+> **Note**: False positives may occur with non-sensitive keys (e.g., public keys). Pair with data classification (e.g., detect base64/hex patterns) to improve accuracy.  
+
+By monitoring these indicators, IaC security tools can reliably surface CWE-798 risks without language-specific constraints.

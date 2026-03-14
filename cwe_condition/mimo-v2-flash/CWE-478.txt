@@ -1,0 +1,78 @@
+### Necessary Weaknesses to Detect CWE-478 in IaC Scripts  
+CWE-478 highlights missing default cases in multi-condition expressions (e.g., switch statements), which can lead to unhandled states and security risks. In **Infrastructure as Code (IaC)**, this manifests as missing fallbacks for unanticipated values in conditional logic. Below are the critical weaknesses to detect, with keywords/attributes for static analysis (language-agnostic):  
+
+---
+
+#### 1. **Incomplete Key Coverage in Mappings**  
+   - **Weakness**: Lookup tables (e.g., key-value maps) without a default/fallback for unhandled keys.  
+   - **Keywords/Attributes**:  
+     - `lookup`, `map`, `dictionary`, `find_in_map`, `zipmap` (common in Terraform, CloudFormation, ARM templates).  
+     - **Fields**:  
+       - Absence of a `default` value in lookup functions.  
+       - Missing catch-all key (e.g., `"*"` or `"default"` in maps).  
+       - Input variables used as keys (e.g., `environment`, `region`) without validation for allowed values.  
+   - **Why it matters**: If an input key (e.g., `environment=staging`) isn’t in the map and no default exists, the IaC may fail or deploy insecurely.  
+
+---
+
+#### 2. **Unhandled Cases in Conditional Expressions**  
+   - **Weakness**: Ternary-like operators or `if`/`else` chains without an `else` branch for unexpected values.  
+   - **Keywords/Attributes**:  
+     - `condition ? true_value : false_value` (ternary), `if`/`else`, `switch`-like logic (e.g., in Terraform `for`/`if` loops).  
+     - **Fields**:  
+       - Variables driving conditions (e.g., `user_input`, `environment_type`) without validation or default handling.  
+       - Absence of an `else` or `default` branch in conditional blocks.  
+   - **Why it matters**: Inputs outside expected values (e.g., typos, new options) bypass logic, leading to misconfigurations.  
+
+---
+
+#### 3. **Missing Fallback in Resource Creation Loops**  
+   - **Weakness**: Loops (`for_each`, `count`) with conditional filters that exclude values without fallback.  
+   - **Keywords/Attributes**:  
+     - `for_each`, `count`, `filter`, `include`/`exclude` conditions.  
+     - **Fields**:  
+       - Input lists/sets driving loops (e.g., `subnets = ["prod", "staging"]`) without handling new/unlisted items.  
+       - No error handling for invalid loop inputs (e.g., unsupported environment names).  
+   - **Why it matters**: Unhandled items in loops may cause partial deployment, leaving resources unsecured.  
+
+---
+
+#### 4. **Incomplete Validation of Input Variables**  
+   - **Weakness**: Input variables used in conditional logic without validating allowed values or providing a safe default.  
+   - **Keywords/Attributes**:  
+     - `variable` definitions, `validation` blocks, `allowed_values`.  
+     - **Fields**:  
+       - Variables without `allowed_values` or `default` in IaC (e.g., Terraform `variable` blocks, CloudFormation parameters).  
+       - Absence of `validation` rules (e.g., regex checks) for user inputs.  
+   - **Why it matters**: Unvalidated inputs can trigger unhandled branches, bypassing security controls.  
+
+---
+
+#### 5. **Absence of Default in Cloud-Specific Constructs**  
+   - **Weakness**: Cloud resource configurations (e.g., IAM policies, security groups) without catch-all rules.  
+   - **Keywords/Attributes**:  
+     - `action`, `resource`, `effect` (in IAM), `ingress`/`egress` (in security groups), `wildcard` (`*`).  
+     - **Fields**:  
+       - Missing `default_action` (e.g., in AWS Load Balancer rules).  
+       - Implicit "deny" vs. explicit "allow" for unmatched traffic (e.g., no explicit deny-all).  
+   - **Why it matters**: Unhandled cases may expose resources (e.g., unintended open ports).  
+
+---
+
+### Key Detection Principles for IaC:  
+1. **Pattern Recognition**:  
+   - Look for **lookup/mapping operations** without a `default` value.  
+   - Identify **conditional branches** (e.g., `if`, ternary) without an `else` clause.  
+   - Scan **loop constructs** for unhandled input values.  
+2. **Input/Output Analysis**:  
+   - Trace user inputs (e.g., `var.environment`) to logic branches; flag unvalidated or unhandled values.  
+   - Check maps/tables for **exhaustive coverage** (all possible keys defined or defaulted).  
+3. **Contextual Risks**:  
+   - Prioritize security-sensitive paths (e.g., IAM, network rules, secret management).  
+   - Flag configurations where unhandled states could escalate privileges or bypass controls.  
+
+### Example Mitigation in IaC (Language-Agnostic):  
+- **Bad**: A mapping for instance types where `environment=dev` or `prod` is handled, but `staging` (new env) isn’t.  
+- **Good**: Add a `default` value (e.g., `instance_type = lookup(var.map, var.env, "t3.micro")`) and validate inputs.  
+
+By targeting these weaknesses, static analysis tools (SAST) can detect CWE-478 in IaC scripts without relying on specific programming languages. Focus on **exhaustive conditional coverage** and **fallback mechanisms** to prevent unhandled cases.

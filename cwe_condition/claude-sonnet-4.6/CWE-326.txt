@@ -1,0 +1,135 @@
+# CWE-326: Inadequate Encryption Strength — IaC Detection Guide
+
+## Core Weaknesses to Detect
+
+### 1. Insufficient Key Length
+**What to look for:** Key size definitions that fall below currently recommended minimums.
+
+| Category | Keywords/Attributes | Weak Indicators |
+|---|---|---|
+| Asymmetric Key Size | `key_size`, `key_length`, `rsa_bits`, `bit_length`, `key_bits`, `modulus_bits` | Values < 2048 (RSA/DSA), < 256 (ECC) |
+| Symmetric Key Size | `key_length`, `key_bits` | Values < 128 bits |
+
+---
+
+### 2. Weak or Deprecated Cipher Algorithms
+**What to look for:** Explicit references to known-weak encryption algorithms.
+
+**Keywords/Attributes:**
+- `algorithm`, `encryption_algorithm`, `cipher`, `cipher_type`, `cipher_spec`
+
+**Weak Values to Flag:**
+- `DES`, `3DES`, `TRIPLE_DES`, `TDEA`
+- `RC2`, `RC4`, `ARC4`, `RC5`
+- `Blowfish` (with short key)
+- `XOR`-based schemes
+- `NULL` or `NONE` encryption
+
+---
+
+### 3. Deprecated TLS/SSL Protocol Versions
+**What to look for:** Protocol version settings allowing outdated SSL/TLS versions.
+
+**Keywords/Attributes:**
+- `ssl_policy`, `security_policy`, `minimum_tls_version`, `tls_version`, `tls_min_version`
+- `protocol`, `ssl_version`, `tls_config`, `min_protocol_version`
+
+**Weak Values to Flag:**
+- `SSLv2`, `SSLv3`, `SSL2`, `SSL3`
+- `TLSv1`, `TLSv1.0`, `TLS_1_0`
+- `TLSv1.1`, `TLS_1_1`
+
+---
+
+### 4. Weak Hashing / Digest Algorithms
+**What to look for:** Use of broken hash functions for cryptographic purposes.
+
+**Keywords/Attributes:**
+- `hash_algorithm`, `digest_algorithm`, `signature_algorithm`
+- `hash_function`, `checksum_type`, `integrity_algorithm`
+
+**Weak Values to Flag:**
+- `MD4`, `MD5`
+- `SHA1`, `SHA-1`
+
+---
+
+### 5. Weak Encryption Modes
+**What to look for:** Block cipher modes that lack semantic security.
+
+**Keywords/Attributes:**
+- `encryption_mode`, `cipher_mode`, `block_mode`, `mode`
+
+**Weak Values to Flag:**
+- `ECB` (Electronic Code Book) — produces deterministic ciphertext from identical plaintext blocks
+- No mode specification (may default to ECB)
+
+---
+
+### 6. Weak or Permissive Cipher Suites
+**What to look for:** Cipher suite configurations that include known-weak components.
+
+**Keywords/Attributes:**
+- `cipher_suite`, `ciphers`, `ssl_ciphers`, `allowed_ciphers`, `cipher_list`
+
+**Patterns to Flag:**
+- Suites containing: `NULL`, `EXPORT`, `ANON`, `RC4`, `DES`, `MD5`, `3DES`, `ADH`, `eNULL`, `aNULL`
+
+---
+
+### 7. Storage Encryption Configuration
+**What to look for:** Data-at-rest encryption settings using weak schemes.
+
+**Keywords/Attributes:**
+- `sse_algorithm`, `server_side_encryption`, `encryption_type`
+- `encrypted`, `volume_type`, `storage_encryption`, `disk_encryption`
+- `kms_key_id`, `kms_master_key_id`, `encryption_key`
+
+**Weak Indicators:**
+- `AES128` instead of `AES256`
+- Missing or null `kms_key_id` (implies default/weak managed keys)
+- `aws:kms` without customer-managed key reference
+
+---
+
+### 8. Certificate / Key Type Weakness
+**What to look for:** Configuration that allows or specifies outdated certificate standards.
+
+**Keywords/Attributes:**
+- `key_type`, `certificate_type`, `signature_type`, `cert_algorithm`
+
+**Weak Values to Flag:**
+- `RSA` with key_size < 2048
+- `DSA` with key_size < 2048
+- Certificate validity periods excessively long (indirect weakness indicator)
+
+---
+
+## Summary of High-Signal Keywords
+
+```
+key_size / key_length / rsa_bits / bit_length
+DES / 3DES / RC4 / RC2 / Blowfish / XOR / NULL
+SSLv2 / SSLv3 / TLSv1 / TLSv1.0 / TLSv1.1
+MD5 / MD4 / SHA1 / SHA-1
+ECB / cipher_mode / block_mode
+cipher_suite / ssl_ciphers / EXPORT / ANON
+sse_algorithm / server_side_encryption / encrypted
+kms_key_id (absent or default)
+minimum_tls_version / ssl_policy / security_policy
+```
+
+---
+
+## Detection Logic Summary
+
+| Signal | Risk |
+|---|---|
+| Key size attribute set below recommended threshold | High |
+| Deprecated algorithm name in any field | High |
+| TLS version below 1.2 explicitly allowed | High |
+| ECB mode specified | High |
+| MD5 or SHA1 as signature/hash algorithm | High |
+| Cipher suite containing NULL/EXPORT/RC4/DES | High |
+| Encryption disabled or absent on storage resources | High |
+| No KMS key reference (using default/weak encryption) | Medium |

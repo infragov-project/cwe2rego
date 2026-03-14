@@ -1,0 +1,117 @@
+# CWE-1327: Binding to an Unrestricted IP Address — Detection in IaC
+
+## Core Weakness to Detect
+
+The fundamental issue is the explicit or implicit assignment of a **wildcard/unrestricted IP address** to a bind/listen attribute of any networked resource, exposing it to all available network interfaces.
+
+---
+
+## Weakness Categories to Identify
+
+### 1. Explicit Wildcard Address Assignment
+Any field that directly accepts an IP binding value being set to an unrestricted address.
+
+| Category | Examples of Suspicious Values |
+|---|---|
+| IPv4 wildcard | `0.0.0.0` |
+| IPv6 wildcard | `::`, `::0`, `0:0:0:0:0:0:0:0` |
+| Symbolic wildcard | `*`, `any`, `all` |
+| Empty/null value | `""`, `null` (interpreted as all interfaces by some services) |
+
+---
+
+### 2. Keywords & Attribute Names to Scan
+
+#### Binding/Listening Address Fields
+```
+listenaddr
+listen_address
+listen_addr
+listen_host
+listen_on
+bind_address
+bind_addr
+bind_ip
+bind_host
+binding_address
+network_address
+host_address
+server_address
+server_host
+host
+hostname
+address
+ip
+ip_address
+interface
+network_interface
+```
+
+#### Access Scope Fields (indirect indicators)
+```
+allowed_hosts
+allowed_ips
+permitted_ips
+source_address
+accept_from
+accessible_from
+```
+
+---
+
+### 3. Contextual Resource Types to Target
+
+These resource/service types are high-risk when combined with wildcard addresses:
+
+- **Database servers** (configuration blocks for SQL, NoSQL, in-memory stores)
+- **Web/API servers** (HTTP listener configurations)
+- **Message brokers/queues** (broker bind settings)
+- **Cache servers** (service configuration)
+- **Authentication/signing servers** (as shown in the CWE example)
+- **Container service definitions** (pod/container network config)
+- **Cloud compute instances** (network interface settings)
+- **Reverse proxies/load balancers** (upstream/downstream bind settings)
+
+---
+
+### 4. Structural Patterns to Flag
+
+| Pattern | Risk Indicator |
+|---|---|
+| A bind/listen field explicitly set to `0.0.0.0` | **High** |
+| A bind/listen field using IPv6 wildcard `::` | **High** |
+| A port field is defined but bind address is absent (service default may be `0.0.0.0`) | **Medium** |
+| A bind field using `*` symbolic wildcard | **High** |
+| Reuse of a variable/parameter that resolves to `0.0.0.0` | **Medium** |
+
+---
+
+### 5. Associated Attributes That Amplify Risk
+
+When wildcard binding is found alongside these, severity increases:
+
+- **`port`** — a specific port defined with no address restriction means any IP can reach that port
+- **`publicly_accessible: true`** or **`public_ip_enabled: true`** — cloud-specific exposure flags
+- **Absence of firewall/security group rules** restricting inbound access
+- **`auth_required: false`** or **no authentication block** — unauthenticated wildcard exposure
+
+---
+
+## Detection Logic Summary
+
+```
+IF (binding_field CONTAINS ["0.0.0.0", "::", "*", "::0"])
+  AND (resource_type IN [server, database, cache, broker, container, instance])
+THEN FLAG as CWE-1327
+
+IF (port_field IS DEFINED)
+  AND (binding_field IS ABSENT OR NULL OR EMPTY)
+  AND (service has network exposure)
+THEN FLAG as potential CWE-1327 (default wildcard risk)
+```
+
+---
+
+## Key Takeaway
+
+The detection priority should be on **any attribute that controls which network interface a service listens on**, combined with a **value that does not restrict to a specific, intentional IP address**. The absence of a restricted bind address is just as dangerous as the explicit assignment of `0.0.0.0`.

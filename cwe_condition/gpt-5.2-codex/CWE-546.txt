@@ -1,0 +1,38 @@
+**CWE‑546: Suspicious Comment — IaC Detection Guidance**
+
+**Weakness to detect**
+- Presence of **comments or free‑text notes** that explicitly indicate *bugs, incomplete functionality, missing security controls, or temporary insecure workarounds*.  
+- In IaC, this includes **inline comments**, **metadata notes**, **annotations**, **descriptions**, **labels**, or **tags** that carry developer remarks about unfinished or risky configuration.
+
+---
+
+### 🔎 Indicative Keywords / Phrases
+Look for comment text or descriptive fields containing words such as:
+
+**General “suspicious comment” markers**
+- `TODO`, `FIXME`, `BUG`, `HACK`, `XXX`, `TEMP`, `LATER`, `WORKAROUND`
+
+**Security‑related incomplete or risky notes**
+- `remove later`, `temporary`, `for testing`, `not for prod`, `skip`, `ignore`, `bypass`, `disable`
+- `open for now`, `allow all`, `public until`, `default password`, `hard‑coded`, `missing auth`
+- `add encryption`, `add logging`, `add validation`, `tighten rules`, `restrict access`, `needs review`
+
+**Explicit caution or insecurity**
+- `insecure`, `unsafe`, `weak`, `dangerous`, `unprotected`, `no validation`, `no auth`
+
+---
+
+### 🧩 Fields / Attributes to Scan
+Even outside explicit comments, IaC files often carry user‑provided text fields that can hide these clues:
+- `description`
+- `notes`
+- `annotations`
+- `metadata`
+- `labels`
+- `tags`
+- `remarks`, `comment`, `doc`, or similar free‑text fields
+
+---
+
+✅ **Detection Requirement Summary:**  
+Flag any IaC script where **comment text or descriptive metadata contains suspicious markers** indicating unfinished security work, hard‑coded values, missing checks, or temporary insecure configurations.

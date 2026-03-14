@@ -1,0 +1,78 @@
+Based on CWE-353 (Missing Support for Integrity Check) and its application to Infrastructure as Code (IaC), here are the key weaknesses to detect, along with generic keywords, attributes, or fields that indicate this weakness:
+
+---
+
+### **Necessary Weaknesses to Detect in IaC**
+1. **Insecure Protocol Configuration**  
+   - **Keywords/Attributes**:  
+     - `protocol: "http"` (not HTTPS)  
+     - `encryption: false`  
+     - `tls_enabled: false`  
+     - `ssl: disabled`  
+     - `port: 80` (HTTP) or insecure ports for other protocols  
+     - `use_plain_text: true`  
+   - **Implication**:  
+     The protocol used for data transmission lacks built-in integrity checks (e.g., using HTTP instead of HTTPS, or unencrypted TCP/UDP).
+
+2. **Missing Checksum or Hash Validation**  
+   - **Keywords/Attributes**:  
+     - `checksum: null` or `hash: null`  
+     - `validate_integrity: false`  
+     - `verify_on_transfer: false`  
+     - Absence of `signature` or `integrity_check` attributes  
+   - **Implication**:  
+     Data in transit (e.g., file transfers, API calls) is not validated for tampering or corruption.
+
+3. **Unsecured Data Transfer Resources**  
+   - **Keywords/Attributes**:  
+     - `allow_insecure_connections: true`  
+     - `disable_security: true`  
+     - `secure_connection: false`  
+     - `disable_tls: true`  
+   - **Implication**:  
+     Resources (e.g., load balancers, API gateways, storage buckets) are configured to accept or use insecure connections.
+
+4. **Lack of Secure Defaults**  
+   - **Keywords/Attributes**:  
+     - `enforce_https: false`  
+     - `redirect_http_to_https: false`  
+     - `min_tls_version: "none"` or `tls_1.0` (weak)  
+   - **Implication**:  
+     The infrastructure does not enforce secure protocols by default, allowing plaintext transmission.
+
+5. **Insecure API or Service Configurations**  
+   - **Keywords/Attributes**:  
+     - `api_security: "none"`  
+     - `authentication: "anonymous"`  
+     - `disable_checksum: true`  
+   - **Implication**:  
+     APIs or services (e.g., REST APIs, message queues) are configured without integrity protection mechanisms.
+
+---
+
+### **Generic IaC Indicators Without Language Specifics**
+- **Resource-Level Flags**:  
+  - `ssl: false`, `tls: disabled`, `encryption: none`  
+  - `checksum: disabled`, `hash_validation: false`  
+  - `secure_transport: false`  
+- **Network Configuration**:  
+  - Ingress/egress rules allowing HTTP, FTP, or other insecure protocols  
+  - Load balancers or gateways configured for `protocol: "http"`  
+- **Data Storage Resources**:  
+  - Storage buckets with `force_https: false`  
+  - Databases with `connection_encryption: "disabled"`  
+- **Custom Scripts/Provisioners**:  
+  - Commands using `curl` without `-C` (checksum) or `wget` without `--checksum`  
+  - File transfers without explicit hash verification (e.g., missing `md5sum` or `sha256sum` validation)  
+
+---
+
+### **Why These Indicate CWE-353**  
+- The core issue is the absence of **integrity checks during data transmission**, which allows tampering or corruption to go undetected.  
+- In IaC, this often manifests as:  
+  - **Protocol choices** that lack built-in integrity (e.g., HTTP vs. HTTPS).  
+  - **Disabled security features** (TLS, checksums) for data in transit.  
+  - **Resource configurations** that prioritize convenience over security.  
+- These misconfigurations align with CWE-353’s focus on missing integrity mechanisms in transmission protocols.  
+
+By scanning IaC for these patterns, you can identify infrastructure designs vulnerable to data integrity breaches.

@@ -1,0 +1,8 @@
+To detect CWE-258 (Empty Password in Configuration File) in Infrastructure as Code (IaC) scripts, focus on identifying configurations where password-related attributes or fields are explicitly set to an empty string. Here are the necessary indicators to look for, based on common patterns without referencing specific programming languages:
+
+- **Keywords in attribute names**: Look for fields that include terms like "password", "passwd", "pwd", "secret", "admin_password", "db_password", "root_password", or "api_key" (if context suggests it's used for authentication). These often indicate where passwords are defined.
+- **Empty values**: Check for attributes set to an empty string (e.g., `""` or `''`), null, or undefined, which imply an empty password. For example, a key-value pair where the value is missing or explicitly empty.
+- **Configuration contexts**: Examine resource definitions for services like databases, virtual machines, or applications where credentials are configured. Common sections include user authentication settings, connection strings, or security policies.
+- **Default behaviors**: Be aware that in some cases, omitting a password field might default to an empty string, but this is less common. Rely on explicit empty values for detection.
+
+These patterns directly align with the CWE's description of empty passwords being insecure, as they can lead to unauthorized access. Always validate that password fields have non-empty, secure values.

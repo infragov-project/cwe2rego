@@ -1,0 +1,115 @@
+# CWE-478: Missing Default Case in IaC Detection Guide
+
+## Core Weakness Pattern
+
+The fundamental issue is **incomplete handling of all possible conditional branches**, leaving the system in an undefined or unintended state when unexpected values are encountered.
+
+---
+
+## Necessary Weaknesses to Detect
+
+### 1. Missing Fallback in Lookup/Mapping Operations
+Lookup or mapping functions invoked without a defined fallback/default value, meaning unrecognized keys silently produce null, empty, or unintended outputs.
+
+**Keywords/Attributes:**
+- `lookup`, `find_in_map`, `select`, `map_lookup`
+- `default_value`, `fallback` *(absence of)*
+- `key_not_found_behavior`
+- `mapping`, `dictionary`, `registry`
+
+---
+
+### 2. Incomplete Conditional Branching
+Conditional logic that only covers expected positive cases without an exhaustive else/catch-all branch.
+
+**Keywords/Attributes:**
+- `condition`, `conditions`, `if`, `when`, `unless`, `only_if`
+- `else`, `otherwise` *(absence of)*
+- `expression`, `predicate`, `filter`
+- `ternary`, `inline_condition`
+- `case`, `match`, `choices`
+
+---
+
+### 3. Missing Default in Policy and Rule Sets
+Access control, routing, or security policies that enumerate specific cases without a terminal default rule (e.g., implicit allow instead of explicit default deny).
+
+**Keywords/Attributes:**
+- `rule`, `rules`, `policy`, `policies`
+- `effect`, `action`, `allow`, `deny`
+- `default_action`, `default_effect` *(absence of)*
+- `priority`, `order`, `weight`
+- `catch_all`, `wildcard`
+- `not_matched_action`
+
+---
+
+### 4. Unhandled State Transitions
+State machine configurations or lifecycle definitions that do not explicitly handle all possible states, leaving transitions undefined for edge cases.
+
+**Keywords/Attributes:**
+- `state`, `states`, `lifecycle`
+- `transition`, `on_enter`, `on_exit`
+- `status`, `phase`, `stage`
+- `undefined_state_behavior` *(absence of)*
+- `fallback_state`
+
+---
+
+### 5. Incomplete Input Validation / Enumeration Handling
+Variable declarations or parameter definitions that list allowed values but lack handling for values outside the enumeration.
+
+**Keywords/Attributes:**
+- `allowed_values`, `enum`, `valid_values`, `choices`
+- `validation`, `validate`, `constraint`
+- `type`, `allowed_pattern`
+- `default` *(absence of in variable definitions)*
+- `error_on_invalid` *(absence of)*
+
+---
+
+### 6. Missing Error/Exception Fallback Paths
+Error handling configurations that only address specific known error codes/types without a general fallback response.
+
+**Keywords/Attributes:**
+- `on_error`, `on_failure`, `catch`
+- `error_code`, `status_code`, `exit_code`
+- `retry`, `fallback`, `recovery`
+- `default_error_action` *(absence of)*
+- `unhandled_exception`
+
+---
+
+### 7. Incomplete Routing or Traffic Rules
+Routing configurations that enumerate specific destination rules but omit a default route for unmatched traffic.
+
+**Keywords/Attributes:**
+- `route`, `routes`, `routing_rule`
+- `match`, `prefix`, `destination`
+- `default_route`, `fallback_route` *(absence of)*
+- `no_match_action`
+- `redirect`, `forward`, `drop`
+
+---
+
+## Summary Detection Table
+
+| Weakness Category | Key Missing Element | Risk |
+|---|---|---|
+| Lookup/Mapping | No default/fallback value | Null or wrong value silently used |
+| Conditional Branching | No `else`/`otherwise` clause | Bypass of logic |
+| Policy Rules | No explicit default deny/allow | Privilege escalation |
+| State Transitions | Undefined states not caught | Undefined behavior |
+| Input Validation | Unconstrained value ranges | Logic manipulation |
+| Error Handling | No general error fallback | Silent failure / bypass |
+| Routing Rules | No default route | Unmatched traffic mishandled |
+
+---
+
+## General Detection Signals
+
+- Presence of multiple explicit `case`/`when`/`condition` blocks **without** a terminal default
+- `lookup`/`map` calls **without** a second default-value argument
+- Enumerated `allowed_values` **without** corresponding fallback behavior for invalid input
+- Policy `rules` array that **terminates without** a catch-all entry
+- Any conditional construct where the number of handled branches does not cover the full input domain

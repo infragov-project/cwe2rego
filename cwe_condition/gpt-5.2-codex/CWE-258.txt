@@ -1,0 +1,37 @@
+**CWE‑258 – Empty Password in Configuration File (IaC detection guidance)**
+
+**Weakness to detect**
+- A configuration element for credentials (user/service/database/admin) sets the password to an **empty string** or **only whitespace**.  
+- This includes both explicit empty values and empty values embedded in connection/credential strings.
+
+**Common indicators in IaC**
+Look for **credential‑related keys/fields** whose value is `""`, `''`, or blank after an equals sign:
+
+- **Direct password fields**
+  - `password`
+  - `passwd`
+  - `pwd`
+  - `passphrase`
+  - `secret`
+  - `credential`
+  - `auth_password`
+  - `admin_password`
+  - `root_password`
+  - `master_password`
+  - `db_password`
+  - `user_password`
+  - `login_password`
+
+- **Connection / credential strings**
+  - Patterns like `password=` or `pwd=` with **no value** before the next delimiter  
+    (e.g., `password=;`, `pwd=;`, `password=&`, `pwd=` end of string)
+
+- **Environment or parameter keys**
+  - Names such as `PASSWORD`, `DB_PASS`, `ADMIN_PASS`, `ROOT_PASS`, etc., assigned **empty values**
+
+**Red flags**
+- Presence of a **username**/account field paired with a **blank password** field  
+- Password field populated with an empty literal (`""`, `''`) or only whitespace  
+- Connection or credential strings containing `password=` / `pwd=` with nothing after it
+
+These patterns indicate CWE‑258 because they allow authentication with an empty password, leading to unauthorized access or privilege escalation.

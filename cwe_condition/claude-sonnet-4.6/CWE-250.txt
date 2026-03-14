@@ -1,0 +1,146 @@
+# CWE-250: Execution with Unnecessary Privileges — Detection in IaC Scripts
+
+## Core Weaknesses to Detect
+
+---
+
+### 1. **Container or Process Running as Root**
+Running workloads as the root user (UID/GID 0) when it is not required.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `runAsUser`, `runAsGroup` | `0` |
+| `runAsNonRoot` | `false` or absent |
+| `user`, `USER` | `root`, `0` |
+| `uid`, `gid` | `0` |
+
+---
+
+### 2. **Privileged Mode Enabled**
+Granting a container or process full access to all host capabilities and devices.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `privileged` | `true` |
+| `securityContext` | missing or permissive block |
+
+---
+
+### 3. **Unnecessary or Excessive Linux Capabilities Added**
+Adding capabilities beyond what the workload functionally requires.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `capabilities`, `cap_add` | `ALL`, `SYS_ADMIN`, `NET_ADMIN`, `SYS_PTRACE`, `DAC_OVERRIDE`, `SYS_RAW_IO` |
+| `add` (under capabilities) | Any overly broad capability set |
+| `drop` (under capabilities) | Absent or missing `ALL` in the drop list |
+
+---
+
+### 4. **Privilege Escalation Permitted**
+Allowing a process to gain privileges beyond those of its parent.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `allowPrivilegeEscalation` | `true` or absent |
+
+---
+
+### 5. **Host Namespace Sharing**
+Sharing host-level namespaces exposes the container to host-level privileges.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `hostPID` | `true` |
+| `hostIPC` | `true` |
+| `hostNetwork` | `true` |
+| `hostPort` | Any value (direct port binding to host) |
+
+---
+
+### 6. **Overly Permissive IAM Policies (Wildcard Permissions)**
+Granting excessive permissions to identities through wildcard actions or resources.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `actions`, `action` | `*`, `"*"` |
+| `resources`, `resource` | `*`, `"*"` |
+| `effect` | `Allow` combined with wildcards |
+| `permissions`, `policy`, `statement` | `FullAccess`, `AdministratorAccess`, `PowerUserAccess` |
+| `notActions`, `notResource` | Overly broad exclusion patterns |
+
+---
+
+### 7. **Overly Broad Role or Cluster-Role Bindings**
+Binding admin-level or cluster-wide roles to service accounts or users unnecessarily.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `clusterRoleBinding`, `roleBinding` | binding to `cluster-admin`, `admin` |
+| `roleRef` | `cluster-admin`, `admin`, `edit` |
+| `subjects` | Wildcard groups (`system:authenticated`, `system:unauthenticated`) |
+| `role`, `clusterRole` | Overly broad definitions with wilcard verbs or resources |
+
+---
+
+### 8. **Sensitive Host Path Volume Mounts**
+Mounting privileged or sensitive host directories into containers.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `hostPath` | `/`, `/etc`, `/proc`, `/sys`, `/root`, `/var/run/docker.sock`, `/dev` |
+| `path` | Sensitive OS directories |
+| `volumes`, `volumeMounts` | References to host-level sensitive paths |
+
+---
+
+### 9. **Read-Only Root Filesystem Not Enforced**
+Failing to restrict write access to the root filesystem, allowing potential privilege escalation via file manipulation.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `readOnlyRootFilesystem` | `false` or absent |
+
+---
+
+### 10. **Unrestricted Sudo or Superuser Access**
+Granting unbounded administrative command execution rights to accounts.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `sudoers`, `sudo` | `ALL=(ALL) ALL`, `NOPASSWD: ALL` |
+| `visudo`, `sudoers.d` | Wildcard user/host/command specs |
+| `privilegeLevel`, `elevation` | `full`, `unrestricted`, `admin` |
+
+---
+
+### 11. **Service or Workload Running Under System/Admin Account**
+Configuring services to run under powerful built-in system accounts.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `serviceAccount`, `runAs` | `system`, `administrator`, `root`, `LocalSystem`, `SYSTEM`, `NT AUTHORITY\SYSTEM` |
+| `user`, `group` | High-privilege built-in accounts |
+| `account`, `identity` | Admin-level managed identities or service principals |
+
+---
+
+### 12. **Missing or Absent Security Context Block**
+The complete absence of a security context definition defaults to permissive behavior.
+
+| Keywords / Attributes / Fields | Dangerous Values |
+|---|---|
+| `securityContext` | Entirely absent at pod or container level |
+| `podSecurityContext` | Absent or empty |
+
+---
+
+## Summary of Key Signal Words
+
+When scanning IaC scripts, flag configurations containing:
+
+- **Role/permission signals:** `*`, `ALL`, `admin`, `root`, `FullAccess`, `Administrator`, `superuser`, `NOPASSWD`
+- **Privilege escalation signals:** `privileged: true`, `allowPrivilegeEscalation: true`, `hostPID: true`, `hostIPC: true`, `hostNetwork: true`
+- **Identity signals:** `runAsUser: 0`, `user: root`, `LocalSystem`, `SYSTEM`
+- **Missing enforcement signals:** Absence of `runAsNonRoot`, `readOnlyRootFilesystem`, `drop: [ALL]`, or `securityContext`
+- **Wildcard permission signals:** `"Action": "*"`, `"Resource": "*"`, `cap_add: [ALL]`

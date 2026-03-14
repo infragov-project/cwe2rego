@@ -1,0 +1,100 @@
+# CWE-353: Missing Support for Integrity Check — IaC Detection Guide
+
+## Core Weakness Patterns to Detect
+
+### 1. **Resource/Artifact Download Without Checksum Verification**
+Fetching external resources (scripts, binaries, packages) without validating their integrity after download.
+
+**Indicators:**
+- `url`, `src`, `source`, `download_url`, `remote_src` present **without** any accompanying integrity field
+- Absence of: `checksum`, `hash`, `sha256`, `sha512`, `sha1`, `md5`, `digest`, `expected_hash`
+- `checksum: ""` or `checksum: null`
+
+---
+
+### 2. **Disabled or Missing Package Signature/GPG Verification**
+Package repositories or installers configured to skip cryptographic integrity validation.
+
+**Indicators:**
+- `gpgcheck: false` / `gpgcheck: 0`
+- `repo_gpgcheck: false` / `repo_gpgcheck: 0`
+- `disable_gpg_check: true`
+- `skip_verify: true`
+- `no_verify: true`
+- `verify: false`
+- `validate_certs: false` (when applied to package sources)
+- `insecure: true`
+- `trusted_gpg_keys` absent when adding external repositories
+
+---
+
+### 3. **Container Image Without Digest Pinning**
+Container images referenced by mutable tags rather than immutable cryptographic digests.
+
+**Indicators:**
+- `image` field using only a tag (`:latest`, `:stable`, `:v1.0`) without a `@sha256:` digest
+- Absence of `digest` field alongside an `image` reference
+- `pull_policy: always` without digest enforcement
+
+---
+
+### 4. **Helm/Package Chart Installation Without Verification**
+Deploying charts or packages without verifying their provenance or integrity.
+
+**Indicators:**
+- `verify: false` in chart/package deployment blocks
+- Missing `keyring`, `key_file`, or `trusted_keys` fields
+- Absence of `signature_verification` or equivalent fields
+- `--no-verify` equivalent flags represented in IaC arguments
+
+---
+
+### 5. **Object/File Storage Without Checksum Algorithm**
+Uploading or downloading objects from storage without enforcing checksum validation.
+
+**Indicators:**
+- `checksum_algorithm` absent in storage resource blocks
+- `integrity_check: false`
+- Missing `content_md5`, `content_sha256`, or equivalent fields
+- `skip_checksum_validation: true`
+
+---
+
+### 6. **Protocol/Transport Configuration Without Integrity Mechanism**
+Network or messaging configurations that use protocols or settings inherently lacking integrity checks.
+
+**Indicators:**
+- Use of bare `http://` schemes in endpoint fields (e.g., `endpoint`, `url`, `broker_url`, `target`)
+- Protocol configured as `udp` without checksum-related settings
+- `disable_checksum: true`
+- `integrity: false`
+- `verify_integrity: false`
+- Missing `tls`, `ssl`, or `checksum_offload` fields in transport configurations
+
+---
+
+### 7. **Software Supply Chain — Missing Verification Steps**
+Pipelines or provisioners that pull third-party software without integrity validation steps.
+
+**Indicators:**
+- `curl | bash` or equivalent inline execution patterns without pre-validation
+- Inline `install` commands missing `--verify`, `--check-hash`, or `--expected-checksum`
+- Provisioner scripts downloading resources without a subsequent hash comparison step
+- Absence of `signature`, `public_key`, or `fingerprint` fields in artifact definitions
+
+---
+
+## Summary Table
+
+| Pattern | Key Absence | Dangerous Presence |
+|---|---|---|
+| File/artifact downloads | `checksum`, `hash`, `digest`, `sha256` | `skip_verify`, `no_verify` |
+| Package management | `gpgcheck`, `repo_gpgcheck`, `trusted_keys` | `gpgcheck: 0`, `insecure: true` |
+| Container images | `@sha256:` digest | Tag-only references (`:latest`) |
+| Storage operations | `checksum_algorithm`, `content_sha256` | `skip_checksum_validation: true` |
+| Protocol configs | `tls`, `integrity`, `checksum` field | `http://` scheme, `integrity: false` |
+| Chart/package deploy | `verify`, `keyring`, `signature_verification` | `verify: false`, `--no-verify` |
+
+## Detection Heuristic
+
+> Flag any resource block that performs a **remote fetch, download, or external package installation** where **none** of the integrity-related fields (`checksum`, `hash`, `digest`, `sha256`, `sha512`, `signature`, `gpgcheck`) are present or where verification is **explicitly disabled**.

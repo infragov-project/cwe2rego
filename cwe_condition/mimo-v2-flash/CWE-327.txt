@@ -1,0 +1,70 @@
+Based on the CWE-327 definition and its application to Infrastructure as Code (IaC) scripts, here are the necessary weaknesses to detect, along with associated keywords, attributes, and fields that imply this weakness—without referencing specific programming languages:
+
+### Necessary Weaknesses to Detect:
+1. **Use of Deprecated Cryptographic Algorithms**  
+   - **Keywords**: `algorithm`, `encryption_algorithm`, `hashing_algorithm`, `crypto_method`  
+   - **Attributes/Fields**:  
+     - Values indicating deprecated algorithms (e.g., `DES`, `3DES`, `RC4`, `MD5`, `SHA1`, `SHA-1`, `AES-ECB`).  
+     - References to legacy standards (e.g., `FIPS 140-1` instead of newer `FIPS 140-3`).  
+   - **Why**: These algorithms are known to be broken or vulnerable to attacks (e.g., collision attacks on MD5/SHA1, key compromise in DES/RC4).
+
+2. **Insufficient Key Lengths**  
+   - **Keywords**: `key_size`, `key_length`, `bits`  
+   - **Attributes/Fields**:  
+     - Asymmetric keys below 2048 bits (e.g., RSA-1024, DSA-1024).  
+     - Symmetric keys below 128 bits (e.g., AES-64).  
+     - Elliptic curve keys below 224 bits (e.g., ECDSA-160).  
+   - **Why**: Short keys enable brute-force or mathematical attacks, rendering encryption ineffective.
+
+3. **Insecure Cryptographic Modes**  
+   - **Keywords**: `mode`, `operation_mode`, `cipher_mode`  
+   - **Attributes/Fields**:  
+     - Modes like `ECB` (Electronic Codebook) without authentication.  
+     - `CBC` (Cipher Block Chaining) without integrity checks (e.g., lacking HMAC).  
+   - **Why**: ECB leaks patterns in data; CBC without authentication is vulnerable to padding oracle attacks.
+
+4. **Use of Custom Cryptographic Implementations**  
+   - **Keywords**: `custom_crypto`, `proprietary_algorithm`, `obfuscation`  
+   - **Attributes/Fields**:  
+     - Non-standard algorithm names or undocumented encryption methods.  
+     - Flags like `use_custom_encryption = true`.  
+   - **Why**: Custom implementations lack peer review and often introduce vulnerabilities.
+
+5. **Outdated Protocol Versions**  
+   - **Keywords**: `protocol_version`, `ssl_version`, `tls_version`  
+   - **Attributes/Fields**:  
+     - Legacy protocols (e.g., `SSLv2`, `SSLv3`, `TLS 1.0`, `TLS 1.1`).  
+   - **Why**: These protocols have known flaws (e.g., POODLE, BEAST attacks).
+
+6. **Static or Hardcoded Cryptographic Keys**  
+   - **Keywords**: `key`, `secret`, `password`  
+   - **Attributes/Fields**:  
+     - Keys embedded directly in scripts (e.g., `secret_key = "plaintext_value"`).  
+     - Lack of key rotation mechanisms.  
+   - **Why**: Hardcoded keys are easily compromised, violating key management best practices (though CWE-327 focuses on algorithms, key mismanagement exacerbates risks).
+
+### Key Indicators in IaC Scripts:
+- **Resource Definitions**:  
+  Look for resources involving encryption (e.g., storage, databases, network services) with weak algorithm attributes.  
+  Example Fields: `encryption_algorithm`, `ssl_policy`, `hashing_method`.  
+- **Configuration Blocks**:  
+  Sections defining security settings (e.g., TLS/SSL configurations, password policies) referencing deprecated standards.  
+- **Non-Compliant Defaults**:  
+  Default settings using weak algorithms (e.g., `algorithm = "SHA1"` for password hashing).  
+- **References to Legacy Standards**:  
+  Mentions of outdated guidelines (e.g., `NIST SP 800-52` without updates to newer versions).  
+
+### Detection Strategy:
+- **Automated Scanning**:  
+  Use tools to flag resources with weak algorithm keywords (e.g., `DES`, `MD5`) or insufficient key lengths.  
+- **Policy Checks**:  
+  Enforce rules rejecting configurations with deprecated protocols or custom crypto.  
+- **Manual Review**:  
+  Audit resource blocks for cryptographic settings, focusing on attributes like `algorithm` or `protocol_version`.  
+
+### Why These Indicators Matter:
+- **Risk Alignment**: CWE-327 emphasizes *broken or risky* algorithms, so attributes must map to known vulnerabilities (e.g., CVEs like `CVE-2022-30273` for TEA in ECB mode).  
+- **IaC Context**: Infrastructure scripts often define encryption for services (e.g., cloud storage, databases); weak settings here propagate systemic risks.  
+- **Mitigation Relevance**: Per CWE-327, mitigations include using vetted libraries and modern standards (e.g., AES-GCM, SHA-256, TLS 1.2+), which should be reflected in IaC attributes.  
+
+By monitoring these weaknesses in IaC, you align with CWE-327’s focus on preventing cryptographic vulnerabilities in infrastructure deployments. For broader context, cross-reference with related CWEs like CWE-325 (insufficient cryptographic steps) or CWE-798 (hardcoded credentials).

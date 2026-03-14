@@ -1,0 +1,102 @@
+### Necessary Weaknesses to Detect CWE-326 (Inadequate Encryption Strength) in IaC Scripts  
+To identify inadequate encryption strength in Infrastructure as Code (IaC) scripts, focus on configurations where encryption parameters fall short of modern security standards. Below are the key indicators, attributes, and fields to inspect. These are language-agnostic and apply to IaC frameworks (e.g., Terraform, CloudFormation, ARM templates):
+
+---
+
+#### **1. Weak Encryption Algorithms**  
+- **Keywords/Attributes**:  
+  - `algorithm`, `cipher`, `encryption_type`, `kms_key_algorithm`, `encryption_algorithm`, `crypto_algorithm`.  
+- **Weak Values**:  
+  - Symmetric: `DES`, `3DES`, `RC4`, `AES-128` (without justification for low sensitivity).  
+  - Asymmetric: `RSA-1024` (key size < 2048 bits).  
+  - Hashing (if used for encryption): `SHA-1`, `MD5`.  
+- **Detection Logic**:  
+  - Flag if explicitly set to deprecated/weak algorithms.  
+  - Example: `algorithm = "AES-128"` instead of `AES-256`.  
+
+---
+
+#### **2. Insufficient Key Sizes**  
+- **Keywords/Attributes**:  
+  - `key_size`, `key_length`, `bits`, `key_spec`, `rsa_key_size`, `key_length`.  
+- **Weak Values**:  
+  - RSA keys < 2048 bits (e.g., `1024`).  
+  - Symmetric keys < 128 bits (e.g., `64` for legacy DES).  
+  - ECC curves with low security (e.g., `secp192r1`).  
+- **Detection Logic**:  
+  - Reject configurations where key sizes are explicitly set below industry standards (e.g., NIST recommendations).  
+
+---
+
+#### **3. Weak Encryption Modes or Configurations**  
+- **Keywords/Attributes**:  
+  - `mode`, `block_mode`, `encryption_mode`, `padding`, `initialization_vector`.  
+- **Weak Values**:  
+  - Block cipher mode: `ECB` (Electronic Codebook).  
+  - Static initialization vectors (IVs) or no IV specified.  
+  - Missing authenticated encryption (e.g., no GCM/CCM mode).  
+- **Detection Logic**:  
+  - Detect `mode = "ECB"` or absence of IV/nonce parameters.  
+
+---
+
+#### **4. Deprecated Protocols or Ciphers**  
+- **Keywords/Attributes**:  
+  - `protocol`, `ssl_protocol`, `tls_version`, `min_tls_version`, `cipher_suites`.  
+- **Weak Values**:  
+  - Protocols: `SSLv2`, `SSLv3`, `TLSv1.0`, `TLSv1.1`.  
+  - Cipher suites including `NULL`, `EXPORT`, `DES`, `RC4`, or `3DES`.  
+- **Detection Logic**:  
+  - Flag if `min_tls_version` is set to `TLSv1.0` or weaker.  
+  - Scan for cipher suites with weak algorithms.  
+
+---
+
+#### **5. Hardcoded or Predictable Encryption Keys**  
+- **Keywords/Attributes**:  
+  - `secret_key`, `password`, `encryption_key`, `key_value`, `kms_key_id` (if static).  
+- **Weak Values**:  
+  - Keys directly embedded in scripts (e.g., `secret_key = "password123"`).  
+  - Short keys (e.g., < 32 characters for symmetric keys).  
+  - Non-rotated or static keys referenced without a key management service (KMS).  
+- **Detection Logic**:  
+  - Identify hardcoded strings for keys/secrets.  
+  - Flag static KMS key IDs without rotation policies.  
+
+---
+
+#### **6. Lack of Key Management**  
+- **Keywords/Attributes**:  
+  - `key_management`, `kms_key_id`, `encryption_key_rotation`, `key_rotation_period`.  
+- **Weak Values**:  
+  - No KMS integration (e.g., encryption without managed keys).  
+  - Disabled key rotation (`rotation_enabled = false`).  
+  - Long key rotation periods (> 90 days).  
+- **Detection Logic**:  
+  - Detect absence of KMS references for encryption.  
+  - Flag disabled key rotation in key management configurations.  
+
+---
+
+#### **7. Contextual Weaknesses (Indirect Indicators)**  
+- **Keywords/Attributes**:  
+  - `sensitive`, `encrypt`, `storage_encryption`, `database_encryption`.  
+- **Weak Values**:  
+  - Sensitive data (e.g., credentials, PII) without encryption.  
+  - Encryption disabled (`encrypt = false`) for sensitive storage.  
+  - Encryption applied inconsistently (e.g., only for some services).  
+- **Detection Logic**:  
+  - Cross-reference sensitive data configurations with encryption settings.  
+
+---
+
+### Summary of Detection Approach  
+- **Automated Static Analysis (SAST) Rules**:  
+  1. Scan for weak algorithm/size keywords (e.g., `algorithm = "DES"`).  
+  2. Validate key sizes against thresholds (e.g., RSA < 2048 bits).  
+  3. Check for deprecated protocols (e.g., `SSLv3`) or ECB mode.  
+  4. Detect hardcoded keys or missing KMS integration.  
+  5. Ensure encryption is enabled for sensitive resources (e.g., storage, databases).  
+- **Effectiveness**: High for catch explicit misconfigurations (per CWE-326 detection methods).  
+
+> **Note**: These indicators assume IaC scripts define encryption explicitly. Cloud-managed services (e.g., AWS KMS) may enforce defaults, but explicit weak settings in IaC still constitute a weakness. Always align with current cryptographic standards (e.g., NIST, OWASP guidelines).

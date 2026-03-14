@@ -1,0 +1,76 @@
+Below are **IaC weakness patterns** that imply **CWE‑284 (Improper Access Control)** and should be detected.  
+Each item includes **generic keywords/attributes/fields** that commonly signal the issue (no language‑specific terms).
+
+---
+
+### 1) **Missing Authentication / Anonymous Access**
+**Risk:** Resource is accessible without proving identity.  
+**Indicative fields / keywords:**
+- `public`, `anonymous`, `unauthenticated`, `guest`
+- `auth = false`, `require_auth = false`, `authentication_disabled`
+- `allow_anonymous`, `no_auth`, `open_access`
+
+---
+
+### 2) **Missing or Incorrect Authorization**
+**Risk:** Identity is not checked for permission to access resource.  
+**Indicative fields / keywords:**
+- `effect: allow` without constraints
+- `allow_all`, `default_allow`
+- empty or missing `principal`, `member`, `role`, `condition`
+- `resource: *`, `scope: global`
+
+---
+
+### 3) **Overly Permissive ACL/Policy**
+**Risk:** Policies grant broad or unintended access.  
+**Indicative fields / keywords:**
+- `principal: *`, `allUsers`, `everyone`, `any`
+- `action: *`, `full_access`, `admin`, `owner`, `superuser`
+- `readWrite`, `write` for public or global principals
+
+---
+
+### 4) **World‑Readable or World‑Writable Permissions**
+**Risk:** Critical data or resources exposed to all users.  
+**Indicative fields / keywords:**
+- `public_read`, `public_write`, `public_read_write`
+- `full_control`, `rwx` for all, `mode: 0777`, `perm: 777`
+- `everyone: read/write`
+
+---
+
+### 5) **Unrestricted Network Access / Open Exposure**
+**Risk:** Resource reachable by any network actor.  
+**Indicative fields / keywords:**
+- `0.0.0.0/0`, `::/0`, `any`, `all`, `*`
+- `allow_all`, `open_port`, `ingress_all`, `public_endpoint`
+- `internet_facing`, `exposed`
+
+---
+
+### 6) **Over‑Trusted Role/Identity Assumption**
+**Risk:** Arbitrary principals can assume privileged roles.  
+**Indicative fields / keywords:**
+- `trust: *`, `any_principal`, `external`, `federated`
+- `assume_role` without restrictions
+- `root` or `admin` allowed broadly
+
+---
+
+### 7) **No Accountability / Audit Disabled**
+**Risk:** Actions not tracked, enabling abuse.  
+**Indicative fields / keywords:**
+- `audit: false`, `logging: disabled`, `monitoring: off`
+- `no_audit`, `disable_logging`
+
+---
+
+### How this maps to CWE‑284
+These patterns commonly reflect:
+- **Missing Authorization / Incorrect Authorization**
+- **Incorrect Permission Assignment**
+- **Missing Authentication**
+- **Improper Restriction of Communication Channels**
+
+Detecting the above **misconfigurations in IaC** strongly indicates **Improper Access Control (CWE‑284)**.

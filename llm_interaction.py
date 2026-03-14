@@ -117,14 +117,15 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
     parser.add_argument("--cwe", help="Choose CWE to use")
-    parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=True)
+    parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=False)
+    parser.add_argument("--cwe-condition-only", action="store_true", help="Only generate and save the CWE condition, then exit")
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
     parser.add_argument(
         "--experiment-name",
-        required=True,
-        help="Required experiment label used in generated file and directory paths (e.g., false_positives)",
+        required=False,
+        help="Experiment label used in generated file and directory paths (e.g., false_positives). Required unless --cwe-condition-only is set.",
     )
     parser.add_argument(
         "--analysis-tool",
@@ -198,8 +199,20 @@ if __name__ == "__main__":
         example_rule_2 = f.read()
     
     cwe_condition = get_cwe_condition(cwe=cwe_text)
-    print("CWE Condition Explanation:")
-    print(cwe_condition)
+
+    if args.cwe_condition_only:
+        from llm_interaction.generation_logging import model_to_directory_name
+        condition_dir = base_dir / "cwe_condition" / model_to_directory_name(args.model)
+        condition_dir.mkdir(parents=True, exist_ok=True)
+        condition_file = condition_dir / f"CWE-{args.cwe}.txt"
+        condition_file.write_text(cwe_condition)
+        print(f"CWE condition saved to {condition_file}")
+        exit(0)
+
+    if not args.type_name:
+        parser.error("--type-name is required unless --cwe-condition-only is set")
+    if not args.experiment_name:
+        parser.error("--experiment-name is required unless --cwe-condition-only is set")
 
     conversation_history = []
     if args.analysis_tool == "kics":

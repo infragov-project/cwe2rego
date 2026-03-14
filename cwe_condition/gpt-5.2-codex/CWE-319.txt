@@ -1,0 +1,67 @@
+Below are **IaC‑relevant weaknesses/patterns** that indicate **CWE‑319 (Cleartext Transmission of Sensitive Information)**. These are the types of misconfigurations a scanner should flag, along with **keywords/attributes/fields** that typically imply the weakness (no specific IaC language mentioned).
+
+---
+
+## ✅ Weaknesses to Detect in IaC for CWE‑319
+
+### 1) **Plaintext Protocols / Schemes Allowed**
+**Evidence:** Endpoints or listeners use non‑TLS protocols for sensitive traffic.  
+**Typical keywords/values:**
+- `protocol: http`, `scheme: http`
+- `ftp`, `telnet`, `smtp`, `pop3`, `imap`, `ldap`, `snmp`, `mqtt`
+- `plaintext`, `cleartext`, `unencrypted`
+
+**Common port indicators:**
+- `80`, `21`, `23`, `25`, `110`, `143`, `389`, `1883`, `6379`, etc.
+
+---
+
+### 2) **Encryption in Transit Disabled or Not Enforced**
+**Evidence:** A config flag explicitly turns off TLS/SSL or secure transfer.  
+**Typical attributes/fields:**
+- `https_only = false`
+- `secure_transfer = disabled`
+- `enforce_ssl = false`
+- `require_tls = false`
+- `tls_enabled = false`
+- `ssl_enabled = false`
+- `encryption_in_transit = false`
+- `min_tls_version = none / 0`
+
+---
+
+### 3) **Insecure Listener / Endpoint Configuration**
+**Evidence:** Service listener set to cleartext protocol or TLS not configured.  
+**Keywords/fields:**
+- `listener_protocol: HTTP`
+- `load_balancer_protocol: http`
+- `redirect_http_to_https = false`
+- missing TLS certificate/key fields where HTTPS is expected
+
+---
+
+### 4) **Insecure Connection Strings or URLs**
+**Evidence:** Service URL uses non‑TLS while carrying credentials.  
+**Keywords/patterns:**
+- `http://` with `password`, `secret`, `token`, `key`, `auth`
+- `sslmode=disable`
+- `use_ssl=false`
+- `insecure_skip_verify=true`
+
+---
+
+### 5) **Management or Debug Interfaces over Cleartext**
+**Evidence:** Administrative channels exposed without encryption.  
+**Keywords/fields:**
+- `management_protocol: telnet / http`
+- `enable_remote_debug = true` (without TLS)
+- admin ports mapped to plaintext services
+
+---
+
+## ✅ Summary Detection Rule (Short)
+Flag configurations that **allow plaintext transport** or **disable TLS/SSL** for sensitive services, especially when credentials or sensitive data are involved.
+
+---
+
+If you want, I can turn these into concrete detection rules or compliance checks for specific cloud providers or IaC formats.

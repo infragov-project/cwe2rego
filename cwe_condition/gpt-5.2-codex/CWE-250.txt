@@ -1,0 +1,92 @@
+Below are **IaC‑relevant weakness indicators** that commonly signal **CWE‑250: Execution with Unnecessary Privileges**. These are generic patterns and terms (not tied to any specific language) that you can scan for in infrastructure definitions.
+
+---
+
+## ✅ Weaknesses to Detect for CWE‑250 in IaC
+
+### 1. **Workloads Running as Over‑Privileged Accounts**
+**Indicators**
+- Execution user set to **root / administrator / system**
+- Explicit **UID/GID = 0**
+- `runAs` or `user` fields pointing to admin accounts  
+**Keywords/Fields**
+- `root`, `administrator`, `system`, `superuser`
+- `runAsUser`, `user`, `uid`, `gid`, `serviceUser`
+
+---
+
+### 2. **Privileged or Escalated Execution Flags**
+**Indicators**
+- Privilege escalation allowed
+- Full OS capabilities enabled  
+**Keywords/Fields**
+- `privileged`, `allowPrivilegeEscalation`
+- `capabilities: ALL`, `add: ["ALL"]`
+- `setuid`, `setgid`, `sudo`, `NOPASSWD`
+
+---
+
+### 3. **Over‑Broad IAM / Role Permissions**
+**Indicators**
+- Roles or policies grant excessive privileges to workloads  
+**Keywords/Fields**
+- `Administrator`, `Owner`, `FullAccess`, `SuperUser`
+- `role`, `policy`, `permissions`, `scope`, `binding`
+- `cluster-admin`, `system:admin`, `allAccess`
+
+---
+
+### 4. **Wildcard or Global Permission Grants**
+**Indicators**
+- Permissions allow “everything” or apply to all resources  
+**Keywords/Fields**
+- `*`, `all`, `any`, `global`, `allResources`
+- `actions: "*"`, `resources: "*"`  
+- `effect: Allow` with no restriction/conditions
+
+---
+
+### 5. **High‑Privilege Role Binding to Service Accounts or Instances**
+**Indicators**
+- Service accounts or compute workloads tied to admin roles  
+**Keywords/Fields**
+- `serviceAccount`, `principal`, `member`, `instanceProfile`
+- `roleBinding`, `assumeRole`, `passRole`
+
+---
+
+### 6. **Host‑Level Access for Containers/Workloads**
+**Indicators**
+- Access to host namespaces or filesystem (elevated control)  
+**Keywords/Fields**
+- `hostNetwork`, `hostPID`, `hostIPC`, `hostPath`
+- `mount: /`, `mount: /var/run`, `device`, `sysAdmin`
+
+---
+
+### 7. **Application Uses Superuser DB / Storage Accounts**
+**Indicators**
+- App or workload configured with DB admin credentials  
+**Keywords/Fields**
+- `adminUser`, `rootUser`, `superuser`
+- `grant all privileges`, `full control`
+
+---
+
+### 8. **Default or Built‑In Admin Accounts Enabled**
+**Indicators**
+- Built‑in admin login enabled for general workload use  
+**Keywords/Fields**
+- `enableRootLogin`, `allowAdminLogin`
+- `defaultAdmin`, `bootstrapAdmin`
+
+---
+
+## Summary (What to Flag)
+Look for **execution identities or permissions that exceed operational need**, especially:
+- **Admin/superuser accounts**
+- **Wildcard or global permissions**
+- **Privilege escalation flags**
+- **Unrestricted role bindings**
+
+These patterns strongly suggest **Execution with Unnecessary Privileges (CWE‑250)**.

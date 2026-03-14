@@ -1,0 +1,100 @@
+# CWE-259: Use of Hard-coded Password — Detection in IaC Scripts
+
+## Core Weakness Categories to Detect
+
+### 1. Literal Credential Assignment
+The most direct form — a sensitive credential field is assigned a plaintext, non-reference string value directly in the configuration.
+
+**Indicators:**
+- Fields named: `password`, `passwd`, `pwd`, `pass`, `passphrase`
+- Fields named: `secret`, `secret_value`, `secret_key`
+- Fields named: `credential`, `credentials`, `auth_credential`
+- Value is a **non-empty literal string**, not a reference or variable
+
+---
+
+### 2. Hardcoded Database/Service Passwords
+Credentials for backend services embedded directly in resource definitions.
+
+**Indicators:**
+- `db_password`, `database_password`, `db_pass`
+- `master_password`, `master_user_password`, `root_password`
+- `admin_password`, `admin_pass`
+- `mysql_root_password`, `postgres_password`, `redis_password`, `mongodb_password`
+- `bind_password`, `ldap_password`
+- `smtp_password`, `smtp_pass`, `ftp_password`
+- Value is a literal string rather than a reference to a secrets store
+
+---
+
+### 3. Hardcoded Connection Strings Containing Passwords
+Connection/URL strings that embed credentials inline.
+
+**Indicators:**
+- Fields named: `connection_string`, `connection_url`, `database_url`, `jdbc_url`, `db_url`, `dsn`
+- Values matching patterns like:
+  - `scheme://username:password@host`
+  - `uid=xxx;pwd=yyy`
+  - `user=xxx;password=yyy`
+  - `Password=xxx` embedded in a connection string value
+
+---
+
+### 4. Environment Variable Injection of Plaintext Passwords
+Sensitive values passed through environment variable definitions inside IaC.
+
+**Indicators:**
+- Blocks/fields like: `env`, `environment`, `env_vars`, `container_env`
+- A key within that block matches a password-related name (e.g., `DB_PASSWORD`, `APP_SECRET`, `AUTH_PASS`, `ADMIN_PASSWORD`)
+- The corresponding `value` field is a **non-empty, unencrypted literal string**
+
+---
+
+### 5. Default/Initial Credential Fields with Static Values
+Fields intended to set first-time or default passwords that are never rotated or changed.
+
+**Indicators:**
+- `default_password`, `initial_password`, `bootstrap_password`
+- `temporary_password`, `first_login_password`
+- `reset_password`
+- Literal, non-dynamic values assigned to these fields
+
+---
+
+### 6. Authentication Configuration Blocks with Embedded Secrets
+Inline authentication sections within resource/service definitions that carry static credentials.
+
+**Indicators:**
+- Blocks/objects named: `auth`, `authentication`, `basic_auth`, `login`, `credentials_config`
+- Child fields such as `password`, `secret`, `token`, `key` holding literal strings
+- `inbound_auth`, `outbound_auth` blocks with static values
+
+---
+
+### 7. Secrets Not Referencing a Secrets Management System
+A password field that uses a plain value instead of a reference to a secrets store is implicitly hardcoded.
+
+**Negative Indicators (absence implies weakness):**
+- No use of references like: `secret_ref`, `valueFrom`, `secretKeyRef`, `parameter_store`, `secrets_manager`, `vault_path`, `key_vault_reference`
+- No variable interpolation pointing to a runtime-resolved secret source
+- Password field value is not a placeholder variable/template expression
+
+---
+
+## Summary Table
+
+| Weakness Pattern | Key Fields/Keywords | Value Indicator |
+|---|---|---|
+| Literal password assignment | `password`, `passwd`, `pwd`, `pass`, `passphrase` | Non-empty literal string |
+| Service-specific credentials | `db_password`, `master_password`, `root_password`, `redis_password` | Non-empty literal string |
+| Embedded connection string | `connection_string`, `database_url`, `dsn`, `jdbc_url` | String containing `password=`, `pwd=`, `:password@` |
+| Env var with secret value | `env` / `environment` block where key matches `*PASSWORD*`, `*SECRET*`, `*PASS*` | Literal `value` field |
+| Default credentials | `default_password`, `initial_password`, `bootstrap_password` | Any non-empty literal |
+| Auth blocks with secrets | `auth`, `basic_auth`, `login` blocks with `password` child | Literal string (not a reference) |
+| Missing secret store reference | Password field lacks `secretKeyRef`, `valueFrom`, `vault_path`, etc. | Static value instead of dynamic reference |
+
+---
+
+## General Detection Rule
+
+> **Flag any field whose name semantically implies a credential (`*pass*`, `*password*`, `*passwd*`, `*secret*`, `*credential*`, `*auth*`) AND whose value is a non-empty, static literal string rather than a reference to a secrets management system or runtime variable.**

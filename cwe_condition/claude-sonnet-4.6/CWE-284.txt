@@ -1,0 +1,152 @@
+# CWE-284: Improper Access Control — Detection in Infrastructure as Code
+
+## Core Weakness Categories
+
+### 1. Overly Permissive Identity & Access Management (IAM) Policies
+**What to detect:** Policies granting excessive or unrestricted permissions.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `effect: allow` combined with `actions: "*"` | Full permission grant |
+| `resources: "*"` | Applies to all resources indiscriminately |
+| `principal: "*"` | Any actor can assume the role or access the resource |
+| `not_actions`, `not_resources`, `not_principals` | Inverted logic, often overly broad |
+| `managed_policy`, `inline_policy`, `policy_arn` with wildcard | Attached over-privileged policies |
+| `AdministratorAccess`, `FullAccess`, `PowerUser` | Pre-built over-privileged role names |
+| `permissions_boundary` absent | No ceiling on escalation |
+
+---
+
+### 2. Publicly Accessible Resources (Missing Access Restriction)
+**What to detect:** Resources exposed without restriction to the public internet or anonymous access.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `publicly_accessible: true` | Database/service open to internet |
+| `public_network_access_enabled: true` | Cloud resource publicly reachable |
+| `acl: public-read`, `acl: public-read-write` | Object/bucket world-readable or writable |
+| `block_public_acls: false` | Public ACLs not blocked |
+| `block_public_policy: false` | Public bucket policies not blocked |
+| `restrict_public_buckets: false` | Buckets accessible to anonymous users |
+| `ignore_public_acls: false` | Inherited public ACLs not ignored |
+| `website_enabled: true` without access control | Static hosting open to all |
+
+---
+
+### 3. Overly Broad Network Access Controls
+**What to detect:** Firewall rules, security groups, or ACLs that allow unrestricted ingress/egress.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `cidr: "0.0.0.0/0"` or `"::/0"` in ingress rules | Open to all IPv4/IPv6 traffic |
+| `source_ranges: ["0.0.0.0/0"]` | No source restriction on traffic |
+| `protocol: "-1"` or `protocol: "all"` | All protocols permitted |
+| `from_port: 0, to_port: 65535` | All ports exposed |
+| `default_action: allow` / `default_rule: permit` | Fail-open behavior |
+| `ingress` block without IP restriction | Unrestricted inbound access |
+| `network_policy` absent on workloads | No pod/workload-level traffic control |
+
+---
+
+### 4. Missing or Disabled Authentication Requirements
+**What to detect:** Resources or APIs accessible without verifying caller identity.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `authentication_enabled: false` | No auth required |
+| `auth_type: none` | Explicitly no authentication |
+| `anonymous_auth_enabled: true` | Anonymous access allowed |
+| `require_auth: false` | Auth not enforced |
+| `mfa_enabled: false` / `mfa_delete: disabled` | No multi-factor enforcement |
+| `mfa_configuration: off` | MFA disabled on user pools or APIs |
+| `authorization_type: none` | API endpoint has no authorization |
+
+---
+
+### 5. Missing Role-Based Access Control (RBAC) / Privilege Separation
+**What to detect:** Absence of least-privilege role structures.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `cluster_admin` role binding to broad subjects | Cluster-wide admin access |
+| `subjects: kind: Group, name: system:authenticated` | All authenticated users get role |
+| `subjects: kind: Group, name: system:unauthenticated` | Unauthenticated users get role |
+| `role: admin` / `role: owner` assigned broadly | Over-privileged role assignment |
+| `service_account` with no token restrictions | Broad API server access |
+| `automount_service_account_token: true` | Implicit credential injection |
+| `namespace: *` or cluster-scoped resource bindings | No namespace isolation |
+
+---
+
+### 6. Insecure Resource-Level Access Policies
+**What to detect:** Missing or overly permissive resource policies on specific services.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `resource_policy` absent | No resource-level restriction |
+| `bucket_policy` absent or allows `Principal: "*"` | S3/Blob storage open |
+| `key_policy` grants `kms:*` to all | No encryption key access restriction |
+| `queue_policy` allows any sender | Message queue open to unauthenticated senders |
+| `trust_policy` with no condition blocks | Broad role assumption |
+| `condition` block absent in policy statements | No contextual restriction on access |
+
+---
+
+### 7. Excessive Privilege / Privilege Escalation Risks
+**What to detect:** Configurations enabling privilege escalation or granting root/admin without necessity.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `run_as_root: true` / `run_as_user: 0` | Container runs as root |
+| `privileged: true` | Full host-level access to container |
+| `allow_privilege_escalation: true` | Process can gain more privileges |
+| `capabilities: add: ["ALL"]` | All Linux capabilities added |
+| `host_pid: true`, `host_network: true` | Shares host namespaces |
+| `sudo` or `admin` role in provisioning | Administrator rights assigned |
+| `root_access: enabled` | Root login allowed (e.g., on RDS) |
+
+---
+
+### 8. Missing Conditions / Context in Access Control Policies
+**What to detect:** Policies that lack conditional constraints, allowing access without context validation.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `condition` block absent | No IP, time, or context-based restriction |
+| Missing `aws:SourceIp`, `aws:PrincipalOrgID`, `aws:RequestedRegion` | No trust boundary enforcement |
+| `cross_account_access` without conditions | Any account can assume role |
+| `assume_role_policy` with no `sts:ExternalId` | Role hijacking risk |
+| `cors` with `allowed_origins: ["*"]` | All origins accepted |
+| `cors_rule` with `expose_headers: ["*"]` | All headers exposed cross-origin |
+
+---
+
+### 9. Logging and Accountability Gaps (Enabling Undetected Access)
+**What to detect:** Missing audit/logging controls that allow unauthorized access to go undetected.
+
+| Keywords / Attributes / Fields | Implication |
+|---|---|
+| `enable_logging: false` | Access events not recorded |
+| `audit_log_config` absent | No API audit trail |
+| `cloud_watch_logs_enabled: false` | No log forwarding |
+| `access_logs` block absent on load balancers | Request logs not captured |
+| `log_delivery` absent on storage buckets | No object-level access tracking |
+
+---
+
+## Summary of Key Signal Keywords
+
+```
+"*" (wildcard in actions/resources/principals)
+0.0.0.0/0 | ::/0
+public | publicly_accessible | public-read | public-read-write
+allow | permit (as defaults)
+authentication_enabled: false | auth_type: none
+mfa_enabled: false | mfa_delete: disabled
+privileged: true | run_as_root: true | allow_privilege_escalation: true
+principal: "*" | anonymous_auth_enabled: true
+admin | root | superuser | full_access | AdministratorAccess
+condition (absent) | trust_policy (no ExternalId)
+enable_logging: false | audit_log_config (absent)
+block_public_acls: false | restrict_public_buckets: false
+```

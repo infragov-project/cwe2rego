@@ -1,0 +1,61 @@
+Below are the **key weakness indicators** to detect CWE‑1327 (“Binding to an Unrestricted IP Address”) in Infrastructure‑as‑Code (IaC) scripts. The goal is to find configurations where a service or resource is bound to **all interfaces** instead of a specific network interface.
+
+---
+
+## ✅ Necessary Weakness to Detect
+**A network‑exposed service or resource is configured to bind/listen on all interfaces (unrestricted address).**
+
+---
+
+## 🔎 Indicators / Keywords / Attributes to Flag  
+*(language‑agnostic; focus on common IaC patterns)*
+
+### 1) **Explicit wildcard address values**
+Look for any of these values in fields that define a bind or listen address:
+
+- `0.0.0.0`
+- `0.0.0.0/0`
+- `::` or `::/0` (IPv6 wildcard)
+- `*`
+- `any`
+- `all`
+
+### 2) **Binding/listening fields**
+These fields frequently define where a service listens or binds:
+
+- `listen`, `listen_address`
+- `bind`, `bind_address`
+- `host`, `server_address`
+- `interface`
+- `ip`, `address`
+- `client_address`, `advertise_address`
+- `endpoint_address`
+- `mgmt_address`, `admin_address`
+
+### 3) **Public exposure flags**
+Fields suggesting exposure on all interfaces or internet‑facing:
+
+- `public`, `publicly_accessible`
+- `expose`, `exposed`
+- `open`, `open_to_public`
+- `allow_all`, `allow_any`
+- `listen_on_all_interfaces`
+
+### 4) **Implicit “all interfaces”**
+Even without an explicit IP:
+- **Empty/omitted bind/listen field** when defaults are known to bind to all interfaces.
+
+### 5) **Ingress/source CIDR + bind all**
+If a service both:
+- binds to wildcard address **and**
+- uses source ranges such as `0.0.0.0/0` or `::/0`,
+it strengthens the finding.
+
+---
+
+## ✅ Summary Detection Rule (Conceptual)
+> **Flag any IaC resource that configures a service/listener to bind or listen on `0.0.0.0`, `::`, or any “all/any/*” address, especially for databases, APIs, dashboards, or management interfaces.**
+
+---
+
+If you'd like, I can also provide detection heuristics, rules, or an audit checklist tailored to a specific IaC platform.

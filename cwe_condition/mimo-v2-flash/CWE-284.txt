@@ -1,0 +1,50 @@
+Based on the provided CWE-284 details, here are the key weaknesses to detect in Infrastructure as Code (IaC) scripts, along with keywords/attributes indicating improper access control:
+
+### Core Weaknesses to Detect
+1. **Overly Permissive Identity/Access Policies**  
+   - Keywords: `wildcard principals`, `excessive permissions`, `full admin rights`  
+   - Attributes:  
+     - Policies with `"Effect": "Allow"` and `"Action": "*"`  
+     - Resources attached to users/roles with unnecessary privileges (e.g., `"Resource": "*"`)
+
+2. **Missing Authentication/Authorization Checks**  
+   - Keywords: `public exposure`, `unauthenticated access`, `bypass authorization`  
+   - Attributes:  
+     - Resources set to `publicly_accessible: true`  
+     - Security groups allowing `0.0.0.0/0` on sensitive ports (e.g., 22, 3389, 1433)  
+     - Database/storage configurations with no authentication flags (e.g., `require_ssl: false`)  
+
+3. **Insecure Resource Exposure**  
+   - Keywords: `world-readable`, `public read`, `unrestricted access`  
+   - Attributes:  
+     - Storage buckets/objects with `acl: "public-read"`  
+     - Serverless functions/APIs with no identity verification  
+     - Network rules allowing ingress from anywhere (`0.0.0.0/0` or `::/0`)  
+
+4. **Weak Secrets Management**  
+   - Keywords: `hardcoded credentials`, `plaintext secrets`, `default passwords`  
+   - Attributes:  
+     - Direct environment variables for credentials (e.g., `password: "secret123"`)  
+     - Use of non-encrypted storage for secrets (e.g., `encryption: "none"`)  
+
+5. **Insufficient Boundary Controls**  
+   - Keywords: `trust boundaries`, `privilege escalation`, `cross-tenant access`  
+   - Attributes:  
+     - Absence of segmentation (e.g., no network isolation between environments)  
+     - Roles with "assume role" capabilities without restrictions  
+
+### Critical Attributes for IaC Scanners
+- **IAM Policies**: Check for `"Principal": "*"` combined with risky actions (e.g., `"s3:DeleteBucket"`).  
+- **Network Rules**: Look for `cidr: "0.0.0.0/0"` on ports like 22 (SSH) or 1521 (Oracle DB).  
+- **Resource Settings**:  
+  - `public_access_blocked: false` (for cloud storage)  
+  - `database_publicly_accessible: true`  
+  - `server_side_encryption: "disabled"`  
+- **Secret References**: Hardcoded values (e.g., `"apiKey": "AKIA...";`) instead of secret manager references.  
+
+### Why This Matters for IaC
+- These patterns often manifest in misconfigurations during resource provisioning (e.g., Terraform/CloudFormation templates).  
+- Missing attributes like `"encryption": "ssm"` or `"require_ssl": true` can lead to data exposure.  
+- Wildcard permissions (`"Action": "*"`) violate least-privilege principles.  
+
+> **Note**: These indicators align with CWE-284’s emphasis on authentication, authorization, and enforcement flaws. For targeted detection, consider mapping to specific child CWEs like CWE-862 (Missing Authorization) or CWE-732 (Incorrect Permissions) where applicable.

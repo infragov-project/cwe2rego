@@ -1,0 +1,69 @@
+Below are **IaC‑centric indicators** that suggest **CWE‑327 (Use of a Broken or Risky Cryptographic Algorithm)**.  
+These are generic patterns and **do not depend on any specific IaC language**.
+
+---
+
+## ✅ What to look for (weakness patterns)
+
+### 1) **Algorithm selection uses deprecated/weak crypto**
+**Fields/keywords likely involved:**  
+`algorithm`, `encryption`, `cipher`, `crypto`, `hash`, `digest`, `signature`
+
+**Risky values / indicators:**  
+- Symmetric: `DES`, `3DES`, `RC4`, `RC2`, `Blowfish`, `IDEA`, `TEA`  
+- Hashing: `MD2`, `MD4`, `MD5`, `SHA1`  
+- Modes: `ECB`, `CBC` without integrity  
+- “Obfuscation” instead of encryption: `xor`, `rot`, `base64`, `custom`
+
+---
+
+### 2) **TLS/SSL protocol versions allow legacy protocols**
+**Fields/keywords likely involved:**  
+`tls_version`, `ssl_version`, `min_protocol`, `enabled_protocols`, `security_policy`
+
+**Risky values:**  
+`SSLv2`, `SSLv3`, `TLS1.0`, `TLS1.1`, `legacy`, `compatibility`
+
+---
+
+### 3) **Cipher suite configuration includes weak ciphers**
+**Fields/keywords likely involved:**  
+`cipher_suites`, `allowed_ciphers`, `ciphers`
+
+**Risky markers:**  
+`NULL`, `EXPORT`, `ANON`, `MD5`, `RC4`, `DES`, `3DES`, `SHA1`, `CBC`
+
+---
+
+### 4) **Key size or key spec too small**
+**Fields/keywords likely involved:**  
+`key_size`, `key_length`, `key_bits`, `key_spec`, `rsa_bits`, `dsa_bits`, `curve`
+
+**Risky patterns:**  
+- RSA/DSA < **2048 bits**  
+- ECC < **256 bits**  
+- Symmetric keys < **128 bits**
+
+---
+
+### 5) **Password or integrity hashing uses weak algorithms**
+**Fields/keywords likely involved:**  
+`password_hash`, `hmac_algorithm`, `digest_algorithm`, `checksum`
+
+**Risky values:**  
+`MD5`, `SHA1`, `CRC`, `crypt` (legacy variants)
+
+---
+
+### 6) **Explicit “allow weak/legacy crypto” flags**
+**Fields/keywords likely involved:**  
+`allow_weak_crypto`, `legacy_crypto`, `compatibility_mode`, `enable_insecure`
+
+---
+
+## Summary
+If IaC scripts **configure crypto or TLS settings** and those settings **select obsolete algorithms, weak hashes, legacy protocols, small key sizes, or insecure cipher suites**, they are strong indicators of **CWE‑327**.
+
+---
+
+If you want, I can also provide **rule templates** or **regex‑style detectors** for these indicators.

@@ -1,0 +1,88 @@
+# CWE-798: Use of Hard-coded Credentials — Detection in IaC Scripts
+
+## Core Weaknesses to Detect
+
+### 1. Literal Credential Assignment
+Credential values assigned **directly as plain-text string literals** to sensitive fields rather than referencing an external secret store or vault.
+
+### 2. Absence of Secret Management References
+Configuration that **lacks references** to external secret managers, vaults, or parameter stores for any field that handles authentication material.
+
+### 3. Inline Connection String Embedding
+Credentials (username, password, tokens) embedded **directly within connection strings or URLs** rather than composed from secure references.
+
+### 4. Environment Variable Inline Population
+Sensitive values passed directly as literal strings into environment variable declarations instead of using dynamic/injected references.
+
+### 5. Unencrypted Credential Storage in Config Files
+Credentials stored in **cleartext** within configuration, property, or manifest files without encryption wrappers or secret management integration.
+
+---
+
+## Keywords, Attributes & Fields That Imply This Weakness
+
+### Sensitive Field Name Indicators
+| Category | Keywords / Field Names |
+|---|---|
+| **Passwords** | `password`, `passwd`, `pwd`, `pass`, `passphrase` |
+| **Keys** | `secret_key`, `access_key`, `api_key`, `private_key`, `encryption_key`, `ssh_key`, `client_secret` |
+| **Tokens** | `token`, `api_token`, `access_token`, `auth_token`, `bearer_token`, `session_token` |
+| **Credentials** | `credentials`, `credential`, `auth`, `authorization`, `secret` |
+| **Connection** | `connection_string`, `connection_url`, `jdbc_url`, `db_url`, `dsn`, `database_uri` |
+| **Certificates** | `certificate`, `cert`, `tls_key`, `ssl_cert`, `pem` |
+| **Community Strings** | `community_string`, `snmp_community` |
+
+---
+
+### Value-Level Red Flags
+- A **non-empty string literal** (rather than a variable reference or lookup function) assigned to any sensitive field
+- **Base64-encoded strings** assigned to key/secret fields
+- **Hexadecimal strings** of length consistent with cryptographic keys (e.g., 32, 64 characters)
+- Strings matching common **default credential patterns** (e.g., `admin`, `password`, `root`, `changeme`, `default`)
+- **username + password** pairs both defined as literals in the same block
+
+---
+
+### Structural / Contextual Patterns
+
+#### Insecure Patterns (Imply CWE-798)
+- Credential field contains a `string` type value with a **hardcoded literal**
+- Credentials defined at the **resource or module level** rather than injected at runtime
+- `value:` or `default:` attribute on a sensitive field set to a non-empty string
+- Connection strings using the format: `protocol://user:password@host/resource`
+
+#### Secure Patterns (Absence Implies Weakness)
+The **absence** of the following reference-style patterns alongside a sensitive field indicates a potential hard-coded credential:
+
+| Secure Reference Type | Concept |
+|---|---|
+| Secret Manager lookup | Reference to an external secret store (e.g., ARN, path, or ID) |
+| Parameter store reference | Dynamic retrieval from a configuration/parameter service |
+| Vault references | Dynamic secret injection from a secrets management system |
+| Runtime environment injection | Value populated at deploy/runtime, not at definition time |
+| Variable references | Use of a variable placeholder rather than a literal value |
+| `secretKeyRef` / `secretRef` style constructs | Reference to a separately managed secret object |
+
+---
+
+### Field Attribute Combinations That Raise Risk
+- `sensitive = false` or missing `sensitive` flag on a field holding a credential
+- `encrypted = false` on a credential-holding attribute
+- `plaintext = true` on any authentication-related field
+- Output or export of credential values without masking
+- Credential fields defined in **publicly accessible or version-controlled** configuration blocks
+
+---
+
+## Summary Table
+
+| Detection Signal | Implication |
+|---|---|
+| String literal in `password`, `secret`, `token` fields | Direct hard-coding |
+| `username` + `password` both as literals | Hard-coded inbound/outbound credentials |
+| Connection URL with embedded credentials | Hard-coded outbound credential |
+| No vault/secret-store reference for auth fields | Missing secret management |
+| Base64/hex literal in a `key` field | Hard-coded cryptographic key |
+| Default values set for credential fields | Default credential vulnerability |
+| Credentials in environment variable `value` (not injected) | Hard-coded runtime credential |
+| `sensitive` flag absent or false on auth fields | Credential exposure risk |

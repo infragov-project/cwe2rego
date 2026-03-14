@@ -1,0 +1,115 @@
+# CWE-327: Detection in Infrastructure as Code (IaC)
+
+## Core Weakness Categories to Detect
+
+### 1. Deprecated or Broken Symmetric Encryption Algorithms
+Look for explicit references to known-weak algorithms in encryption configuration fields.
+
+**Keywords / Values to Flag:**
+- `DES`, `3DES`, `TripleDES`, `TDEA`
+- `RC2`, `RC4`, `RC5`
+- `Blowfish`, `IDEA`
+- `ECB` (mode of operation — leaks patterns regardless of cipher)
+- `TEA`, `XTEA`
+- `XOR` (used as obfuscation)
+- `NULL` (null cipher suites)
+
+---
+
+### 2. Broken or Deprecated Hash Algorithms
+Hashing used for integrity checking, password storage, certificate signing, or data fingerprinting.
+
+**Keywords / Attributes / Values:**
+- `MD4`, `MD5`
+- `SHA1`, `SHA-1`, `sha1`
+- `RIPEMD-128`
+- `hash_algorithm`, `digest_algorithm`, `signing_algorithm` set to the above
+- `hmac_algorithm` using MD5 or SHA-1
+- `content_md5`, `checksum_algorithm: md5`
+
+---
+
+### 3. Insecure TLS/SSL Protocol Versions
+Protocol version selection in listeners, endpoints, CDN distributions, load balancers, or VPN tunnels.
+
+**Keywords / Attributes / Values:**
+- `ssl_policy`, `security_policy`, `tls_policy`, `minimum_protocol_version`
+- Values indicating: `SSLv2`, `SSLv3`, `TLSv1`, `TLSv1.0`, `TLSv1.1`, `ssl3`, `tls1_0`, `tls1_1`
+- Policy names containing: `2015`, `2016`, `TLS-1-0`, `TLS-1-1`
+- `protocol: HTTP` (where HTTPS is expected)
+- `insecure_ssl: true` or `verify_ssl: false`
+
+---
+
+### 4. Weak Key Sizes or Key Specifications
+Cryptographic strength depends heavily on key length.
+
+**Keywords / Attributes / Values:**
+- `key_size`, `key_bits`, `key_length`, `rsa_bits`, `modulus_length`
+- Values: `512`, `768`, `1024` (RSA/DH) — below 2048-bit threshold
+- `key_spec` or `key_algorithm` set to deprecated types (e.g., `RSA_2048` boundary, `RSA_1024`)
+- `dh_group` with small DH group numbers (e.g., Group 1, Group 2, Group 5)
+- `elliptic_curve` using weak curves (e.g., `secp112r1`, `secp128r1`)
+
+---
+
+### 5. Weak IKE / IPSec / VPN Cipher Settings
+VPN configurations that specify encryption and integrity algorithms for tunnel negotiation.
+
+**Keywords / Attributes / Values:**
+- `phase1_encryption_algorithms`, `phase2_encryption_algorithms`
+- `ike_version: 1` (IKEv1 is less secure than IKEv2)
+- `integrity_algorithm` or `authentication_algorithm` with MD5, SHA-1
+- `pfs_group` disabled or set to weak group
+- `perfect_forward_secrecy: disable` or `pfs: false`
+
+---
+
+### 6. Weak or Missing Storage Encryption Configuration
+Object storage, block storage, and database encryption settings.
+
+**Keywords / Attributes / Values:**
+- `server_side_encryption`, `sse_algorithm`, `encryption_algorithm`
+- Absent or `none` for encryption fields where it should be set
+- `AES128` in contexts where `AES256` is required by policy
+- `kms_master_key_id` or `kms_key_id` absent (falling back to weaker defaults)
+- `encrypt_at_rest: false`, `storage_encrypted: false`
+
+---
+
+### 7. Weak Certificate or Signing Configuration
+Certificate issuance, signing requests, and public key infrastructure settings.
+
+**Keywords / Attributes / Values:**
+- `signature_algorithm` set to `sha1WithRSAEncryption`, `md5WithRSAEncryption`
+- `certificate_type` referencing deprecated standards
+- `algorithm` in signing blocks set to `RS256` with SHA-1 internally
+- Self-signed flags combined with weak algorithm fields
+- `key_algorithm: RSA` with accompanying small `key_size`
+
+---
+
+### 8. Insecure Cipher Suite References
+Explicit cipher suite lists in web server, load balancer, or proxy configurations.
+
+**Keywords / Attributes / Values:**
+- `cipher_suites`, `ssl_ciphers`, `ciphers` field listing any of:
+  - `RC4-*`, `DES-*`, `3DES-*`, `NULL-*`, `EXPORT-*`, `ANON-*`
+  - `*-MD5`, `*-SHA` (SHA-1 based)
+  - `ADH-*` (anonymous Diffie-Hellman)
+- `cipher_suite_policy` referencing legacy or permissive preset names
+
+---
+
+## Summary Table
+
+| Weakness Indicator | Relevant IaC Attribute/Field | Risky Values |
+|---|---|---|
+| Weak symmetric cipher | `encryption_algorithm`, `algorithm` | `DES`, `RC4`, `ECB` |
+| Weak hash | `hash_algorithm`, `digest_algorithm` | `MD5`, `SHA1` |
+| Old TLS/SSL | `ssl_policy`, `minimum_protocol_version` | `TLSv1.0`, `SSLv3` |
+| Small key size | `key_size`, `rsa_bits`, `key_bits` | `< 2048` |
+| Weak cipher suites | `cipher_suites`, `ssl_ciphers` | `RC4-*`, `EXPORT-*`, `NULL-*` |
+| Weak VPN tunnel | `phase1_encryption_algorithms`, `ike_version` | `DES`, `IKEv1` |
+| Disabled PFS | `perfect_forward_secrecy`, `pfs` | `false`, `disable` |
+| No storage encryption | `server_side_encryption`, `storage_encrypted` | `false`, absent |

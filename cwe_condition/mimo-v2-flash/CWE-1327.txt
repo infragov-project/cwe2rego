@@ -1,0 +1,54 @@
+Based on CWE-1327 (Binding to an Unrestricted IP Address), here are the key weaknesses to detect in Infrastructure as Code (IaC) scripts, focusing on universal patterns without language-specific syntax:
+
+### **Core Weakness Indicators**
+1. **Unrestricted IP Assignment**  
+   - **Keywords/Attributes**: `bind_address`, `listen_address`, `host`, `ip_address`, `server_address`, `address`, `ip`, `host_ip`  
+   - **Critical Value**: `0.0.0.0` (or equivalent wildcards like `*`, `::0` for IPv6)  
+   - **Risk**: Allows connections from any IP, exposing services to unintended networks.
+
+2. **Remote Communication Endpoints**  
+   - **Target Resources**: Services handling remote connections (e.g., databases, APIs, cloud instances, containerized services).  
+   - **Attributes**: `port`, `protocol`, `exposed` (set to `true`), `publicly_accessible` (if paired with unrestricted IPs).  
+
+3. **Network Configuration Flaws**  
+   - **Missing Constraints**: Absence of IP allowlists, firewall rules, or network policies to restrict access.  
+   - **Risk Amplifiers**: Attributes like `external_access = true` without IP limitations.  
+
+4. **Cloud/Container-Specific Context**  
+   - **Cloud Instances**: Attributes like `public_ip` or `network_interface` set to listen on `0.0.0.0`.  
+   - **Container/Orchestration**: Ports mapped to `0.0.0.0` (e.g., in service definitions) or `hostNetwork: true` without IP filtering.  
+
+### **Detection Strategy**
+- **Pattern Match**: Flag configurations where an IP-binding attribute is explicitly set to `0.0.0.0`.  
+- **Context Check**: Focus on resources that:  
+  - Communicate over networks (e.g., databases, web servers, cloud services).  
+  - Have inbound access enabled (ports exposed to the internet/VPC).  
+- **Severity Trigger**: Always flag `0.0.0.0` for network-facing services—this is inherently high-risk per CWE-1327.  
+
+### **Mitigation Clues**
+- **Secure Alternatives**:  
+  - `127.0.0.1` (localhost-only)  
+  - Specific private IPs (e.g., `10.0.0.1`) or VPC/CIDR ranges.  
+  - Attributes like `private_ip` or `restrict_access: true`.  
+- **Defensive Add-ons**: Paired with firewall/VPN configurations (e.g., `allow_cidr` or security groups).  
+
+### **Example Weakness Snippets (Abstract)**
+```plaintext
+# Bad: Unrestricted binding
+resource "network_service" {
+  bind_address = "0.0.0.0"  #  ⚠️ Weakness
+  port         = 8080
+}
+
+# Good: Restricted binding
+resource "network_service" {
+  bind_address = "10.0.1.5"  #  ✅ Specific IP
+  port         = 8080
+}
+```
+
+### **Why This Matters**
+- **Impact**: Services bound to `0.0.0.0` risk DoS attacks, data exposure, or unauthorized access (e.g., CVE-2022-21947).  
+- **IaC Relevance**: These misconfigurations are reproducible across deployments, amplifying security debt.  
+
+Focus on these universal patterns to detect CWE-1327 in any IaC framework.

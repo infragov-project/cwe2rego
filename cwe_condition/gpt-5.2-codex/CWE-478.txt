@@ -1,0 +1,44 @@
+Below are the key weakness conditions and detection cues for **CWE‑478: Missing Default Case in Multiple‑Condition Expression** when scanning **Infrastructure as Code (IaC)** scripts.  
+(General terms only; no language‑specific syntax.)
+
+---
+
+## ✅ Weakness to Detect
+**Multi‑branch conditional logic selects behavior based on a variable/parameter, but lacks a catch‑all/default path.**  
+If the input is unexpected or out of range, execution/configuration proceeds with undefined or unsafe behavior.
+
+---
+
+## ✅ Detection Indicators (Concepts & Keywords)
+
+### 1. **Multi‑condition selection constructs**
+Look for configuration logic that enumerates multiple explicit cases:
+- *Keywords / attributes:*  
+  `switch`, `case`, `when`, `match`, `choice`, `select`, `rule`, `condition`, `mapping`, `decision`, `branch`, `state`
+
+### 2. **No fallback / default path**
+Verify that those constructs include a catch‑all or error branch.  
+Flag when absent:
+- *Keywords / attributes that imply a needed fallback:*  
+  `default`, `else`, `otherwise`, `fallback`, `catch_all`, `unknown`, `invalid`, `*`, `any`
+
+### 3. **Mapping / lookup without default**
+Configuration chooses values from a mapping table but has no defined default for unknown keys.
+- *Keywords / attributes:*  
+  `lookup`, `map`, `dictionary`, `table`, `key`, `value`, `resolve`, `default_value`, `not_found`
+
+### 4. **If/elseif chains without final else**
+Sequential conditional blocks only handle known values with no final “else.”
+- *Keywords / attributes:*  
+  `if`, `elseif`, `elif`, `then`, `condition`, `when`, `unless`  
+  (flag if no terminal fallback exists)
+
+---
+
+## ✅ Summary Rule for IaC Scanners
+**Any multi‑way selection based on variable input must include a default/else/otherwise branch or explicit error handling.**  
+If the structure enumerates only known values and lacks a catch‑all, it matches CWE‑478.
+
+---
+
+If you want, I can also provide sample detection patterns or pseudocode rules for scanning IaC configs.

@@ -1,0 +1,65 @@
+### Necessary Weaknesses to Detect CWE-250 (Execution with Unnecessary Privileges) in IaC Scripts  
+To identify instances where infrastructure resources are configured with excessive privileges, focus on these patterns in Infrastructure as Code (IaC) templates (e.g., Terraform, CloudFormation, Kubernetes manifests). Keywords and attributes to monitor without language-specific details:  
+
+#### **1. Overly Permissive Identity and Access Management (IAM) Roles/Policies**  
+   - **Keywords**: `AdministratorAccess`, `*` (wildcard in actions/resources), `fullaccess`, `root` privileges.  
+   - **Attributes**:  
+     - Policies permitting `Action: "*"` or `Resource: "*"`.  
+     - Roles assigned managed policies like `AdministratorAccess` or custom policies with broad permissions (e.g., `s3:*`, `ec2:*`).  
+     - Service accounts with cluster-admin roles (e.g., Kubernetes `ClusterRoleBinding` with `cluster-admin`).  
+
+#### **2. Unrestricted Execution Contexts**  
+   - **Keywords**: `privileged: true`, `runAsUser: 0` (root), `privilegedContainers`.  
+   - **Attributes**:  
+     - Containers/pods running as `root` or with `securityContext.privileged: true`.  
+     - Virtual machines using high-privilege service accounts (e.g., GCP `compute.engine` or Azure `Contributor` roles).  
+     - Lambda functions or serverless roles with unnecessary administrative permissions.  
+
+#### **3. Excessive Network Permissions**  
+   - **Keywords**: `0.0.0.0/0`, `open` ports, `allTraffic`.  
+   - **Attributes**:  
+     - Security groups/network ACLs allowing inbound/outbound traffic from `0.0.0.0/0` on sensitive ports (e.g., SSH/RDP/22, database ports).  
+     - Load balancers or firewalls with overly permissive ingress rules.  
+
+#### **4. Unnecessary File/Storage Permissions**  
+   - **Keywords**: `public`, `world-writable`, `allUsers`.  
+   - **Attributes**:  
+     - Storage buckets (e.g., S3, Azure Blob) with `AllUsers` or `AuthenticatedUsers` access.  
+     - File systems or volumes mounted with write permissions for non-privileged users.  
+
+#### **5. Privileged Process Execution**  
+   - **Keywords**: `sudo`, `setuid`, `privileged` execution flags.  
+   - **Attributes**:  
+     - Compute instances configured to run processes with `sudo` or elevated privileges without justification.  
+     - Scripts/commands invoking privilege escalation (e.g., `sudo command`).  
+
+#### **6. Default High-Privilege Configurations**  
+   - **Keywords**: `default` roles, `built-in` high-privilege roles.  
+   - **Attributes**:  
+     - Use of platform default roles (e.g., Azure `Owner`, AWS `PowerUserAccess`) without customization.  
+     - Resources inheriting broad permissions from parent scopes (e.g., subscription-level roles).  
+
+---
+
+### **Detection Approach in IaC Scanners**  
+- **Static Analysis Rules**:  
+  - Flag resources with wildcard permissions (`*`) in IAM policies.  
+  - Detect containers/VMs running as root (`runAsUser: 0`) or with `privileged: true`.  
+  - Identify network rules allowing `0.0.0.0/0` on sensitive ports.  
+  - Alert on storage resources with `allUsers` access.  
+- **Policy Checks**:  
+  - Compare roles against least-privilege principles (e.g., validate if `AdministratorAccess` is truly needed).  
+  - Verify that service accounts have minimal permissions (e.g., `roles/viewer` instead of `roles/owner`).  
+- **Contextual Validation**:  
+  - Ensure privilege escalation (e.g., `sudo`) is restricted to justified use cases.  
+  - Require justification for high-privilege built-in roles.  
+
+### **Why This Matters**  
+Excessive privileges in IaC can lead to:  
+- **Privilege escalation** (attacker gains root/admin access).  
+- **Lateral movement** (compromised resource attacks other systems).  
+- **Data breaches** (unrestricted access to storage/networks).  
+
+By scanning for these patterns, you enforce least privilege—reducing the attack surface per CWE-250 mitigations (e.g., `MIT-17`, `MIT-18`).  
+
+> **Note**: Always validate if broad permissions are justified (e.g., admin tasks). If not, refactor to scoped-down policies.

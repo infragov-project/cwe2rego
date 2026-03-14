@@ -1,0 +1,66 @@
+### Weakness Detection for CWE-319: Cleartext Transmission of Sensitive Information in Infrastructure as Code (IaC)  
+To detect this weakness in IaC scripts (e.g., Terraform, CloudFormation, ARM templates), focus on configurations that explicitly enable or allow **unencrypted communication channels** for sensitive data. Below are key indicators, attributes, and keywords to scrutinize without language-specific examples:
+
+---
+
+#### **Critical Keywords/Attributes to Detect**  
+1. **Protocol Configuration**  
+   - Attributes explicitly permitting plaintext protocols:  
+     - `protocol = "http"` (instead of `https`, `tls`, or encrypted alternatives).  
+     - `protocol = "ftp"`, `"smtp"`, `"telnet"`, `"plaintext"`, or `"cleartext"`.  
+   - Keywords: `unencrypted`, `disable_tls`, `ssl: false`, `tls_enabled: false`.  
+
+2. **Endpoint Configuration**  
+   - URLs, endpoints, or URIs starting with `http://` (non-HTTPS) for sensitive operations (e.g., data transfer, API calls, secret injection).  
+   - Resource configurations allowing HTTP-only access (e.g., `enable_http = true` without redirecting to HTTPS).  
+
+3. **Resource Properties**  
+   - **Storage Services**:  
+     - `enable_https_traffic_only: false` (e.g., cloud storage buckets allowing HTTP).  
+     - `require_ssl: false` (for databases, queues, or file shares).  
+   - **Compute/Network Resources**:  
+     - Load balancers/listeners without TLS termination (e.g., `listener_protocol = "HTTP"`).  
+     - Virtual machines or containers using plaintext protocols for internal communication (e.g., `http` for metadata services).  
+   - **Secret Handling**:  
+     - Secrets/credentials referenced in plaintext within configuration (e.g., `password = "secret"` passed to a resource over HTTP).  
+     - Environment variables for secrets (e.g., `ENV_SECRET`) without encryption in transit.  
+
+4. **Security Policies**  
+   - Missing or disabled encryption enforcement:  
+     - `enforce_https: false` (or `force_https: false`).  
+     - `encryption: disabled` for data-in-transit settings.  
+   - Network security groups/firewall rules allowing ports associated with plaintext protocols (e.g., port `80` for HTTP, `21` for FTP, `23` for Telnet) without encryption.  
+
+5. **Default Insecure Settings**  
+   - Reliance on defaults that disable encryption (e.g., cloud services with plaintext protocols enabled by default).  
+   - Resources with unsecured ports exposed publicly (e.g., public endpoints without TLS).  
+
+---
+
+#### **Implied Weakness Patterns**  
+- **Direct Exposure**:  
+  - Any resource configuration that explicitly uses `http://` for sensitive data transmission (e.g., `endpoint = "http://api.example.com"`).  
+- **Indirect Risks**:  
+  - Services lacking encryption enforcement (e.g., no TLS/SSL configuration in databases, message queues, or secret managers).  
+  - Scripts that fetch secrets from insecure sources (e.g., `curl http://vault.example.com/secrets`).  
+- **Cloud-Specific Risks**:  
+  - Storage buckets with `public_access` allowed over HTTP (e.g., `access_policy: allow_http`).  
+  - Serverless functions invoking endpoints via HTTP for secret retrieval.  
+
+---
+
+#### **Mitigation Keywords/Attributes**  
+To resolve the weakness, enforce encrypted configurations:  
+- Attributes: `https_only: true`, `ssl: required`, `encryption: enabled`, `protocol: https`, `force_tls: true`.  
+- Keywords: `redirect_http_to_https`, `tls_version: "1.2+"`, `certificate_arn` (for TLS termination).  
+
+---
+
+### **Summary for Detection**  
+Scan IaC scripts for:  
+- **Plaintext protocols** (HTTP, FTP, etc.) in service endpoints or configurations.  
+- **Explicit disabling** of encryption (e.g., `ssl: false`, `enable_https: false`).  
+- **Sensitive data** (passwords, tokens, API keys) transmitted via unencrypted channels.  
+- **Missing encryption enforcement** in resources handling secrets or sensitive operations.  
+
+By targeting these attributes, you can identify configurations violating CWE-319 and prioritize encryption in transit for IaC deployments.

@@ -1,0 +1,112 @@
+# CWE-319: Cleartext Transmission of Sensitive Information in IaC
+
+## Core Weaknesses to Detect
+
+### 1. Unencrypted Protocol Enforcement Disabled
+The most direct indicator — configurations that explicitly allow or default to cleartext communication channels.
+
+**Keywords / Attributes / Fields:**
+- `https_only`, `enableHttpsTrafficOnly`, `secure_transfer_required` → set to `false` or absent
+- `require_ssl`, `force_ssl`, `enforce_https`, `enable_https` → set to `false` or absent
+- `encryption_in_transit`, `in_transit_encryption` → set to `disabled`, `false`, or absent
+- `ssl_enabled`, `tls_enabled` → set to `false`
+- `encryption` → set to `none` or omitted in transit-related blocks
+
+---
+
+### 2. Cleartext Protocol Usage
+Resources explicitly configured to use non-encrypted communication protocols.
+
+**Keywords / Attributes / Fields:**
+- Protocol scheme references: `http://`, `ftp://`, `telnet://`, `smtp://`, `ldap://`
+- `protocol` → `HTTP`, `FTP`, `TELNET`, `LDAP`, `SMTP`, `WS` (non-secure WebSocket)
+- `endpoint_type`, `connection_type`, `scheme` → set to plaintext variants
+- `listener_protocol` → `HTTP` without an accompanying HTTPS redirect rule
+
+---
+
+### 3. Insecure Port Configurations
+Ports associated with cleartext protocols indicate unencrypted channel exposure.
+
+**Keywords / Attributes / Fields:**
+- `port` → `80` (HTTP), `21` (FTP), `23` (Telnet), `8080`, `8008`, `389` (LDAP), `25` (SMTP), `110` (POP3), `143` (IMAP)
+- `from_port`, `to_port` → ranges including cleartext protocol ports
+- Absence of port `443`, `22`, `636` (LDAPS), `587/465` (secure mail)
+
+---
+
+### 4. Weak or Missing TLS Version Requirements
+Permitting outdated TLS/SSL versions effectively degrades encryption to near-cleartext risk.
+
+**Keywords / Attributes / Fields:**
+- `min_tls_version`, `minimum_tls_version`, `tls_policy` → `TLS1_0`, `TLS1_1`, `SSLv3`, `TLS1.0`
+- `ssl_policy` → referencing legacy or weak cipher policies
+- Absence of `min_tls_version` altogether
+- `tls_version` → `1.0` or `1.1`
+
+---
+
+### 5. Missing Redirect from HTTP to HTTPS
+No enforced redirection means cleartext traffic is accepted without upgrade.
+
+**Keywords / Attributes / Fields:**
+- `redirect_http_to_https` → `false` or absent
+- `http_to_https_redirect` → missing
+- `default_action` on HTTP listener → not set to `redirect` with status `301`/`302`
+- Absence of `redirect_config` or `redirect_action` on plaintext listeners
+
+---
+
+### 6. Missing or Misconfigured TLS Certificates
+Without a valid TLS certificate, encrypted channels cannot be established.
+
+**Keywords / Attributes / Fields:**
+- `ssl_certificate`, `certificate_arn`, `tls_certificate_id` → absent or empty
+- `certificate` block → missing within listener or endpoint definitions
+- `acm_certificate_arn`, `iam_certificate_id` → not specified on HTTPS endpoints
+
+---
+
+### 7. Insecure Cookie Configuration
+Cookies transmitted without the `Secure` flag travel over cleartext HTTP.
+
+**Keywords / Attributes / Fields:**
+- `secure` flag on cookie → `false` or absent
+- `cookie_attributes` → missing `Secure` or `SameSite=Strict/Lax`
+- `session_cookie_secure` → `false`
+
+---
+
+### 8. Database / Cache / Queue Connections Without In-Transit Encryption
+Data stores exposed without encrypted connections.
+
+**Keywords / Attributes / Fields:**
+- `transit_encryption_enabled`, `encryption_at_transit` → `false` or absent
+- `require_tls` → `false` or absent
+- `ssl_mode` → `disabled`, `none`, or `allow` (instead of `require`/`verify-full`)
+- `connection_string` → includes `sslmode=disable` or `encrypt=false`
+- `auth_token` omitted where token-based encrypted auth is expected
+
+---
+
+### 9. API Gateway / Load Balancer Permitting HTTP
+**Keywords / Attributes / Fields:**
+- `endpoint_configuration_types` → `REGIONAL`/`EDGE` with no SSL policy
+- `insecure_ssl` → `true`
+- `disable_ssl_verification` → `true`
+- `backend_protocol` → `HTTP` in reverse proxy or gateway configs
+
+---
+
+## Summary Table
+
+| Weakness Category | Key Indicators |
+|---|---|
+| Encryption flag disabled | `https_only=false`, `ssl_enabled=false`, `encryption_in_transit=disabled` |
+| Cleartext protocol | `protocol=HTTP/FTP/TELNET`, `scheme=http` |
+| Insecure ports | port `80`, `21`, `23`, `389`, `8080` |
+| Weak TLS version | `min_tls_version=TLS1_0`, `ssl_policy=legacy` |
+| No HTTP→HTTPS redirect | `redirect_http_to_https=false`, missing `redirect_action` |
+| Missing certificate | `ssl_certificate` absent, `certificate_arn` empty |
+| Insecure cookies | `secure=false` on cookie, missing `Secure` attribute |
+| Unencrypted data store connections | `transit_encryption_enabled=false`, `ssl_mode=disable` |

@@ -1,0 +1,67 @@
+Below are the **core weakness patterns** to look for in Infrastructure‑as‑Code (IaC) when detecting **CWE‑259: Use of Hard‑coded Password**, followed by **keywords/fields** that commonly signal this issue. These are language‑agnostic and focus on IaC concepts.
+
+---
+
+## ✅ Weakness Patterns to Detect in IaC (CWE‑259)
+
+1. **Literal password values in configuration**
+   - Any password or credential field assigned a fixed string instead of a secret reference, variable, or secure store.
+
+2. **Default/admin accounts with fixed passwords**
+   - Definition of local, root, or admin users where a static password is provided for initial login.
+
+3. **Credentials embedded in connection strings or URLs**
+   - Endpoints or connection strings that contain `user:password@host` or `password=...`.
+
+4. **Credentials placed in variables/parameters with defaults**
+   - Variables or parameters that define secret values directly in the template (default/value fields).
+
+5. **Secrets stored in plain configuration/metadata**
+   - “Secret” objects or config sections that include cleartext password values rather than references to managed secrets.
+
+6. **Bootstrap or init scripts setting fixed passwords**
+   - User creation or password‑setting commands embedded in startup/init/user‑data scripts.
+
+7. **Credential values exposed via outputs**
+   - Outputs or exported values containing passwords or secrets.
+
+---
+
+## 🔍 Common Keywords / Attributes / Fields that Imply Hard‑coded Passwords
+
+Look for these names combined with **literal string values**:
+
+**Password/Secret Terms**
+- `password`, `passwd`, `pwd`, `passphrase`
+- `secret`, `client_secret`, `shared_secret`
+- `credential`, `credentials`, `auth`, `authentication`
+
+**User/Account Terms**
+- `username`, `user`, `login`
+- `admin`, `root`, `superuser`, `default_user`
+- `initial_password`, `default_password`, `bootstrap_password`
+
+**Connection / Access Terms**
+- `connection`, `connectionString`, `dsn`, `endpoint`, `uri`, `url`
+- `db_user`, `db_password`, `database`, `datasource`
+
+**API / Token / Key Terms**
+- `api_key`, `access_key`, `secret_key`, `token`
+- `private_key`, `key`
+
+**Config / Env / Data Fields**
+- `value`, `data`, `stringData`, `env`, `environment`
+- `metadata`, `user_data`, `init_script`, `startup_script`
+
+---
+
+### ✅ What “Hard‑coded” Looks Like
+- A **literal string** provided directly in IaC rather than:
+  - secret manager reference
+  - encrypted value
+  - runtime injection
+  - external secure variable
+
+---
+
+If any of the above fields are populated with **static or plain text values**, it is a strong indicator of **CWE‑259** in IaC.

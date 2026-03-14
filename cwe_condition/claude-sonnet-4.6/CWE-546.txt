@@ -1,0 +1,124 @@
+# CWE-546: Suspicious Comment Detection in Infrastructure as Code
+
+## Overview of Necessary Weaknesses to Detect
+
+CWE-546 in IaC scripts focuses on identifying **inline comments** that signal deferred, incomplete, or deliberately weakened security configurations. The core indicators span several weakness categories:
+
+---
+
+## Weakness Categories & Indicators
+
+### 1. Deferred Security Implementation
+Comments that acknowledge a security control is missing and planned for later.
+
+**Keywords to detect:**
+- `TODO`, `TO-DO`, `TO DO`
+- `FIXME`, `FIX ME`, `FIX THIS`
+- `LATER`, `LATER2`
+- `IMPLEMENT`, `NOT YET IMPLEMENTED`
+- `PENDING`, `TBD`, `TBA`
+- `PLACEHOLDER`
+
+---
+
+### 2. Known Bugs or Acknowledged Weaknesses
+Comments that admit a configuration is broken, risky, or a known issue.
+
+**Keywords to detect:**
+- `BUG`, `BUGFIX`
+- `BROKEN`, `DOES NOT WORK`
+- `VULNERABLE`, `INSECURE`, `UNSECURE`
+- `RISK`, `RISKY`, `UNSAFE`
+- `KNOWN ISSUE`, `KNOWN BUG`
+- `XXX`, `HACK`, `KLUDGE`
+
+---
+
+### 3. Temporary or Workaround Configurations
+Comments indicating a configuration is intentionally short-term but may persist.
+
+**Keywords to detect:**
+- `TEMP`, `TEMPORARY`
+- `WORKAROUND`, `WORK-AROUND`
+- `QUICK FIX`, `QUICKFIX`
+- `STOP-GAP`, `STOPGAP`
+- `SHORTCUT`
+- `FOR NOW`, `FOR TESTING`
+
+---
+
+### 4. Hardcoded or Credentials-Related Markers
+Comments near sensitive fields hinting values should be replaced.
+
+**Keywords to detect:**
+- `HARDCODED`, `HARD-CODED`
+- `REPLACE`, `REPLACE THIS`, `REPLACE ME`
+- `CHANGE THIS`, `CHANGE ME`
+- `DO NOT COMMIT`, `REMOVE BEFORE`
+- `DEFAULT PASSWORD`, `DEFAULT CRED`
+- `EXAMPLE`, `SAMPLE` (near credential fields)
+
+---
+
+### 5. Disabled or Bypassed Security Controls
+Comments indicating a security mechanism has been intentionally disabled.
+
+**Keywords to detect:**
+- `DISABLED`, `DISABLE`
+- `BYPASS`, `SKIP`, `SKIPPED`
+- `COMMENTED OUT`
+- `ALLOW ALL`, `OPEN TO ALL`
+- `NO AUTH`, `NO AUTHENTICATION`, `NO ENCRYPTION`
+- `NOT FOR PRODUCTION`, `DO NOT USE IN PRODUCTION`
+- `DEV ONLY`, `TEST ONLY`
+
+---
+
+### 6. Review / Unresolved Flags
+Comments left for code review that were never resolved.
+
+**Keywords to detect:**
+- `REVIEW`, `REVISIT`
+- `CAUTION`, `WARNING`, `DANGER`
+- `VERIFY`, `DOUBLE-CHECK`
+- `IS THIS SAFE?`, `IS THIS OK?`
+- `CONFIRM`
+
+---
+
+## High-Risk IaC Fields Where Suspicious Comments Are Most Critical
+
+When the above keywords appear as comments near these fields/attributes, severity increases significantly:
+
+| Field/Attribute Category | Why It Matters |
+|---|---|
+| Encryption settings (`encrypt`, `kms_key`, `ssl`) | May indicate disabled or pending encryption |
+| Access control / IAM policies (`policy`, `role`, `permission`) | May flag overly permissive rules |
+| Firewall / security group rules (`ingress`, `egress`, `cidr`) | May indicate open network access |
+| Authentication fields (`auth`, `password`, `secret`, `token`) | May flag hardcoded or missing credentials |
+| Logging / monitoring (`logging`, `audit`, `monitoring`) | May signal disabled observability |
+| TLS/certificate fields (`certificate`, `tls`, `ssl_policy`) | May indicate deprecated or missing TLS |
+| Public access flags (`public`, `expose`, `open`) | May indicate unintended exposure |
+
+---
+
+## Detection Strategy Summary
+
+```
+Detection Approach:
+─────────────────────────────────────────────────────
+1. Parse all comment blocks (inline, block, multiline)
+2. Tokenize comment text and match against suspicious keyword list
+3. Evaluate proximity of comment to security-sensitive attributes
+4. Flag severity based on:
+   - Keyword category (e.g., HACK > TODO in severity)
+   - Field sensitivity (e.g., near `password` vs. near `name`)
+   - Whether flagged config block is active in the deployment
+─────────────────────────────────────────────────────
+```
+
+---
+
+## Key Takeaway
+
+In IaC, a suspicious comment is not just a code quality issue — it often directly maps to an **unimplemented security control** in live infrastructure, making it a deployment-time risk rather than just a development concern.

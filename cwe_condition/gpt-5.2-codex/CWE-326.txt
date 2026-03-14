@@ -1,0 +1,86 @@
+Below are the **core weakness patterns** that indicate **CWE‑326: Inadequate Encryption Strength** when reviewing Infrastructure‑as‑Code (IaC) configurations. These patterns focus on **encryption settings that are theoretically sound but too weak for modern protection needs**.
+
+---
+
+## ✅ Weakness Patterns to Detect in IaC
+
+### 1. **Weak or Deprecated Encryption Algorithms**
+**What to look for:** encryption settings that explicitly select outdated or weak ciphers.
+
+**Indicative keywords/fields**
+- `encryption_algorithm`
+- `cipher`
+- `server_side_encryption`
+- `kms_key_spec`
+- `algorithm`
+
+**Suspicious values**
+- `DES`, `3DES`, `RC4`, `RC2`, `Blowfish`, `IDEA`, `XOR`
+- `ECB` mode
+- `MD5`, `SHA1` used for crypto protection
+
+---
+
+### 2. **Insufficient Key Length**
+**What to look for:** key sizes below modern minimum recommendations.
+
+**Indicative fields**
+- `key_size`, `key_length`, `key_bits`
+- `rsa_bits`, `aes_bits`, `key_spec`
+
+**Weak values**
+- Symmetric key sizes < 128/256
+- RSA or DH sizes < 2048
+- Elliptic curve sizes < 256
+
+---
+
+### 3. **Legacy TLS/SSL Protocols or Weak Security Policies**
+**What to look for:** minimum protocol versions or policies that allow obsolete protocols.
+
+**Indicative fields**
+- `min_protocol_version`
+- `tls_version`, `ssl_protocols`
+- `security_policy`, `ssl_policy`
+- `protocols`
+
+**Weak values**
+- `SSLv2`, `SSLv3`, `TLS1.0`, `TLS1.1`
+- `legacy`, `compatibility`, `low`
+
+---
+
+### 4. **Weak Cipher Suites or Hash/MAC Algorithms Allowed**
+**What to look for:** lists of allowed ciphers that include weak options.
+
+**Indicative fields**
+- `cipher_suites`, `allowed_ciphers`
+- `ssl_ciphers`, `mac_algorithm`
+- `hash_algorithm`
+
+**Weak values**
+- `RC4`, `DES`, `3DES`
+- `MD5`, `SHA1`
+- `NULL`, `EXPORT`, `aNULL`, `LOW`
+
+---
+
+### 5. **Static or Fixed IV/Salt/Nonce**
+**What to look for:** non‑random cryptographic parameters that reduce effective strength.
+
+**Indicative fields**
+- `iv`, `initialization_vector`
+- `salt`, `nonce`
+
+**Weak indicators**
+- hardcoded/constant values
+- reuse of IV/salt across resources
+
+---
+
+## ✅ Summary
+Any IaC configuration that **enables encryption but chooses weak algorithms, short keys, outdated TLS versions, or weak cipher suites** can indicate **CWE‑326**. These settings may still be “encrypted,” yet are **not strong enough for current security requirements**.
+
+---
+
+If you’d like, I can also provide **rule examples** or **detection logic** tailored to specific IaC scanners.

@@ -1,0 +1,74 @@
+Below are the key **weakness indicators** you should look for in Infrastructure‑as‑Code (IaC) when detecting **CWE‑798: Use of Hard‑coded Credentials**. These focus on **attributes/fields and patterns** that imply credentials are embedded directly in the code or configuration rather than sourced securely.
+
+---
+
+## ✅ Weakness to Detect
+**Hard‑coded credentials** — any secret (password, token, key, etc.) embedded as a fixed literal value inside the IaC definition.
+
+---
+
+## 🔍 Common Indicators (Keywords / Attributes / Fields)
+
+### **1) Password / Passphrase Fields**
+Look for literal strings assigned to fields such as:
+- `password`
+- `passphrase`
+- `pwd`
+- `root_password`
+- `admin_password`
+- `db_password`
+- `user_password`
+- `default_password`
+
+### **2) Username + Password Pairs**
+Account or login blocks that define both username and password inline:
+- `username`, `user`, `login`
+- `admin_user`, `root_user`
+- `credentials`, `auth`, `authentication` blocks
+
+### **3) API Tokens / Access Keys / Secrets**
+Static tokens or key material defined inline:
+- `api_key`, `api_token`
+- `access_key`, `secret_key`
+- `client_secret`, `client_key`
+- `shared_secret`, `token`
+- `bearer_token`, `auth_token`
+
+### **4) Cryptographic Keys / Private Keys**
+Inline key material used for encryption or signing:
+- `private_key`, `ssh_key`
+- `tls_key`, `certificate_key`
+- `encryption_key`, `signing_key`
+- `jwt_secret`, `hmac_key`
+
+### **5) Connection Strings / URIs with Embedded Credentials**
+Fields that include secrets in a single string:
+- `connection_string`, `dsn`, `uri`, `endpoint`, `url`
+- Patterns like `user:pass@host` or `pwd=...` or `token=...`
+
+### **6) Default Credential Variables**
+Variables or parameters with **default values** that are secrets:
+- `default = "secret123"`
+- `value = "hardcodedSecret"`
+
+### **7) Inline Script/User‑Data Sections**
+Embedded scripts in IaC that export or set credentials as literals:
+- `export PASSWORD="..."`
+- `TOKEN="..."`
+
+### **8) Encoded Secrets Stored Inline**
+Non‑obvious secrets that look like:
+- Long base64/hex strings
+- Hard‑coded hashes used as passwords
+
+---
+
+## ✅ Summary Detection Rule (Generic)
+Flag any IaC attribute that **represents authentication or secret material** when it is:
+- **Assigned a literal value**
+- **Embedded in a connection/URL string**
+- **Provided as a default in a variable**
+
+---
+
+If you need, I can also provide **detection rules** or **heuristics** tailored for automated IaC scanners.
