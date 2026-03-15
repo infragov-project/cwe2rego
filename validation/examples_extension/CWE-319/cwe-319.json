@@ -1,15 +1,17 @@
 {
     "examples": [
         {
-            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
+            "file": "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
             "lines": [
-                32
+                13
             ]
         },
         {
-            "file": "redhat-cop_agnosticd-ansible-roles-ocp4-workload-rhte-keynote-ai-odh-setup-defaults-main.yml",
+            "file": "srsakhamuri_monasca-ansible-scripts-roles-percona-tasks-repo.yml",
             "lines": [
-                27
+                5,
+                9,
+                13
             ]
         },
         {
@@ -26,15 +28,15 @@
             ]
         },
         {
-            "file": "github-alphagov@govuk-puppet-modules-govuk_prometheus_node_exporter-manifests-repo.pp",
+            "file": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-packages-govuk_python.pp",
             "lines": [
-                17
+                18
             ]
         },
         {
-            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "file": "github-alphagov@govuk-puppet-modules-govuk_prometheus_node_exporter-manifests-repo.pp",
             "lines": [
-                7
+                17
             ]
         }
     ]
