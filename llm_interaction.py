@@ -118,9 +118,14 @@ def trim_validation_history(history: list, max_iterations: int, pinned_messages:
     """Keep the first pinned messages and only the last N validation-fix iterations.
 
     Each iteration corresponds to 2 chat messages (user prompt + model response).
-    If max_iterations <= 0, keep full validation history.
+    If max_iterations == 0, clear all history.
+    If max_iterations < 0, keep full validation history.
     """
-    if max_iterations <= 0:
+    if max_iterations == 0:
+        history.clear()
+        return
+
+    if max_iterations < 0:
         return
 
     if len(history) <= pinned_messages:
@@ -153,8 +158,8 @@ def build_argument_parser() -> ArgumentParser:
         help=(
             "Number of most recent validation-fix iterations to retain in history. "
             "When omitted, full validation history is preserved. "
-            "The initial rule-generation prompt/response pair is always preserved when truncation is enabled. "
-            "Set <=0 to keep full validation history."
+            "The initial rule-generation prompt/response pair is preserved when iterations > 0. "
+            "Set 0 to keep no history. Set <0 to keep full validation history."
         ),
     )
     parser.add_argument(

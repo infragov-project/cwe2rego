@@ -79,9 +79,10 @@ Large semantic examples (especially IR payloads) can overflow model context duri
 Notes:
 
 - By default (flag omitted), there is no validation-history truncation and full validation history is preserved.
-- The initial rule-generation prompt/response pair is always preserved in shared history.
+- The initial rule-generation prompt/response pair is preserved when `--validation-history-iterations > 0`.
 - Each iteration corresponds to 2 messages (user prompt + model response), so `3` iterations means keeping 6 recent iteration messages plus the pinned initial rule-generation pair.
-- Set `--validation-history-iterations 0` (or a negative value) to explicitly disable truncation and keep full validation history.
+- Set `--validation-history-iterations 0` to keep no history.
+- Set `--validation-history-iterations -1` (or omit the flag) to keep full validation history.
 
 Recommended for large extension sets:
 

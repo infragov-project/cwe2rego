@@ -120,18 +120,24 @@ def build_run_paths(
 
 
 def _build_validation_history_config(iterations: int | None) -> dict[str, Any]:
-    truncation_enabled = iterations is not None and iterations > 0
-    mode = (
-        "last_n_iterations"
-        if truncation_enabled
-        else "keep_all"
-    )
+    if iterations == 0:
+        mode = "no_history"
+        truncation_enabled = True
+        pinned_messages = 0
+    elif iterations is not None and iterations > 0:
+        mode = "last_n_iterations"
+        truncation_enabled = True
+        pinned_messages = 2
+    else:
+        mode = "keep_all"
+        truncation_enabled = False
+        pinned_messages = 2
 
     return {
         "iterations": iterations,
         "truncation_enabled": truncation_enabled,
         "mode": mode,
-        "pinned_messages": 2,
+        "pinned_messages": pinned_messages,
     }
 
 
