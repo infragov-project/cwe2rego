@@ -123,6 +123,14 @@ if __name__ == "__main__":
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
     parser.add_argument(
+        "--semantic-examples-dir",
+        help=(
+            "Directory for static semantic examples when --use-llm-examples is disabled. "
+            "Accepts either a base folder with CWE-<id>/ subfolders or a direct CWE folder. "
+            "Default: validation/examples"
+        ),
+    )
+    parser.add_argument(
         "--experiment-name",
         required=False,
         help="Experiment label used in generated file and directory paths (e.g., false_positives). Required unless --cwe-condition-only is set.",
@@ -156,6 +164,18 @@ if __name__ == "__main__":
         initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
 
     base_dir = Path(__file__).parent
+    static_examples_dir = None
+    if args.semantic_examples_dir:
+        provided_examples_dir = Path(args.semantic_examples_dir).expanduser()
+        static_examples_dir = (
+            provided_examples_dir
+            if provided_examples_dir.is_absolute()
+            else (base_dir / provided_examples_dir)
+        )
+
+    if args.use_llm_examples and static_examples_dir is not None:
+        print("Warning: --semantic-examples-dir is ignored because --use-llm-examples is enabled")
+
     if args.analysis_tool == "kics":
         KICSTool.install(base_dir)
         tool = KICSTool(base_dir)
@@ -279,6 +299,7 @@ if __name__ == "__main__":
         model_directory=model_directory,
         generated_examples_dir=generated_examples_dir,
         target_technologies=target_technologies,
+        static_examples_dir=static_examples_dir,
     )
     if getattr(args, "use_llm_examples", False):
         generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)

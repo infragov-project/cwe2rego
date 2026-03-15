@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
+            "lines": [
+                43
+            ]
+        },
+        {
+            "file": "spantaleev_matrix-docker-ansible-deploy-roles-matrix-jitsi-defaults-main.yml",
+            "lines": [
+                55
+            ]
+        },
+        {
+            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
+            "lines": [
+                47
+            ]
+        },
+        {
+            "file": "cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb",
+            "lines": [
+                30
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                7
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-manila-deployment_scripts-puppet-manifests-site.pp",
+            "lines": [
+                38,
+                39
+            ]
+        }
+    ]
+}

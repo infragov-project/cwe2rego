@@ -1,0 +1,45 @@
+{
+    "examples": [
+        {
+            "file": "redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
+            "lines": [
+                35,
+                36
+            ]
+        },
+        {
+            "file": "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
+            "lines": [
+                31,
+                32
+            ]
+        },
+        {
+            "file": "cookbooks_ic-hbase-cookbooks-zabbix-attributes-default.rb",
+            "lines": [
+                34,
+                36,
+                51,
+                52
+            ]
+        },
+        {
+            "file": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+            "lines": [
+                21
+            ]
+        },
+        {
+            "file": "ostk-fuel-library-deployment-puppet-osnailyfacter-manifests-ceph_nova_compute.pp",
+            "lines": [
+                3
+            ]
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "examples": [
+        {
+            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
+            "lines": [
+                46
+            ]
+        },
+        {
+            "file": "spantaleev_matrix-docker-ansible-deploy-roles-matrix-jitsi-defaults-main.yml",
+            "lines": [
+                67,
+                69,
+                204,
+                219
+            ]
+        },
+        {
+            "file": "cookbooks_ic-cloud_utils-cookbooks-mongodb-attributes-mongodb.rb",
+            "lines": [
+                35
+            ]
+        },
+        {
+            "file": "sous-chefs_yum-attributes-main.rb",
+            "lines": [
+                66,
+                77
+            ]
+        },
+        {
+            "file": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "github-cargomedia@puppet-packages-modules-mysql-manifests-server-instance.pp",
+            "lines": [
+                1,
+                4,
+                5
+            ]
+        }
+    ]
+}

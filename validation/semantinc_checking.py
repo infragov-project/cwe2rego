@@ -39,6 +39,26 @@ def _write_generated_examples(folder: Path, cwe_number: str, examples: List[Dict
     manifest_path.write_text(json.dumps({"examples": manifest}, indent=2), encoding="utf-8")
 
 
+def _resolve_static_examples_folder(examples_dir: Path, cwe_number: str) -> Path:
+    """Resolve a static examples directory to the concrete CWE folder.
+
+    Supported inputs:
+    - Base directory containing CWE-<id>/ subfolders
+    - Direct CWE folder containing cwe-<id>.json
+    """
+    manifest_name = f"cwe-{cwe_number}.json"
+    cwe_subdir = examples_dir / f"CWE-{cwe_number}"
+
+    if (examples_dir / manifest_name).exists():
+        return examples_dir
+    if (cwe_subdir / manifest_name).exists():
+        return cwe_subdir
+
+    if cwe_subdir.exists():
+        return cwe_subdir
+    return examples_dir
+
+
 def _verify_examples(
     tool: AnalysisTool,
     runner: CliRunner,
@@ -127,6 +147,7 @@ def prepare_semantic_examples(
     model_directory: Optional[Path] = None,
     generated_examples_dir: Optional[Path] = None,
     target_technologies: Optional[List[str]] = None,
+    static_examples_dir: Optional[Path] = None,
 ) -> Tuple[Path, List[Dict[str, Any]]]:
     """Prepare semantic-check examples once and return the folder and manifest entries."""
     if use_llm_examples:
@@ -159,7 +180,11 @@ def prepare_semantic_examples(
         print(f"  Generated {len(examples)} example(s) via LLM, saved to {folder}")
         return folder, examples
 
-    folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
+    if static_examples_dir is not None:
+        folder = _resolve_static_examples_folder(Path(static_examples_dir), cwe_number)
+    else:
+        folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
+
     examples = _load_examples(folder, cwe_number)
     print(f"  Loaded {len(examples)} example(s) from {folder}")
     return folder, examples

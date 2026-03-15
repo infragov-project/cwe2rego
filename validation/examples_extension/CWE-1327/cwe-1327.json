@@ -1,0 +1,50 @@
+{
+    "examples": [
+        {
+            "file": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+            "lines": [
+                14
+            ]
+        },
+        {
+            "file": "redhat-cop_agnosticd-ansible-configs-multi-cloud-capsule-default_vars_osp.yml",
+            "lines": [
+                36,
+                43,
+                50,
+                57,
+                64,
+                71,
+                78,
+                85,
+                92,
+                99,
+                106
+            ]
+        },
+        {
+            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
+            "lines": [
+                40
+            ]
+        },
+        {
+            "file": "cookbooks_ic-cloud_utils-cookbooks-mongodb-attributes-mongodb.rb",
+            "lines": [
+                29
+            ]
+        },
+        {
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
+            "lines": [
+                64
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                28
+            ]
+        }
+    ]
+}

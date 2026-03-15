@@ -1,0 +1,35 @@
+{
+    "examples": [
+        {
+            "file": "redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
+            "lines": [
+                36
+            ]
+        },
+        {
+            "file": "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
+            "lines": [
+                32
+            ]
+        },
+        {
+            "file": "cookbooks_ic-hbase-cookbooks-zabbix-attributes-default.rb",
+            "lines": [
+                52
+            ]
+        },
+                {
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
+            "lines": [
+                28,
+                75
+            ]
+        }
+    ]
+}

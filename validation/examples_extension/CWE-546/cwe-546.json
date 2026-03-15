@@ -1,0 +1,43 @@
+{
+    "examples": [
+        {
+            "file": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+            "lines": [
+                24
+            ]
+        },
+        {
+            "file": "usegalaxy-au_infrastructure-host_vars-galactic-radio-telescope.yml",
+            "lines": [
+                11,
+                90,
+                97,
+                123
+            ]
+        },
+        {
+            "file": "cookbooks_ic-cloud_utils-cookbooks-mongodb-attributes-mongodb.rb",
+            "lines": [
+                20
+            ]
+        },
+        {
+            "file": "scmgalaxy_chef-training-programs-rohit-chef-repo-webserver-.delivery-build_cookbook-test-fixtures-cookbooks-test-recipes-default.rb",
+            "lines": [
+                3
+            ]
+        },
+        {
+            "file": "github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp",
+            "lines": [
+                1
+            ]
+        },
+        {
+            "file": "ostk-fuel-library-deployment-puppet-osnailyfacter-manifests-ceph_nova_compute.pp",
+            "lines": [
+                33
+            ]
+        }
+    ]
+}

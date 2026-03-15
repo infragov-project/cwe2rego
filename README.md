@@ -44,6 +44,12 @@ Example (GLITCH, default):
 python llm_interaction.py xiaomi/mimo-v2-flash --cwe 250 --type-name sec_def_admin --experiment-name false_positives --use-llm-examples
 ```
 
+Example (GLITCH, static semantic examples from extension set):
+
+```bash
+python llm_interaction.py xiaomi/mimo-v2-flash --cwe 250 --type-name sec_def_admin --experiment-name false_positives --semantic-examples-dir validation/examples_extension
+```
+
 Example (KICS, Ansible only):
 
 ```bash
@@ -58,3 +64,8 @@ A new run is created only after that CWE already exists in all previous runs.
 The Rego filename is `cwe_<cwe>.rego` and logs are written under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/logs/`.
 
 When `--use-llm-examples` is enabled, generated examples are saved under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/generated_examples/CWE-<cwe>/`.
+
+When `--use-llm-examples` is disabled, static semantic examples are loaded from `validation/examples/CWE-<cwe>/` by default. Override this with `--semantic-examples-dir`; it accepts either:
+
+- A base directory with `CWE-<cwe>/` subfolders (for example, `validation/examples_extension`)
+- A direct CWE folder (for example, `validation/examples_extension/CWE-250`)
