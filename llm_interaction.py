@@ -320,6 +320,8 @@ if __name__ == "__main__":
         examples_model=examples_model_used,
         generated_examples_dir=generated_examples_dir,
         experiment_name=experiment_name,
+        validation_history_iterations=args.validation_history_iterations,
+        static_examples_dir=static_examples_dir,
     )
     persist_generation_log(log_path, generation_log)
 
@@ -336,9 +338,11 @@ if __name__ == "__main__":
         target_technologies=target_technologies,
         static_examples_dir=static_examples_dir,
     )
+    generation_log["semantic_examples"]["resolved_directory"] = str(Path(examples_folder).resolve())
+    generation_log["semantic_examples"]["entries_count"] = len(semantic_examples)
     if getattr(args, "use_llm_examples", False):
         generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
-        persist_generation_log(log_path, generation_log)
+    persist_generation_log(log_path, generation_log)
     
     MAX_VALIDATION_ATTEMPTS = 20
     validation_passed = False

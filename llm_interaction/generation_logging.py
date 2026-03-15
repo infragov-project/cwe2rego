@@ -119,6 +119,22 @@ def build_run_paths(
     }
 
 
+def _build_validation_history_config(iterations: int | None) -> dict[str, Any]:
+    truncation_enabled = iterations is not None and iterations > 0
+    mode = (
+        "last_n_iterations"
+        if truncation_enabled
+        else "keep_all"
+    )
+
+    return {
+        "iterations": iterations,
+        "truncation_enabled": truncation_enabled,
+        "mode": mode,
+        "pinned_messages": 2,
+    }
+
+
 def create_generation_log(
     *,
     run_id: str,
@@ -133,6 +149,8 @@ def create_generation_log(
     examples_model: str | None,
     generated_examples_dir: Path,
     experiment_name: str,
+    validation_history_iterations: int | None,
+    static_examples_dir: Path | None,
 ) -> dict[str, Any]:
     """Create the initial generation log payload."""
     return {
@@ -151,6 +169,16 @@ def create_generation_log(
             "model": examples_model if use_llm_examples else None,
             "directory": str(generated_examples_dir.resolve()) if use_llm_examples else None,
             "files": [],
+        },
+        "validation_history": _build_validation_history_config(
+            validation_history_iterations
+        ),
+        "semantic_examples": {
+            "source": "llm_generated" if use_llm_examples else "static_manifest",
+            "directory_flag_provided": static_examples_dir is not None,
+            "configured_directory": str(static_examples_dir.resolve()) if static_examples_dir is not None else None,
+            "resolved_directory": None,
+            "entries_count": 0,
         },
         "iterations": [],
         "result": {
