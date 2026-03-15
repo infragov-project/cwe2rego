@@ -21,15 +21,6 @@
             ]
         },
         {
-            "file": "cookbooks_ic-hbase-cookbooks-zabbix-attributes-default.rb",
-            "lines": [
-                34,
-                36,
-                51,
-                52
-            ]
-        },
-        {
             "file": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
             "lines": [
                 21

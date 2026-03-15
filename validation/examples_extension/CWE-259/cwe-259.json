@@ -19,12 +19,6 @@
             ]
         },
         {
-            "file": "cookbooks_ic-hbase-cookbooks-zabbix-attributes-default.rb",
-            "lines": [
-                52
-            ]
-        },
-                {
             "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
             "lines": [
                 28,

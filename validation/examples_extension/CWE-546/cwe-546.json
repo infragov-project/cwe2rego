@@ -16,12 +16,6 @@
             ]
         },
         {
-            "file": "cookbooks_ic-cloud_utils-cookbooks-mongodb-attributes-mongodb.rb",
-            "lines": [
-                20
-            ]
-        },
-        {
             "file": "scmgalaxy_chef-training-programs-rohit-chef-repo-webserver-.delivery-build_cookbook-test-fixtures-cookbooks-test-recipes-default.rb",
             "lines": [
                 3

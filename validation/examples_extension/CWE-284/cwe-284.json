@@ -29,12 +29,6 @@
             ]
         },
         {
-            "file": "cookbooks_ic-cloud_utils-cookbooks-mongodb-attributes-mongodb.rb",
-            "lines": [
-                29
-            ]
-        },
-        {
             "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
             "lines": [
                 64

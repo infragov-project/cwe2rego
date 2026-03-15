@@ -1,12 +1,6 @@
 {
     "examples": [
         {
-            "file": "cookbooks_ic-mongodb-cookbooks-zabbix-libraries-zabbix_hosts_and_templates.rb",
-            "lines": [
-                11
-            ]
-        },
-        {
             "file": "stackforge-attic_cookbook-ceph-recipes-default.rb",
             "lines": [
                 23

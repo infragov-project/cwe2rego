@@ -13,12 +13,6 @@
             ]
         },
         {
-            "file": "cookbooks_ic-volumes_ebs-cookbooks-zabbix-recipes-database_mysql.rb",
-            "lines": [
-                129
-            ]
-        },
-        {
             "file": "guntukukamal_chef-cookbooks-jenkins-test-fixtures-cookbooks-jenkins_slave-recipes-create_ssh.rb",
             "lines": [
                 13
