@@ -35,6 +35,12 @@
             ]
         },
         {
+            "file": "Soluciones_ey-cloud-recipes-cookbooks-mongodb-recipes-configure.rb",
+            "lines": [
+                61
+            ]
+        },
+        {
             "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
             "lines": [
                 28

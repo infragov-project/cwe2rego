@@ -27,6 +27,14 @@
             ]
         },
         {
+            "file": "SpanningCloudApps_cassandra-chef-cookbook-attributes-config.rb",
+            "lines": [
+                99,
+                101,
+                119
+            ]
+        },
+        {
             "file": "ostk-fuel-library-deployment-puppet-osnailyfacter-manifests-ceph_nova_compute.pp",
             "lines": [
                 3

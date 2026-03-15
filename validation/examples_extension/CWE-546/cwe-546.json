@@ -16,6 +16,12 @@
             ]
         },
         {
+            "file": "sous-chefs_visualstudio-attributes-vs2012.rb",
+            "lines": [
+                22
+            ]
+        },
+        {
             "file": "scmgalaxy_chef-training-programs-rohit-chef-repo-webserver-.delivery-build_cookbook-test-fixtures-cookbooks-test-recipes-default.rb",
             "lines": [
                 3

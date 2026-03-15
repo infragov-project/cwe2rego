@@ -1,6 +1,12 @@
 {
     "examples": [
         {
+            "file": "cookbooks_ic-jenkins-cookbooks-nfs-recipes-server.rb",
+            "lines": [
+                12
+            ]
+        },
+        {
             "file": "stackforge-attic_cookbook-ceph-recipes-default.rb",
             "lines": [
                 23

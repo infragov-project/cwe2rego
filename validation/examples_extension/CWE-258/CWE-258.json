@@ -27,6 +27,12 @@
             "lines": [
                 12
             ]
+        },
+        {
+            "file": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+            "lines": [
+                20
+            ]
         }
     ]
 }
