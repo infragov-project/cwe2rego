@@ -113,6 +113,28 @@ def clean_rego_code(rego_code: str) -> str:
     
     return code.strip()
 
+
+def trim_validation_history(history: list, max_iterations: int, pinned_messages: int = 2) -> None:
+    """Keep the first pinned messages and only the last N validation-fix iterations.
+
+    Each iteration corresponds to 2 chat messages (user prompt + model response).
+    If max_iterations <= 0, keep full validation history.
+    """
+    if max_iterations <= 0:
+        return
+
+    if len(history) <= pinned_messages:
+        return
+
+    max_tail_messages = max_iterations * 2
+    tail_length = len(history) - pinned_messages
+    if tail_length <= max_tail_messages:
+        return
+
+    trim_start = pinned_messages
+    trim_end = len(history) - max_tail_messages
+    del history[trim_start:trim_end]
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
@@ -122,6 +144,17 @@ if __name__ == "__main__":
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
+    parser.add_argument(
+        "--validation-history-iterations",
+        type=int,
+        default=None,
+        help=(
+            "Number of most recent validation-fix iterations to retain in history. "
+            "When omitted, full validation history is preserved. "
+            "The initial rule-generation prompt/response pair is always preserved when truncation is enabled. "
+            "Set <=0 to keep full validation history."
+        ),
+    )
     parser.add_argument(
         "--semantic-examples-dir",
         help=(
@@ -234,7 +267,9 @@ if __name__ == "__main__":
     if not args.experiment_name:
         parser.error("--experiment-name is required unless --cwe-condition-only is set")
 
+    # Shared history starts at first rule generation; this pinned pair is preserved by trimming.
     conversation_history = []
+
     if args.analysis_tool == "kics":
         rego_rule = get_rego_generation_kics(
             cwe=args.cwe,
@@ -314,6 +349,11 @@ if __name__ == "__main__":
 
     for attempt in range(1, MAX_VALIDATION_ATTEMPTS + 1):
         print(f"--- Validation Attempt {attempt}/{MAX_VALIDATION_ATTEMPTS} ---")
+        if args.validation_history_iterations is not None:
+            trim_validation_history(
+                conversation_history,
+                args.validation_history_iterations,
+            )
         
         # Clean markdown code fences from LLM-generated code
         rego_rule = clean_rego_code(rego_rule)
@@ -395,7 +435,7 @@ if __name__ == "__main__":
                     "iac_language": f[1],
                     "missing_lines": f[2],
                     "false_positives": f[3],
-                    "ir_file": f[0]
+                    "ir_file": f[0],
                 }
                 for f in failures
             ]

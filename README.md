@@ -69,3 +69,22 @@ When `--use-llm-examples` is disabled, static semantic examples are loaded from 
 
 - A base directory with `CWE-<cwe>/` subfolders (for example, `validation/examples_extension`)
 - A direct CWE folder (for example, `validation/examples_extension/CWE-250`)
+
+## Controlling validation history size
+
+Large semantic examples (especially IR payloads) can overflow model context during iterative repair. The pipeline keeps the full IR content for semantic failures and provides optional validation-history truncation when you explicitly enable it.
+
+- `--validation-history-iterations N` enables history truncation for positive values and keeps only the most recent `N` validation-fix iterations (syntactic or semantic)
+
+Notes:
+
+- By default (flag omitted), there is no validation-history truncation and full validation history is preserved.
+- The initial rule-generation prompt/response pair is always preserved in shared history.
+- Each iteration corresponds to 2 messages (user prompt + model response), so `3` iterations means keeping 6 recent iteration messages plus the pinned initial rule-generation pair.
+- Set `--validation-history-iterations 0` (or a negative value) to explicitly disable truncation and keep full validation history.
+
+Recommended for large extension sets:
+
+```bash
+python llm_interaction.py xiaomi/mimo-v2-flash --cwe 798 --type-name sec_https --experiment-name false_positives --semantic-examples-dir validation/examples_extension --validation-history-iterations 3
+```
