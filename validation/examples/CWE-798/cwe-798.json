@@ -12,8 +12,18 @@
         },
         {
             "file": "hard_secr.yml",
-            "lines": [7],
+            "lines": [7, 8],
             "type": "tasks"
+        },
+        {
+            "file": "hard_secr.pp",
+            "lines": [2],
+            "type": "script"
+        },
+        {
+            "file": "hard_secr.rb",
+            "lines": [8],
+            "type": "script"
         },
         {
             "file": "admin.yml",
