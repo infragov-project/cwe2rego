@@ -119,19 +119,19 @@ def build_run_paths(
     }
 
 
-def _build_validation_history_config(iterations: int | None) -> dict[str, Any]:
+def _build_validation_history_config(
+    iterations: int | None,
+    pinned_messages: int,
+) -> dict[str, Any]:
     if iterations == 0:
-        mode = "no_history"
+        mode = "pinned_only" if pinned_messages > 0 else "no_history"
         truncation_enabled = True
-        pinned_messages = 0
     elif iterations is not None and iterations > 0:
         mode = "last_n_iterations"
         truncation_enabled = True
-        pinned_messages = 2
     else:
         mode = "keep_all"
         truncation_enabled = False
-        pinned_messages = 2
 
     return {
         "iterations": iterations,
@@ -156,6 +156,7 @@ def create_generation_log(
     generated_examples_dir: Path,
     experiment_name: str,
     validation_history_iterations: int | None,
+    validation_history_pinned_messages: int,
     static_examples_dir: Path | None,
 ) -> dict[str, Any]:
     """Create the initial generation log payload."""
@@ -177,7 +178,8 @@ def create_generation_log(
             "files": [],
         },
         "validation_history": _build_validation_history_config(
-            validation_history_iterations
+            validation_history_iterations,
+            validation_history_pinned_messages,
         ),
         "semantic_examples": {
             "source": "llm_generated" if use_llm_examples else "static_manifest",

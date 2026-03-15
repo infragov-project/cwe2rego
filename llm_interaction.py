@@ -10,6 +10,7 @@ from llm_interaction.conversation_templated import (
     initialize_examples_model,
     initialize_model_settings,
 )
+from llm_interaction.history import trim_validation_history
 from llm_interaction.generation_logging import (
     build_run_paths,
     create_generation_log,
@@ -114,33 +115,6 @@ def clean_rego_code(rego_code: str) -> str:
     return code.strip()
 
 
-def trim_validation_history(history: list, max_iterations: int, pinned_messages: int = 2) -> None:
-    """Keep the first pinned messages and only the last N validation-fix iterations.
-
-    Each iteration corresponds to 2 chat messages (user prompt + model response).
-    If max_iterations == 0, clear all history.
-    If max_iterations < 0, keep full validation history.
-    """
-    if max_iterations == 0:
-        history.clear()
-        return
-
-    if max_iterations < 0:
-        return
-
-    if len(history) <= pinned_messages:
-        return
-
-    max_tail_messages = max_iterations * 2
-    tail_length = len(history) - pinned_messages
-    if tail_length <= max_tail_messages:
-        return
-
-    trim_start = pinned_messages
-    trim_end = len(history) - max_tail_messages
-    del history[trim_start:trim_end]
-
-
 def build_argument_parser() -> ArgumentParser:
     """Build and configure the CLI argument parser."""
     parser = ArgumentParser(description="LLM Interaction Client")
@@ -158,8 +132,17 @@ def build_argument_parser() -> ArgumentParser:
         help=(
             "Number of most recent validation-fix iterations to retain in history. "
             "When omitted, full validation history is preserved. "
-            "The initial rule-generation prompt/response pair is preserved when iterations > 0. "
-            "Set 0 to keep no history. Set <0 to keep full validation history."
+            "Pinned messages are controlled separately by --validation-history-pinned-messages. "
+            "Set 0 to keep only the pinned messages. Set <0 to keep full validation history."
+        ),
+    )
+    parser.add_argument(
+        "--validation-history-pinned-messages",
+        type=int,
+        default=2,
+        help=(
+            "Number of earliest conversation-history messages to keep whenever validation-history "
+            "truncation is enabled. Default: 2, which preserves the initial generation prompt/response pair."
         ),
     )
     parser.add_argument(
@@ -203,6 +186,8 @@ if __name__ == "__main__":
     initialize_model_settings()
     if not args.model:
         raise ValueError("Model argument is required")
+    if args.validation_history_pinned_messages < 0:
+        parser.error("--validation-history-pinned-messages must be >= 0")
     initialize_model(OPENROUTER_API_KEY, args.model)
     if getattr(args, "use_llm_examples", False):
         initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
@@ -332,6 +317,7 @@ if __name__ == "__main__":
         generated_examples_dir=generated_examples_dir,
         experiment_name=experiment_name,
         validation_history_iterations=args.validation_history_iterations,
+        validation_history_pinned_messages=args.validation_history_pinned_messages,
         static_examples_dir=static_examples_dir,
     )
     persist_generation_log(log_path, generation_log)
@@ -368,6 +354,7 @@ if __name__ == "__main__":
             trim_validation_history(
                 conversation_history,
                 args.validation_history_iterations,
+                pinned_messages=args.validation_history_pinned_messages,
             )
         
         # Clean markdown code fences from LLM-generated code

@@ -75,13 +75,15 @@ When `--use-llm-examples` is disabled, static semantic examples are loaded from 
 Large semantic examples (especially IR payloads) can overflow model context during iterative repair. The pipeline keeps the full IR content for semantic failures and provides optional validation-history truncation when you explicitly enable it.
 
 - `--validation-history-iterations N` enables history truncation for positive values and keeps only the most recent `N` validation-fix iterations (syntactic or semantic)
+- `--validation-history-pinned-messages M` keeps the first `M` conversation messages whenever truncation is enabled. The default is `2`, which preserves the initial rule-generation prompt/response pair.
 
 Notes:
 
 - By default (flag omitted), there is no validation-history truncation and full validation history is preserved.
-- The initial rule-generation prompt/response pair is preserved when `--validation-history-iterations > 0`.
+- The initial rule-generation prompt/response pair is preserved by default because `--validation-history-pinned-messages` defaults to `2`.
 - Each iteration corresponds to 2 messages (user prompt + model response), so `3` iterations means keeping 6 recent iteration messages plus the pinned initial rule-generation pair.
-- Set `--validation-history-iterations 0` to keep no history.
+- Set `--validation-history-iterations 0 --validation-history-pinned-messages 2` to keep only the initial rule-generation prompt/response pair.
+- Set `--validation-history-iterations 0 --validation-history-pinned-messages 0` to keep no history.
 - Set `--validation-history-iterations -1` (or omit the flag) to keep full validation history.
 
 Recommended for large extension sets:
