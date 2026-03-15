@@ -7,12 +7,6 @@
             ]
         },
         {
-            "file": "Shwetas25_ansiblenew-language_features-prompts.yml",
-            "lines": [
-                41
-            ]
-        },
-        {
             "file": "guntukukamal_chef-cookbooks-jenkins-test-fixtures-cookbooks-jenkins_slave-recipes-create_ssh.rb",
             "lines": [
                 13
@@ -24,12 +18,6 @@
                 57,
                 77,
                 83
-            ]
-        },
-        {
-            "file": "github-openstack@fuel-plugin-external-zabbix-deployment_scripts-puppet-modules-plugin_zabbix-manifests-params.pp",
-            "lines": [
-                183
             ]
         }
     ]

@@ -1,16 +1,15 @@
 {
     "examples": [
         {
-            "file": "redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
+            "file": "aristanetworks_ansible-avd-ansible_collections-arista-avd-molecule-evpn_underlay_ospf_overlay_ebgp-intended-structured_configs-DC1-SVC3B.yml",
             "lines": [
-                35,
-                36
+                14
             ]
         },
         {
-            "file": "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "file": "spantaleev_matrix-docker-ansible-deploy-roles-matrix-jitsi-defaults-main.yml",
             "lines": [
-                12
+                218
             ]
         },
         {
@@ -21,17 +20,10 @@
             ]
         },
         {
-            "file": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
             "lines": [
-                21
-            ]
-        },
-        {
-            "file": "SpanningCloudApps_cassandra-chef-cookbook-attributes-config.rb",
-            "lines": [
-                99,
-                101,
-                119
+                74,
+                75
             ]
         },
         {

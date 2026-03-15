@@ -1,29 +1,21 @@
 {
     "examples": [
         {
+            "file": "chaturay_ansible-provisioner-sample_workshops-sample-arista.yml",
+            "lines": [
+                6
+            ]
+        },
+        {
             "file": "redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
             "lines": [
                 36
             ]
         },
         {
-            "file": "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
-            "lines": [
-                12
-            ]
-        },
-        {
             "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
             "lines": [
                 32
-            ]
-        },
-        {
-            "file": "SpanningCloudApps_cassandra-chef-cookbook-attributes-config.rb",
-            "lines": [
-                99,
-                101,
-                119
             ]
         },
         {

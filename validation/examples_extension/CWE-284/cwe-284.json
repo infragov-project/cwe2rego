@@ -7,31 +7,9 @@
             ]
         },
         {
-            "file": "redhat-cop_agnosticd-ansible-configs-multi-cloud-capsule-default_vars_osp.yml",
+            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
             "lines": [
-                36,
-                43,
-                50,
-                57,
-                64,
-                71,
-                78,
-                85,
-                92,
-                99,
-                106
-            ]
-        },
-        {
-            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
-            "lines": [
-                40
-            ]
-        },
-        {
-            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
-            "lines": [
-                64
+                17
             ]
         },
         {
@@ -41,9 +19,15 @@
             ]
         },
         {
-            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "file": "cookbooks_ic-homebrew-cookbooks-jenkins-attributes-default.rb",
             "lines": [
-                28
+                82
+            ]
+        },
+        {
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
+            "lines": [
+                64
             ]
         }
     ]

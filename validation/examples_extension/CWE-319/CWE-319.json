@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
+            "lines": [
+                32
+            ]
+        },
+        {
+            "file": "redhat-cop_agnosticd-ansible-roles-ocp4-workload-rhte-keynote-ai-odh-setup-defaults-main.yml",
+            "lines": [
+                27
+            ]
+        },
+        {
+            "file": "cookbooks_ic-ganglia-cookbooks-cassandra-attributes-default.rb",
+            "lines": [
+                77,
+                81
+            ]
+        },
+        {
+            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
+            "lines": [
+                47
+            ]
+        },
+        {
+            "file": "github-alphagov@govuk-puppet-modules-govuk_prometheus_node_exporter-manifests-repo.pp",
+            "lines": [
+                17
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                7
+            ]
+        }
+    ]
+}

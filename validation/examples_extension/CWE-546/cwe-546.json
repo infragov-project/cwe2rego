@@ -1,24 +1,16 @@
 {
     "examples": [
         {
-            "file": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
-            "lines": [
-                24
-            ]
-        },
-        {
             "file": "usegalaxy-au_infrastructure-host_vars-galactic-radio-telescope.yml",
             "lines": [
                 11,
-                90,
-                97,
                 123
             ]
         },
         {
-            "file": "sous-chefs_visualstudio-attributes-vs2012.rb",
+            "file": "rackspace-cookbooks_phpstack-recipes-apache.rb",
             "lines": [
-                22
+                39
             ]
         },
         {
@@ -34,9 +26,9 @@
             ]
         },
         {
-            "file": "ostk-fuel-library-deployment-puppet-osnailyfacter-manifests-ceph_nova_compute.pp",
+            "file": "ostk-puppet-mistral-manifests-keystone-authtoken.pp",
             "lines": [
-                33
+                236
             ]
         }
     ]

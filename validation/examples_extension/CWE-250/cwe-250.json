@@ -7,33 +7,15 @@
             ]
         },
         {
-            "file": "shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml",
+            "file": "Shwetas25_ansiblenew-language_features-prompts.yml",
             "lines": [
-                9
+                7
             ]
         },
         {
             "file": "aws_aws-parallelcluster-cookbook-cookbooks-aws-parallelcluster-slurm-recipes-update_computefleet_status_head_node.rb",
             "lines": [
                 19
-            ]
-        },
-        {
-            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
-            "lines": [
-                36
-            ]
-        },
-        {
-            "file": "github-StackStorm@st2workroom-modules-puppet-manifests-masterless.pp",
-            "lines": [
-                33
-            ]
-        },
-        {
-            "file": "github-cargomedia@puppet-packages-modules-composer-spec-project-1-install.pp",
-            "lines": [
-                5
             ]
         }
     ]
