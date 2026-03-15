@@ -135,7 +135,9 @@ def trim_validation_history(history: list, max_iterations: int, pinned_messages:
     trim_end = len(history) - max_tail_messages
     del history[trim_start:trim_end]
 
-if __name__ == "__main__":
+
+def build_argument_parser() -> ArgumentParser:
+    """Build and configure the CLI argument parser."""
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
     parser.add_argument("--cwe", help="Choose CWE to use")
@@ -181,6 +183,10 @@ if __name__ == "__main__":
         metavar="TECH",
         help="Only run semantic check on these technologies (e.g. ansible chef). Omit to use all tool-supported types.",
     )
+    return parser
+
+if __name__ == "__main__":
+    parser = build_argument_parser()
     args = parser.parse_args()
 
     load_dotenv()
