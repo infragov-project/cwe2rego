@@ -20,9 +20,9 @@
             ]
         },
         {
-            "file": "sous-chefs_visualstudio-attributes-vs2012.rb",
+            "file": "cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb",
             "lines": [
-                232
+                30
             ]
         },
         {
