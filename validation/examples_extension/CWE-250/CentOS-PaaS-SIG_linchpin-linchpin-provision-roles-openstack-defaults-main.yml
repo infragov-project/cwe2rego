@@ -1,2 +1,0 @@
-openstack_become: true
-openstack_become_user: root
