@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "file": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+            "lines": [
+                20
+            ]
+        },
+        {
+            "file": "aristanetworks_ansible-avd-ansible_collections-arista-avd-molecule-evpn_underlay_ospf_overlay_ebgp-intended-structured_configs-DC1-SVC3B.yml",
+            "lines": [
+                14,
+                57,
+                87
+            ]
+        },
+        {
+            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
+            "lines": [
+                32
+            ]
+        },
+        {
+            "file": "SpanningCloudApps_cassandra-chef-cookbook-attributes-config.rb",
+            "lines": [
+                99,
+                101,
+                119,
+                125
+            ]
+        },
+        {
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
+            "lines": [
+                28,
+                75
+            ]
+        }
+    ]
+}

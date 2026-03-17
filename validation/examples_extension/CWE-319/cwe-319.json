@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "Cloudbox_Cloudbox-roles-nvidia-tasks-nvidia_patch.yml",
+            "lines": [
+                19
+            ]
+        },
+        {
+            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
+            "lines": [
+                25,
+                32
+            ]
+        },
+        {
+            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
+            "lines": [
+                47
+            ]
+        },
+        {
+            "file": "sous-chefs_visualstudio-attributes-vs2012.rb",
+            "lines": [
+                232
+            ]
+        },
+        {
+            "file": "github-alphagov@govuk-puppet-modules-govuk_prometheus_node_exporter-manifests-repo.pp",
+            "lines": [
+                17
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                7
+            ]
+        }
+    ]
+}

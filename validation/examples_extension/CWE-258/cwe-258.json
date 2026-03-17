@@ -1,0 +1,36 @@
+{
+    "examples": [
+        {
+            "file": "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+            "lines": [
+                5
+            ]
+        },
+        {
+            "file": "debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+            "lines": [
+                481
+            ]
+        },
+        {
+            "file": "sous-chefs_yum-attributes-main.rb",
+            "lines": [
+                66,
+                77
+            ]
+        },
+        {
+            "file": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+            "lines": [
+                20,
+                53
+            ]
+        }
+    ]
+}

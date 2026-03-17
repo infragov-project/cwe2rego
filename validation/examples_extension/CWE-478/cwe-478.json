@@ -1,0 +1,29 @@
+{
+    "examples": [
+        {
+            "file": "aws_opsworks-cookbooks-opsworks_java-recipes-tomcat_install.rb",
+            "lines": [
+                1
+            ]
+        },
+        {
+            "file": "cookbooks_ic-jenkins-cookbooks-nfs-recipes-server.rb",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "github-StackStorm@st2workroom-modules-profile-manifests-st2server.pp",
+            "lines": [
+                38,
+                631
+            ]
+        },
+        {
+            "file": "github-voxpupuli@puppet-zabbix-manifests-server.pp",
+            "lines": [
+                395
+            ]
+        }
+    ]
+}

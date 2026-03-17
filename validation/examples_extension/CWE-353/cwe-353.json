@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "Cloudbox_Cloudbox-roles-nvidia-tasks-nvidia_patch.yml",
+            "lines": [
+                11
+            ]
+        },
+        {
+            "file": "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+            "lines": [
+                22,
+                29
+            ]
+        },
+        {
+            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
+            "lines": [
+                46
+            ]
+        },
+        {
+            "file": "realityforge_chef-glassfish-providers-library_linux.rb",
+            "lines": [
+                55
+            ]
+        },
+        {
+            "file": "github-SecGen@SecGen-modules-utilities-unix-languages-java-manifests-oracle.pp",
+            "lines": [
+                190
+            ]
+        },
+        {
+            "file": "github-quintel@boxen-modules-caffeine-manifests-init.pp",
+            "lines": [
+                7
+            ]
+        }
+    ]
+}

@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "file": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+            "lines": [
+                14
+            ]
+        },
+        {
+            "file": "pulibrary_princeton_ansible-group_vars-mysql-staging.yml",
+            "lines": [
+                4
+            ]
+        },
+        {
+            "file": "Soluciones_ey-cloud-recipes-cookbooks-mongodb-recipes-configure.rb",
+            "lines": [
+                61
+            ]
+        },
+        {
+            "file": "cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb",
+            "lines": [
+                22
+            ]
+        },
+        {
+            "file": "github-puppetlabs@pltraining-bootstrap-manifests-profile-guacamole.pp",
+            "lines": [
+                64
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                28
+            ]
+        }
+    ]
+}

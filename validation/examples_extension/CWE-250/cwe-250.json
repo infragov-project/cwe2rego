@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "file": "Shwetas25_ansiblenew-language_features-prompts.yml",
+            "lines": [
+                7
+            ]
+        },
+        {
+            "file": "shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml",
+            "lines": [
+                9
+            ]
+        },
+        {
+            "file": "aws_aws-parallelcluster-cookbook-cookbooks-aws-parallelcluster-slurm-recipes-update_computefleet_status_head_node.rb",
+            "lines": [
+                19
+            ]
+        },
+        {
+            "file": "cookbooks_ic-papertrail-cookbooks-zabbix-recipes-agent_prebuild.rb",
+            "lines": [
+                36
+            ]
+        },
+        {
+            "file": "github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp",
+            "lines": [
+                10
+            ]
+        },
+        {
+            "file": "github-cargomedia@puppet-packages-modules-composer-spec-project-1-install.pp",
+            "lines": [
+                5
+            ]
+        }
+    ]
+}

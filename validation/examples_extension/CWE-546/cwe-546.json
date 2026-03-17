@@ -1,0 +1,49 @@
+{
+    "examples": [
+        {
+            "file": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+            "lines": [
+                3,
+                28,
+                30
+            ]
+        },
+        {
+            "file": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+            "lines": [
+                24
+            ]
+        },
+        {
+            "file": "scmgalaxy_chef-training-programs-rohit-chef-repo-webserver-.delivery-build_cookbook-test-fixtures-cookbooks-test-recipes-default.rb",
+            "lines": [
+                3
+            ]
+        },
+        {
+            "file": "sous-chefs_visualstudio-attributes-vs2012.rb",
+            "lines": [
+                22
+            ]
+        },
+        {
+            "file": "ostk-fuel-plugin-ceilometer-redis-deployment_scripts-puppet-modules-redis-tests-init.pp",
+            "lines": [
+                82,
+                83,
+                84,
+                85,
+                86,
+                87
+            ]
+        },
+        {
+            "file": "wiki-puppet-modules-role-manifests-kafka-analytics-broker.pp",
+            "lines": [
+                120,
+                135,
+                143
+            ]
+        }
+    ]
+}
