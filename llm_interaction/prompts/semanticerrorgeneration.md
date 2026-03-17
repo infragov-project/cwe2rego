@@ -1,4 +1,4 @@
-You are a security expert with extensive Rego expertise. Please rewrite the previously generated rule since it did not correctly detect the security smell in the following intermediate representation(s) and considering this is Rego V0. Only return the Rego rule, ready to be used, and nothing else. No extra characters or words such as ` or rego, that do not conform to Rego syntax. There is no need to "present" the rule, just the code itself.
+You are a security expert with extensive Rego expertise. Please rewrite the previously generated rule since it did not correctly detect the security smell in the following intermediate representation(s). Only return the Rego rule, ready to be used, and nothing else. No extra characters or words such as ` or rego, that do not conform to Rego syntax. There is no need to "present" the rule, just the code itself.
 
 The rule must detect the vulnerability across {% if target_technologies|length == 1 %}this IaC technology{% else %}these IaC technologies{% endif %}: {{ target_technologies_text }}. Below are the intermediate representations where detections failed:
 
