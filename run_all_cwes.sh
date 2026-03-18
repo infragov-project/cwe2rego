@@ -2,19 +2,33 @@
 
 set -euo pipefail
 
-if [[ $# -lt 7 ]]; then
-    echo "Usage: $0 <model> <type_name> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> <cwe1> [cwe2 ...]"
-    echo "Example: $0 openai/gpt-5.2-codex sec_invalid_bind extension_examples_test validation/examples_extension glitch 1 284 250 319"
+if [[ $# -lt 6 ]]; then
+    echo "Usage: $0 <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> <cwe1> [cwe2 ...]"
+    echo "Example: $0 openai/gpt-5.2-codex extension_examples_test validation/examples_extension glitch 1 284 250 319"
     exit 1
 fi
 
 MODEL="$1"
-TYPE_NAME="$2"
-EXPERIMENT_NAME="$3"
-SEMANTIC_EXAMPLES_DIR="$4"
-ANALYSIS_TOOL="$5"
-VALIDATION_HISTORY_ITERATIONS="$6"
-shift 6
+EXPERIMENT_NAME="$2"
+SEMANTIC_EXAMPLES_DIR="$3"
+ANALYSIS_TOOL="$4"
+VALIDATION_HISTORY_ITERATIONS="$5"
+shift 5
+
+declare -A TYPE_BY_CWE=(
+    [250]="sec_def_admin"
+    [258]="sec_empty_pass"
+    [259]="sec_hard_pass"
+    [284]="sec_invalid_bind"
+    [319]="sec_https"
+    [326]="sec_weak_crypt"
+    [327]="sec_weak_crypt"
+    [353]="sec_no_int_check"
+    [478]="sec_no_default_switch"
+    [546]="sec_susp_comm"
+    [798]="sec_hard_secr"
+    [1327]="sec_invalid_bind"
+)
 
 if [[ ! -d "$SEMANTIC_EXAMPLES_DIR" ]]; then
     echo "Error: semantic examples directory not found: $SEMANTIC_EXAMPLES_DIR"
@@ -32,8 +46,14 @@ for cwe in "$@"; do
         exit 1
     fi
 
+    TYPE_NAME="${TYPE_BY_CWE[$cwe]:-}"
+    if [[ -z "$TYPE_NAME" ]]; then
+        echo "Error: no type-name mapping found for CWE-$cwe"
+        exit 1
+    fi
+
     echo ""
-    echo "=== Running CWE-$cwe ==="
+    echo "=== Running CWE-$cwe (type: $TYPE_NAME) ==="
     python3 llm_interaction.py "$MODEL" \
         --cwe "$cwe" \
         --type-name "$TYPE_NAME" \
