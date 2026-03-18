@@ -40,6 +40,8 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
+failed_cwes=()
+
 for cwe in "$@"; do
     if [[ ! "$cwe" =~ ^[0-9]+$ ]]; then
         echo "Error: invalid CWE number: $cwe"
@@ -54,15 +56,32 @@ for cwe in "$@"; do
 
     echo ""
     echo "=== Running CWE-$cwe (type: $TYPE_NAME) ==="
-    python3 llm_interaction.py "$MODEL" \
+    if python3 llm_interaction.py "$MODEL" \
         --cwe "$cwe" \
         --type-name "$TYPE_NAME" \
         --experiment-name "$EXPERIMENT_NAME" \
         --semantic-examples-dir "$SEMANTIC_EXAMPLES_DIR" \
         --analysis-tool "$ANALYSIS_TOOL" \
         --use-rag \
-        --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS"
+        --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS"; then
+        echo "CWE-$cwe completed successfully."
+    else
+        exit_code=$?
+        failed_cwes+=("$cwe:$exit_code")
+        echo "Warning: CWE-$cwe failed (exit code: $exit_code). Continuing..."
+    fi
 done
 
 echo ""
+if (( ${#failed_cwes[@]} > 0 )); then
+    echo "Done with failures."
+    echo "Failed CWEs:"
+    for failure in "${failed_cwes[@]}"; do
+        failed_cwe="${failure%%:*}"
+        failed_exit="${failure##*:}"
+        echo "  - CWE-$failed_cwe (exit code: $failed_exit)"
+    done
+    exit 1
+fi
+
 echo "Done."
