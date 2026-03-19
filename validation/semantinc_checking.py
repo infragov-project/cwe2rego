@@ -66,12 +66,13 @@ def _verify_examples(
     example: Dict[str, Any],
     type_name: str,
     csv_path: Path,
-) -> Tuple[str, str, List[int], List[int]] | None:
+) -> Tuple[str, str, List[int], List[int], str] | None:
     """
     Verify a single example.
 
     Returns:
-        Tuple of (ir_file, iac_language, missing_lines, false_positives) if validation fails, None if passes
+        Tuple of (ir_file, iac_language, missing_lines, false_positives, file_name)
+        if validation fails, None if passes
     """
     file_name = example.get("file")
     if not file_name:
@@ -130,7 +131,7 @@ def _verify_examples(
             print(f"    ❌ Missing detections on lines: {missing}")
         if false_positives:
             print(f"    ❌ False positives on lines: {false_positives}")
-        return (ir, tech, missing, false_positives)
+        return (ir, tech, missing, false_positives, file_name)
 
     print(f"    ✅ All expected lines detected")
     return None
@@ -198,7 +199,7 @@ def semantic_check(
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
-) -> List[Tuple[str, str, List[int], List[int]]]:
+) -> List[Tuple[str, str, List[int], List[int], str]]:
     """
     Verify all examples for a CWE using a preloaded examples manifest.
 
@@ -212,7 +213,8 @@ def semantic_check(
         technologies: If set, only run semantic check for these techs (e.g. ["ansible"]). None = all.
 
     Returns:
-        List of tuples (ir_file, iac_language, missing_lines, false_positives) for failed files.
+        List of tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
+        for failed files.
         Empty list if all files pass.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
@@ -225,7 +227,7 @@ def semantic_check(
 
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / f"{tool.name}_lint.csv"
-    failures: List[Tuple[str, str, List[int], List[int]]] = []
+    failures: List[Tuple[str, str, List[int], List[int], str]] = []
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
