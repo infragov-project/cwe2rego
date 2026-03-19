@@ -1,10 +1,9 @@
 from pydantic_ai import Agent
-from pydantic_ai import Agent, UnexpectedModelBehavior, capture_run_messages, PromptedOutput
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from pydantic_ai.exceptions import UsageLimitExceeded, UnexpectedModelBehavior
 from pydantic_ai.models.openrouter import OpenRouterModelSettings
 import asyncio
-from typing import Callable, List, Any, Optional
+from typing import Callable, List, Any
 from pydantic_ai.messages import ModelMessage
 
 
@@ -50,9 +49,21 @@ class InfraAgent:
         completion_tokens = _usage_get(usage_data, 'output_tokens', 0)
         
         cache_read_tokens = _usage_get(usage_data, 'cache_read_tokens', 0) or 0
+        usage_details = _usage_get(usage_data, 'details', {}) or {}
+        if not isinstance(usage_details, dict):
+            usage_details = {}
+
+        reasoning_tokens = int(
+            usage_details.get('reasoning_tokens')
+            or usage_details.get('reasoningTokens')
+            or usage_details.get('thoughts_token_count')
+            or 0
+        )
+        visible_completion_tokens = max(completion_tokens - reasoning_tokens, 0)
 
         print(
-            f"📊 Usage: prompt={prompt_tokens}, completion={completion_tokens}, "
+            f"Usage: prompt={prompt_tokens}, completion_total={completion_tokens}, "
+            f"completion_visible={visible_completion_tokens}, reasoning={reasoning_tokens}, "
             f"cache_read_tokens={cache_read_tokens}"
         )
         
