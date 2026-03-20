@@ -23,7 +23,7 @@ from llm_interaction.generation_logging import (
 from dotenv import load_dotenv
 import os
 from argparse import ArgumentParser
-from validation.semantinc_checking import prepare_semantic_examples, semantic_check
+from validation.semantic_checking import prepare_semantic_examples, semantic_check
 from validation.syntax_checking import opa_check
 from validation.tools import GlitchTool, KICSTool
 from rag.rag import build_rag_index, retrieve_from_index, format_chunks
