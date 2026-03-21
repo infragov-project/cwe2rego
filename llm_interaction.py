@@ -78,7 +78,7 @@ def get_semantic_error_generation(
     """Get a semantic error regeneration of the rule from the LLM.
     
     Args:
-        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'file_name'
+        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives'
         target_technologies: Technologies the rule should target
         target_technologies_text: Human-readable technologies list for the prompt
         chat_history: Conversation history
@@ -95,7 +95,7 @@ def get_semantic_error_generation_kics(
     """Get a KICS-specific semantic error regeneration of the rule from the LLM.
     
     Args:
-        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'original_file_numbered', 'file_name'
+        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'original_file_numbered'
         target_technologies: Technologies the rule should target
         target_technologies_text: Human-readable technologies list for the prompt
         chat_history: Conversation history
@@ -157,8 +157,18 @@ def build_argument_parser() -> ArgumentParser:
     parser.add_argument("--cwe", help="Choose CWE to use")
     parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=False)
     parser.add_argument("--cwe-condition-only", action="store_true", help="Only generate and save the CWE condition, then exit")
+    parser.add_argument(
+        "--use-cwe-text",
+        action="store_true",
+        help="Use raw CWE text directly instead of generating a distilled CWE condition via LLM.",
+    )
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
+    parser.add_argument(
+        "--skip-semantic-check",
+        action="store_true",
+        help="Skip semantic validation and semantic-regeneration; only enforce syntax/type validation.",
+    )
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
     parser.add_argument(
         "--validation-history-iterations",
@@ -282,7 +292,10 @@ if __name__ == "__main__":
     with open(example_paths[1], "r") as f:
         example_rule_2 = f.read()
     
-    cwe_condition = get_cwe_condition(cwe=cwe_text)
+    if args.use_cwe_text:
+        cwe_condition = cwe_text
+    else:
+        cwe_condition = get_cwe_condition(cwe=cwe_text)
 
     if args.cwe_condition_only:
         from llm_interaction.generation_logging import model_to_directory_name
@@ -357,23 +370,30 @@ if __name__ == "__main__":
     )
     persist_generation_log(log_path, generation_log)
 
-    examples_folder, semantic_examples = prepare_semantic_examples(
-        type_name=args.type_name,
-        cwe_number=str(args.cwe),
-        tool=tool,
-        use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
-        cwe_text=cwe_condition if getattr(args, "use_llm_examples", False) else None,
-        api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
-        examples_model=getattr(args, "examples_model", None),
-        model_directory=model_directory,
-        generated_examples_dir=generated_examples_dir,
-        target_technologies=target_technologies,
-        static_examples_dir=static_examples_dir,
-    )
-    generation_log["semantic_examples"]["resolved_directory"] = str(Path(examples_folder).resolve())
-    generation_log["semantic_examples"]["entries_count"] = len(semantic_examples)
-    if getattr(args, "use_llm_examples", False):
-        generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
+    examples_folder = None
+    semantic_examples = []
+    if args.skip_semantic_check:
+        generation_log["semantic_examples"]["resolved_directory"] = None
+        generation_log["semantic_examples"]["entries_count"] = 0
+        generation_log["semantic_examples"]["skipped"] = True
+    else:
+        examples_folder, semantic_examples = prepare_semantic_examples(
+            type_name=args.type_name,
+            cwe_number=str(args.cwe),
+            tool=tool,
+            use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
+            cwe_text=cwe_condition if getattr(args, "use_llm_examples", False) else None,
+            api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
+            examples_model=getattr(args, "examples_model", None),
+            model_directory=model_directory,
+            generated_examples_dir=generated_examples_dir,
+            target_technologies=target_technologies,
+            static_examples_dir=static_examples_dir,
+        )
+        generation_log["semantic_examples"]["resolved_directory"] = str(Path(examples_folder).resolve())
+        generation_log["semantic_examples"]["entries_count"] = len(semantic_examples)
+        if getattr(args, "use_llm_examples", False):
+            generation_log["example_generation"]["files"] = list_generated_example_files(examples_folder)
     persist_generation_log(log_path, generation_log)
     
     MAX_VALIDATION_ATTEMPTS = 20
@@ -460,6 +480,13 @@ if __name__ == "__main__":
                     )
             continue
         
+        if args.skip_semantic_check:
+            iteration_log["semantic_check_skipped"] = True
+            iteration_log["status"] = "passed"
+            append_iteration_and_persist(iteration_log)
+            validation_passed = True
+            break
+
         failures, skipped_empty_ir = semantic_check(
             tool,
             rego_rule,
