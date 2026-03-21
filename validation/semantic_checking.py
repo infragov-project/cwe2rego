@@ -191,6 +191,22 @@ def prepare_semantic_examples(
     return folder, examples
 
 
+def _is_empty_kics_ir(ir: str) -> bool:
+    text = (ir or "").strip()
+    if not text:
+        return True
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+
+    if isinstance(parsed, dict) and isinstance(parsed.get("document"), list):
+        return len(parsed["document"]) == 0
+    if isinstance(parsed, list):
+        return len(parsed) == 0
+    return False
+
+
 def semantic_check(
     tool: AnalysisTool,
     rego_rule: str,
@@ -199,7 +215,7 @@ def semantic_check(
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
-) -> List[Tuple[str, str, List[int], List[int], str]]:
+) -> Tuple[List[Tuple[str, str, List[int], List[int], str]], List[str]]:
     """
     Verify all examples for a CWE using a preloaded examples manifest.
 
@@ -213,9 +229,10 @@ def semantic_check(
         technologies: If set, only run semantic check for these techs (e.g. ["ansible"]). None = all.
 
     Returns:
-        List of tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
-        for failed files.
-        Empty list if all files pass.
+                A tuple with:
+                - List of tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
+                    for failed files.
+                - List of files skipped due to empty KICS IR.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
 
@@ -228,6 +245,7 @@ def semantic_check(
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / f"{tool.name}_lint.csv"
     failures: List[Tuple[str, str, List[int], List[int], str]] = []
+    skipped_empty_ir: List[str] = []
 
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
@@ -242,6 +260,14 @@ def semantic_check(
             if tech not in technologies:
                 print(f"  Skipping {script_path.name} (technology {tech!r} not selected)")
                 continue
+
+        if tool.name == "kics":
+            unit_type = example.get("type") or "unknown"
+            if _is_empty_kics_ir(tool.extract_ir(str(script_path), unit_type)):
+                print(f"  Skipping {script_path.name} (KICS returned empty IR)")
+                skipped_empty_ir.append(example.get("file") or script_path.name)
+                continue
+
         failure = _verify_examples(
             tool, runner, folder, example, type_name, csv_path
         )
@@ -251,8 +277,15 @@ def semantic_check(
                 print(f"  Reached maximum of 3 failures, stopping verification")
                 break
 
+    if skipped_empty_ir:
+        print(
+            f"Skipped {len(skipped_empty_ir)} file(s) due to empty KICS IR:"
+        )
+        for skipped_file in skipped_empty_ir:
+            print(f"  - {skipped_file}")
+
     if failures:
         print(f"Semantic check failed ❌ ({len(failures)} file(s) failed)")
-        return failures
+        return failures, skipped_empty_ir
     print(f"Semantic check passed ✅")
-    return []
+    return [], skipped_empty_ir

@@ -412,7 +412,7 @@ if __name__ == "__main__":
                 )
             continue
         
-        failures = semantic_check(
+        failures, skipped_empty_ir = semantic_check(
             tool,
             rego_rule,
             args.type_name,
@@ -421,6 +421,10 @@ if __name__ == "__main__":
             examples=semantic_examples,
             technologies=target_technologies,
         )
+
+        if skipped_empty_ir:
+            iteration_log["skipped_empty_ir_files"] = skipped_empty_ir
+            iteration_log["skipped_empty_ir_count"] = len(skipped_empty_ir)
         
         if failures:
             iteration_log["errors"] = serialize_semantic_failures(failures)

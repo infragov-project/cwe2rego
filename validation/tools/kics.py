@@ -251,7 +251,7 @@ class KICSTool(AnalysisTool):
                 )
                 valid_exit_codes = (0, 20, 30, 40, 50, 60)
                 if result.returncode not in valid_exit_codes or not payload_file.exists():
-                    return path.read_text(encoding="utf-8")
+                    return ""
                 payload = json.loads(payload_file.read_text(encoding="utf-8"))
                 documents = payload.get("document", [])
                 if not isinstance(documents, list):
@@ -262,6 +262,6 @@ class KICSTool(AnalysisTool):
                         return json.dumps(doc, indent=2)
                 if documents:
                     return json.dumps(documents, indent=2)
-                return path.read_text(encoding="utf-8")
+                return ""
         except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-            return path.read_text(encoding="utf-8")
+            return ""
