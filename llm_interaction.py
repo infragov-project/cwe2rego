@@ -57,6 +57,16 @@ def get_syntax_error_generation_norag(error_message: str, chat_history=None) -> 
 def get_syntax_error_generation(error_message: str, rag_context: str, chat_history=None) -> str:
     """Get a syntax error regeneration with RAG assistance."""
     ...
+
+@ask_model_prompt("prompts/syntaxerrorgeneration_kics_norag.md")
+def get_syntax_error_generation_kics_norag(error_message: str, chat_history=None) -> str:
+    """Get a KICS-specific syntax error regeneration without RAG assistance."""
+    ...
+
+@ask_model_prompt("prompts/syntaxerrorgeneration_kics.md")
+def get_syntax_error_generation_kics(error_message: str, rag_context: str, chat_history=None) -> str:
+    """Get a KICS-specific syntax error regeneration with RAG assistance."""
+    ...
     
 @ask_model_prompt("prompts/semanticerrorgeneration.md")
 def get_semantic_error_generation(
@@ -68,7 +78,24 @@ def get_semantic_error_generation(
     """Get a semantic error regeneration of the rule from the LLM.
     
     Args:
-        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'file_name'
+        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'file_name'
+        target_technologies: Technologies the rule should target
+        target_technologies_text: Human-readable technologies list for the prompt
+        chat_history: Conversation history
+    """
+    ...
+
+@ask_model_prompt("prompts/semanticerrorgeneration_kics.md")
+def get_semantic_error_generation_kics(
+    failures: list,
+    target_technologies: list[str],
+    target_technologies_text: str,
+    chat_history=None,
+) -> str:
+    """Get a KICS-specific semantic error regeneration of the rule from the LLM.
+    
+    Args:
+        failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'original_file_numbered', 'file_name'
         target_technologies: Technologies the rule should target
         target_technologies_text: Human-readable technologies list for the prompt
         chat_history: Conversation history
@@ -113,6 +140,14 @@ def clean_rego_code(rego_code: str) -> str:
     code = re.sub(r'\n?```+\s*$', '', code)
     
     return code.strip()
+
+
+def add_line_numbers(content: str) -> str:
+    """Prefix each line with 1-based line numbers for annotation prompts."""
+    lines = content.splitlines()
+    if not lines:
+        return ""
+    return "\n".join(f"{index}: {line}" for index, line in enumerate(lines, start=1))
 
 
 def build_argument_parser() -> ArgumentParser:
@@ -396,20 +431,33 @@ if __name__ == "__main__":
             if attempt >= MAX_VALIDATION_ATTEMPTS:
                 break
 
-            # Use appropriate syntax error generation based on RAG flag
+            # Use appropriate syntax error generation based on RAG flag and analysis tool
             if args.use_rag and rego_index is not None:
                 rag_chunks = retrieve_from_index(rego_index, error, top_k=3)
                 rag_context = format_chunks(rag_chunks)
-                rego_rule = get_syntax_error_generation(
-                    error_message=error,
-                    rag_context=rag_context,
-                    chat_history=conversation_history
-                )
+                if args.analysis_tool == "kics":
+                    rego_rule = get_syntax_error_generation_kics(
+                        error_message=error,
+                        rag_context=rag_context,
+                        chat_history=conversation_history
+                    )
+                else:
+                    rego_rule = get_syntax_error_generation(
+                        error_message=error,
+                        rag_context=rag_context,
+                        chat_history=conversation_history
+                    )
             else:
-                rego_rule = get_syntax_error_generation_norag(
-                    error_message=error,
-                    chat_history=conversation_history
-                )
+                if args.analysis_tool == "kics":
+                    rego_rule = get_syntax_error_generation_kics_norag(
+                        error_message=error,
+                        chat_history=conversation_history
+                    )
+                else:
+                    rego_rule = get_syntax_error_generation_norag(
+                        error_message=error,
+                        chat_history=conversation_history
+                    )
             continue
         
         failures, skipped_empty_ir = semantic_check(
@@ -436,18 +484,42 @@ if __name__ == "__main__":
                 break
 
             # Format failures for the prompt
-            formatted_failures = [
-                {
-                    "iac_language": f[1],
-                    "missing_lines": f[2],
-                    "false_positives": f[3],
-                    "ir_file": f[0],
-                }
-                for f in failures
-            ]
-            rego_rule = get_semantic_error_generation(
-                failures=formatted_failures,
-                target_technologies=target_technologies,
+            formatted_failures = []
+            for f in failures:
+                # f is a tuple: (ir_file, iac_language, missing_lines, false_positives, file_name)
+                ir_file = f[0]
+                iac_language = f[1]
+                missing_lines = f[2]
+                false_positives = f[3]
+                file_name = f[4]
+                
+                # Load original file content with line numbers
+                original_file_path = Path(examples_folder) / file_name
+                original_file_numbered = ""
+                if original_file_path.exists():
+                    original_content = original_file_path.read_text(encoding="utf-8")
+                    original_file_numbered = add_line_numbers(original_content)
+                
+                formatted_failures.append({
+                    "iac_language": iac_language,
+                    "missing_lines": missing_lines,
+                    "false_positives": false_positives,
+                    "ir_file": ir_file,
+                    "original_file_numbered": original_file_numbered,
+                })
+            
+            # Call appropriate semantic error generation function based on analysis tool
+            if args.analysis_tool == "kics":
+                rego_rule = get_semantic_error_generation_kics(
+                    failures=formatted_failures,
+                    target_technologies=target_technologies,
+                    target_technologies_text=target_technologies_text,
+                    chat_history=conversation_history,
+                )
+            else:
+                rego_rule = get_semantic_error_generation(
+                    failures=formatted_failures,
+                    target_technologies=target_technologies,
                 target_technologies_text=target_technologies_text,
                 chat_history=conversation_history,
             )
