@@ -1,0 +1,51 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T17:52:27.469166+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_extension_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "kics_extension_test",
+  "cwe": "258",
+  "type_name": "sec_empty_pass",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_extension_test/claude-sonnet-4.6/runs/run_001/cwe_258.rego",
+  "cwe_condition": "# CWE-258: Empty Password in Configuration File \u2014 Detection in IaC Scripts\n\n## Core Weakness to Detect\n\nThe fundamental issue is the **assignment of an empty or blank string to a password-related field** within any configuration or infrastructure definition file.\n\n---\n\n## Weakness Indicators\n\n### 1. Password Field Assignment to Empty Value\nAny field whose name semantically relates to authentication credentials being assigned a null, empty, or whitespace-only value.\n\n**Keywords/Field Names to Watch:**\n- `password`, `passwd`, `pwd`, `pass`\n- `secret`, `secret_key`, `secret_value`\n- `credentials`, `credential`\n- `auth_password`, `auth_pass`\n- `admin_password`, `root_password`\n- `db_password`, `database_password`\n- `user_password`, `login_password`\n- `access_password`, `service_password`\n- `master_password`, `master_key`\n- `token_secret`, `api_secret`\n\n---\n\n### 2. Empty or Blank Value Patterns (Language-Agnostic)\n\n| Pattern Type | Example Representation |\n|---|---|\n| Empty quoted string | `password = \"\"` or `password = ''` |\n| Bare empty assignment | `password =` (nothing after operator) |\n| Null/none assignment | `password = null` / `password = ~` |\n| Whitespace-only string | `password = \" \"` |\n| Empty in connection strings | `pwd=;` , `password=;`, `pwd=,` |\n| Placeholder with no value | `password: ` (YAML with no value) |\n\n---\n\n### 3. Authentication & Connection Block Fields\n\nLook for empty values **within these contextual blocks/sections:**\n\n- `connectionString` / `connection_string` blocks containing `pwd=` or `password=` with no following value\n- `database` configuration sections\n- `ldap` / `active_directory` configuration blocks\n- `smtp` / `mail_server` configuration\n- `proxy` authentication settings\n- `registry` / `repository` credential sections\n- `backend` / `remote_state` authentication blocks\n- `provider` authentication attributes\n- `datasource` / `data_source` definitions\n\n---\n\n### 4. Secret/Credential Management Fields\n\n| Field | Risk if Empty |\n|---|---|\n| `secret_string` | Secrets manager storing empty secret |\n| `initial_password` | Default account initialized with no password |\n| `default_password` | Service defaults to empty password |\n| `parameter_value` (sensitive type) | SSM/parameter store empty secret |\n| `kv_value` | Key-value store empty credential |\n| `env_value` / `environment variable` of password type | Runtime empty credential injection |\n\n---\n\n### 5. Encoded Empty Values\n\nIn base64-encoded contexts (e.g., container orchestration secrets):\n\n- `\"\"` base64-encoded \u2192 empty decoded value\n- Check if `data` fields under secret/credential resources decode to an empty string\n\n---\n\n## Detection Logic Summary\n\n```\nIF field_name MATCHES password/secret/credential keywords\nAND field_value IS ONE OF:\n    - Empty string (\"\")\n    - Single/double-quoted whitespace only\n    - Null / None / nil / ~\n    - Empty after delimiter in connection strings (pwd=;)\n    - Base64 of empty string\nTHEN FLAG as CWE-258\n```\n\n---\n\n## High-Risk Resource Types to Scan\n\n- Database instance definitions (RDS, Cloud SQL, managed databases)\n- Directory service configurations (LDAP, AD connectors)\n- Container environment variable definitions\n- Secret store entries (Vault, SSM Parameter Store, Key Vault)\n- Messaging queue or broker credential configs\n- Proxy or load balancer authentication blocks\n- CI/CD pipeline credential variables\n- Remote backend state configurations\n\n---\n\n## Related Attributes That Amplify Risk\n- `plaintext = true` combined with empty password\n- `encryption_enabled = false` combined with empty password\n- `public_access = true` combined with empty password field\n- `auth_enabled = false` (bypasses auth entirely \u2014 related but distinct)",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258",
+    "entries_count": 5
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nnon_module_keys := {\n\t\"name\", \"become\", \"become_user\", \"when\", \"register\",\n\t\"notify\", \"tags\", \"vars\", \"loop\", \"with_items\", \"with_list\",\n\t\"with_dict\", \"block\", \"rescue\", \"always\", \"ignore_errors\",\n\t\"no_log\", \"environment\", \"delegate_to\", \"run_once\",\n\t\"changed_when\", \"failed_when\", \"listen\", \"async\", \"poll\",\n\t\"check_mode\", \"diff\", \"connection\", \"port\", \"remote_user\",\n\t\"timeout\", \"any_errors_fatal\",\n}\n\nis_password_field(key) {\n\tpassword_subs := {\"password\", \"passwd\", \"secret\", \"credential\"}\n\tcontains(lower(key), password_subs[_])\n}\n\nis_password_field(key) {\n\tlower(key) == \"pwd\"\n}\n\nis_empty_value(value) {\n\tvalue == null\n}\n\nis_empty_value(value) {\n\tis_string(value)\n\ttrim(value, \" \\t\\n\\r\") == \"\"\n}\n\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tsome module_key\n\tmodule_value := task[module_key]\n\tnot non_module_keys[module_key]\n\tis_object(module_value)\n\tsome field_name\n\tfield_value := module_value[field_name]\n\tis_string(field_name)\n\tis_password_field(field_name)\n\tis_empty_value(field_value)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_key,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task.name, module_key, field_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should not be empty or null\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is empty or null\", [field_name]),\n\t}\n}\n\nCxPolicy[result] {\n\tplaybook := input.document[i].playbooks[_]\n\tsome var_key\n\tvar_value := playbook.vars[var_key]\n\tis_string(var_key)\n\tis_password_field(var_key)\n\tis_empty_value(var_value)\n\n\tresult := {\n\t\t\"documentId\": input.document[i].id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": sprintf(\"vars.%s\", [var_key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should not be empty or null\", [var_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is empty or null\", [var_key]),\n\t}\n}",
+      "errors": [],
+      "status": "passed",
+      "skipped_empty_ir_files": [
+        "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+        "debops_debops-ansible-roles-gitlab_runner-defaults-main.yml"
+      ],
+      "skipped_empty_ir_count": 2
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T17:52:27.612878+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

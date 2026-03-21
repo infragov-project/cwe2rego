@@ -1,0 +1,51 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T18:56:21.779796+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_extension_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "kics_extension_test",
+  "cwe": "798",
+  "type_name": "sec_hard_secr",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_extension_test/claude-sonnet-4.6/runs/run_001/cwe_798.rego",
+  "cwe_condition": "# CWE-798: Use of Hard-coded Credentials \u2014 Detection in IaC Scripts\n\n## Core Weaknesses to Detect\n\n### 1. Literal Value Assignment to Sensitive Fields\nThe most fundamental indicator \u2014 a credential-related attribute is assigned a **static, non-dynamic string value** instead of referencing an external secret source.\n\n### 2. Absence of Secret Management References\nCredentials are defined **inline** rather than referencing secret managers, vaults, or environment variables.\n\n### 3. High-Entropy String Assignment\nRandom-looking or encoded strings (Base64, hex) assigned directly to sensitive fields suggesting embedded cryptographic keys or tokens.\n\n### 4. Default or Common Credential Values\nWell-known, predictable strings (`admin`, `password`, `root`, `123456`, `changeme`) assigned to authentication fields.\n\n### 5. Cleartext Credential Storage\nSensitive values stored without any encryption or obfuscation mechanism in configuration blocks.\n\n---\n\n## Keywords, Attributes & Fields to Inspect\n\n### Authentication & Identity Fields\n| Category | Keywords / Field Names |\n|---|---|\n| Passwords | `password`, `passwd`, `pass`, `pwd`, `passphrase`, `user_password`, `admin_password`, `root_password`, `default_password`, `master_password` |\n| Usernames tied to credentials | `username`, `user`, `uid`, `login`, `admin_user`, `db_user`, `service_account` |\n| Secrets | `secret`, `secret_key`, `client_secret`, `shared_secret`, `jwt_secret`, `app_secret` |\n| Tokens | `token`, `access_token`, `auth_token`, `api_token`, `bearer_token`, `refresh_token`, `session_token` |\n| API Keys | `api_key`, `apikey`, `api_secret`, `access_key`, `secret_access_key` |\n\n### Cryptographic Fields\n| Category | Keywords / Field Names |\n|---|---|\n| Keys | `private_key`, `public_key`, `encryption_key`, `signing_key`, `hmac_key`, `aes_key`, `rsa_key`, `key_data` |\n| Certificates & TLS | `certificate`, `cert`, `ssl_key`, `ssl_cert`, `tls_key`, `tls_cert`, `ca_cert`, `client_cert` |\n| SSH | `ssh_key`, `ssh_private_key`, `ssh_authorized_keys`, `identity_key` |\n\n### Connection & Database Fields\n| Category | Keywords / Field Names |\n|---|---|\n| Connection Strings | `connection_string`, `connectionstring`, `conn_str`, `dsn`, `jdbc_url`, `database_url` |\n| Database credentials | `db_password`, `database_password`, `db_secret`, `db_user`, `db_username` |\n| SNMP / Network | `community_string`, `snmp_community`, `community` |\n\n---\n\n## Suspicious Pattern Indicators\n\n### Value Pattern Indicators\n- **Direct string literals** assigned to any of the above fields (e.g., `password = \"MySecret123\"`)\n- **Base64-encoded strings** assigned to key or certificate fields\n- **Hexadecimal strings** (32, 64 characters) assigned to key/hash fields\n- **PEM-formatted content** (blocks starting with `BEGIN`) embedded inline\n- **High-entropy strings** that don't follow variable reference syntax\n\n### Structural Anti-Patterns (Missing Safe Practices)\n| Missing Safe Pattern | What It Implies |\n|---|---|\n| No reference to secret manager paths | Credentials defined locally instead of fetched dynamically |\n| No environment variable reference syntax | Value is hardcoded, not injected at runtime |\n| No variable interpolation | Static literal used instead of a parameterized/dynamic value |\n| Plain text value on sensitive field | Cleartext credential storage |\n\n### Reference Syntax Absence (Language-Agnostic Signals)\nIn safe IaC, sensitive values are typically referenced via patterns like:\n- Vault path references\n- Secret manager ARN/ID references\n- Environment variable wrappers\n- Parameter store lookups\n- Encrypted data blocks\n\n**The absence of such references** \u2014 when a sensitive field holds a raw string \u2014 is a strong CWE-798 indicator.\n\n---\n\n## Detection Summary Table\n\n| Weakness Indicator | Detection Signal |\n|---|---|\n| Static string on password field | Literal assigned to `password`, `passwd`, `pwd` etc. |\n| Embedded private key | PEM block or base64 blob in `private_key`, `ssh_key` |\n| Hardcoded API token | Long alphanumeric string on `api_key`, `token` fields |\n| Default credentials | Common values like `admin`, `root`, `changeme` on auth fields |\n| Inline connection string with credentials | `uid=`, `pwd=`, `password=` embedded within `connection_string` |\n| Hardcoded SNMP community | Literal on `community_string`, `snmp_community` |\n| Missing secret manager reference | No vault/secret-store reference on sensitive fields |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-798",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nsensitive_keys := {\n\t\"password\", \"passwd\", \"pass\", \"pwd\", \"passphrase\",\n\t\"user_password\", \"admin_password\", \"root_password\", \"default_password\", \"master_password\",\n\t\"secret\", \"secret_key\", \"client_secret\", \"shared_secret\", \"jwt_secret\", \"app_secret\",\n\t\"token\", \"access_token\", \"auth_token\", \"api_token\", \"bearer_token\", \"refresh_token\", \"session_token\",\n\t\"api_key\", \"apikey\", \"api_secret\", \"access_key\", \"secret_access_key\",\n\t\"private_key\", \"encryption_key\", \"signing_key\", \"hmac_key\", \"aes_key\", \"rsa_key\", \"key_data\",\n\t\"ssh_key\", \"ssh_private_key\", \"ssh_authorized_keys\", \"identity_key\",\n\t\"db_password\", \"database_password\", \"db_secret\",\n\t\"community_string\", \"snmp_community\",\n}\n\ntask_meta_keys := {\n\t\"name\", \"become\", \"become_user\", \"when\", \"register\", \"tags\", \"notify\",\n\t\"loop\", \"loop_control\", \"with_items\", \"vars\", \"no_log\", \"ignore_errors\",\n\t\"changed_when\", \"failed_when\", \"check_mode\", \"environment\", \"delegate_to\",\n\t\"run_once\", \"block\", \"rescue\", \"always\", \"listen\", \"args\", \"any_errors_fatal\",\n\t\"with_dict\", \"with_list\", \"with_sequence\", \"with_nested\", \"with_indexed_items\",\n\t\"collections\", \"connection\", \"debugger\", \"diff\", \"timeout\", \"module_defaults\",\n}\n\nis_hardcoded_credential(value) {\n\tis_string(value)\n\tcount(value) > 0\n\tnot contains(value, \"{{\")\n}\n\nis_sensitive_key(key) {\n\tlower(key) == sensitive_keys[_]\n}\n\n# Task-level: detect hardcoded credentials in module parameters\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\ttask_name := object.get(task, \"name\", \"n/a\")\n\n\t[path, value] := walk(task)\n\tcount(path) >= 2\n\n\tmodule_name := path[0]\n\tis_string(module_name)\n\tnot task_meta_keys[module_name]\n\n\tcred_key := path[count(path) - 1]\n\tis_string(cred_key)\n\tis_sensitive_key(cred_key)\n\tis_hardcoded_credential(value)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_name,\n\t\t\"resourceName\": task_name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task_name, module_name, cred_key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should reference a variable or secret manager, not contain a hardcoded value\", [cred_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' contains a hardcoded credential value\", [cred_key]),\n\t}\n}\n\n# Task-level: detect hardcoded credentials defined in task vars\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\ttask_name := object.get(task, \"name\", \"n/a\")\n\n\tvars := task.vars\n\tis_object(vars)\n\n\tvalue := vars[key]\n\tis_string(key)\n\tis_sensitive_key(key)\n\tis_hardcoded_credential(value)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": task_name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.vars.%s\", [task_name, key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'vars.%s' should not contain a hardcoded credential; use a variable or vault reference\", [key]),\n\t\t\"keyActualValue\": sprintf(\"'vars.%s' contains a hardcoded credential value\", [key]),\n\t}\n}\n\n# Playbook-level: detect hardcoded credentials defined in playbook vars\nCxPolicy[result] {\n\tplaybook := input.document[i].playbooks[_]\n\n\tvars := playbook.vars\n\tis_object(vars)\n\n\tvalue := vars[key]\n\tis_string(key)\n\tis_sensitive_key(key)\n\tis_hardcoded_credential(value)\n\n\tresult := {\n\t\t\"documentId\": input.document[i].id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": sprintf(\"vars.%s\", [key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'vars.%s' should not contain a hardcoded credential; use a variable or vault reference\", [key]),\n\t\t\"keyActualValue\": sprintf(\"'vars.%s' contains a hardcoded credential value\", [key]),\n\t}\n}",
+      "errors": [],
+      "status": "passed",
+      "skipped_empty_ir_files": [
+        "aristanetworks_ansible-avd-ansible_collections-arista-avd-molecule-evpn_underlay_ospf_overlay_ebgp-intended-structured_configs-DC1-SVC3B.yml",
+        "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml"
+      ],
+      "skipped_empty_ir_count": 2
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T18:56:22.328484+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

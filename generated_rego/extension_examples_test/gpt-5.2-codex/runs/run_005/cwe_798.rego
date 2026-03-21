@@ -2,245 +2,144 @@ package glitch
 
 import data.glitch_lib
 
-desc := "Use of hard-coded credentials - Credentials should not be hard-coded in IaC scripts. (CWE-798)"
+sensitive_pattern := "(?i)(^|[^a-z0-9])(password|passwd|pwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token|bearer|private[_-]?key|ssh[_-]?key|tls[_-]?key|key_data|encryption[_-]?key|credential|keystore|truststore)([^a-z0-9]|$)"
 
-secret_name_patterns := {
-    "(?i)(^|[^a-z0-9])pass(word|wd|phrase)?s?[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])pwd[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])secret(s)?[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])token(s)?[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])auth[_-]?token[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])bearer[_-]?token[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])client[_-]?secret[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])access[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])secret[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])api[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])private[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])ssh[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])tls[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])signing[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])encryption[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])shared[_-]?secret[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])shared[_-]?key[0-9]*([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])key_data([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])keystore([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])truststore([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])certificate([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])pem([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])pfx([^a-z0-9]|$)"
+cred_assign_pattern := "(?i)(password|passwd|pwd|passphrase|secret|token|api[_-]?key|access[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token|bearer|private[_-]?key|ssh[_-]?key|tls[_-]?key|key_data|encryption[_-]?key)\\s*[:=]\\s*[^\\s\"']+"
+uri_cred_pattern := "(?i)\\w+://[^\\s:@]+:[^\\s@]+@"
+conn_string_pattern := "(?i)(user|uid|username)=[^;\\s]+;\\s*(password|pwd)=[^;\\s]+"
+
+is_placeholder(s) {
+    regex.match(".*\\$\\{.*\\}.*", s)
+} else {
+    regex.match(".*\\{\\{.*\\}\\}.*", s)
 }
 
-filelike_name_patterns := {
-    "(?i)(^|[^a-z0-9])private[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])ssh[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])tls[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])signing[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])encryption[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])shared[_-]?key([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])key_data([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])keystore([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])truststore([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])certificate([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])pem([^a-z0-9]|$)",
-    "(?i)(^|[^a-z0-9])pfx([^a-z0-9]|$)"
-}
-
-credential_value_patterns := {
-    "(?i)[^\\s:@/]+:[^@/\\s]+@",
-    "(?i)(uid|user(name)?|login)\\s*=\\s*[^;\\s]+.*(pass(word)?|pwd)\\s*=\\s*[^;\\s]+",
-    "(?i)(pass(word)?|pwd|token|secret|api[_-]?key|access[_-]?key|secret[_-]?key|client[_-]?secret|auth[_-]?token|bearer)\\s*[:=]\\s*[^\\s,;]+",
-    "(?i)bearer\\s+[A-Za-z0-9._-]+",
-    "(?i)(BEGIN\\s+[^\\n]*PRIVATE\\s+KEY|ssh-rsa|ssh-ed25519|-----BEGIN)"
-}
-
-allowed_kv_types := {"Variable", "Attribute"}
-
-path_contains_unit_blocks(path) {
-    path[_] == "unit_blocks"
-}
-
-all_kv(parent) = kvs {
-    kvs = {kv |
-        walk(parent, [path, kv])
-        kv.ir_type == allowed_kv_types[_]
-        kv.value.ir_type != "BlockExpr"
-        not path_contains_unit_blocks(path)
-    }
-}
-
-all_hash_entries(parent) = entries {
-    entries = {entry |
-        walk(parent, [path, h])
-        h.ir_type == "Hash"
-        not path_contains_unit_blocks(path)
-        entry := h.value[_]
-    }
-}
-
-matches_any_pattern(val, patterns) {
-    pattern := patterns[_]
-    regex.match(pattern, val)
-}
-
-matches_secret_name(name) {
-    matches_any_pattern(name, secret_name_patterns)
-}
-
-is_filelike_name(name) {
-    matches_any_pattern(name, filelike_name_patterns)
-}
-
-is_literal_string(v) {
+is_secret_string(v) {
     v.ir_type == "String"
     v.value != ""
-    not regex.match(".*\\$\\{.*\\}.*", v.value)
-    not regex.match(".*\\{\\{.*\\}\\}.*", v.value)
-    not regex.match(".*<%.*%>.*", v.value)
-    not regex.match(".*#\\{.*\\}.*", v.value)
-    not regex.match(".*%\\{.*\\}.*", v.value)
+    not is_placeholder(v.value)
 }
 
-is_file_reference(v) {
-    v.ir_type == "String"
-    regex.match("^(?:/|\\./|\\.\\./|~/?|[A-Za-z]:\\\\)", v.value)
+is_secret_value(v) {
+    is_secret_string(v)
+} else {
+    v.ir_type == "Array"
+    some e
+    e := v.value[_]
+    is_secret_string(e)
+} else {
+    v.ir_type == "Hash"
+    some kv
+    kv := v.value[_]
+    is_secret_string(kv.value)
 }
 
-is_file_reference(v) {
-    v.ir_type == "String"
-    regex.match("(?i).*\\.(pem|pfx|key|crt|cer|jks|p12|p7b|p7c)$", v.value)
+sensitive_name(name) {
+    regex.match(sensitive_pattern, name)
 }
 
-is_literal_secret_value(v) {
-    is_literal_string(v)
+auth_context(h) {
+    some e
+    e := h.value[_]
+    e.key.ir_type == "String"
+    k := lower(e.key.value)
+    allowed := {"method", "type"}
+    k == allowed[_]
+    e.value.ir_type == "String"
+    regex.match("(?i)(key|password|token|secret)", e.value.value)
+} else {
+    some e
+    e := h.value[_]
+    e.key.ir_type == "String"
+    regex.match("(?i)(auth|authentication|credential|login|password|secret|token)", e.key.value)
 }
 
-is_literal_secret_value(v) {
-    v.ir_type == "Integer"
-}
-
-is_literal_secret_value(v) {
-    v.ir_type == "Float"
-}
-
-should_flag_by_name(name, v) {
-    matches_secret_name(name)
-    is_literal_secret_value(v)
-    not (is_filelike_name(name) and is_file_reference(v))
-}
-
-has_credential_pattern(v) {
-    is_literal_string(v)
-    matches_any_pattern(v.value, credential_value_patterns)
-}
-
-is_credential_kv(kv) {
-    should_flag_by_name(kv.name, kv.value)
-}
-
-is_credential_kv(kv) {
-    not matches_secret_name(kv.name)
-    has_credential_pattern(kv.value)
-}
-
-is_credential_entry(entry) {
+key_entry_secret(entry, h) {
     entry.key.ir_type == "String"
-    should_flag_by_name(entry.key.value, entry.value)
+    lower(entry.key.value) == "key"
+    is_secret_string(entry.value)
+    auth_context(h)
 }
 
-is_credential_entry(entry) {
-    not (entry.key.ir_type == "String" and matches_secret_name(entry.key.value))
-    has_credential_pattern(entry.value)
+string_has_cred(s) {
+    regex.match(cred_assign_pattern, s)
+} else {
+    regex.match(uri_cred_pattern, s)
+} else {
+    regex.match(conn_string_pattern, s)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    kv := all_kv(parent)[_]
-    is_credential_kv(kv)
-
+    v := glitch_lib.all_variables(parent)[_]
+    sensitive_name(v.name)
+    is_secret_value(v.value)
     result := {
         "type": "sec_hard_secr",
-        "element": kv,
+        "element": v,
         "path": parent.path,
-        "description": desc
+        "description": "Hard-coded credentials detected - Avoid embedding secrets directly in IaC definitions. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    kv := all_kv(parent)[_]
-    kv.value.ir_type == "Array"
-    elem := kv.value.value[_]
-    should_flag_by_name(kv.name, elem)
-
+    a := glitch_lib.all_attributes(parent)[_]
+    sensitive_name(a.name)
+    is_secret_value(a.value)
     result := {
         "type": "sec_hard_secr",
-        "element": elem,
+        "element": a,
         "path": parent.path,
-        "description": desc
+        "description": "Hard-coded credentials detected - Avoid embedding secrets directly in IaC definitions. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    kv := all_kv(parent)[_]
-    kv.value.ir_type == "Array"
-    elem := kv.value.value[_]
-    has_credential_pattern(elem)
-
-    result := {
-        "type": "sec_hard_secr",
-        "element": elem,
-        "path": parent.path,
-        "description": desc
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    entry := all_hash_entries(parent)[_]
-    is_credential_entry(entry)
-
+    walk(parent, [_, h])
+    h.ir_type == "Hash"
+    entry := h.value[_]
+    entry.key.ir_type == "String"
+    sensitive_name(entry.key.value)
+    is_secret_value(entry.value)
     result := {
         "type": "sec_hard_secr",
         "element": entry.value,
         "path": parent.path,
-        "description": desc
+        "description": "Hard-coded credentials detected - Avoid embedding secrets directly in IaC definitions. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    entry := all_hash_entries(parent)[_]
-    entry.key.ir_type == "String"
-    entry.value.ir_type == "Array"
-    elem := entry.value.value[_]
-    should_flag_by_name(entry.key.value, elem)
-
+    walk(parent, [_, h])
+    h.ir_type == "Hash"
+    entry := h.value[_]
+    key_entry_secret(entry, h)
     result := {
         "type": "sec_hard_secr",
-        "element": elem,
+        "element": entry.value,
         "path": parent.path,
-        "description": desc
+        "description": "Hard-coded credentials detected - Avoid embedding secrets directly in IaC definitions. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    entry := all_hash_entries(parent)[_]
-    entry.value.ir_type == "Array"
-    elem := entry.value.value[_]
-    has_credential_pattern(elem)
-
+    walk(parent, [_, s])
+    s.ir_type == "String"
+    is_secret_string(s)
+    string_has_cred(s.value)
     result := {
         "type": "sec_hard_secr",
-        "element": elem,
+        "element": s,
         "path": parent.path,
-        "description": desc
+        "description": "Hard-coded credentials detected - Avoid embedding secrets directly in IaC definitions. (CWE-798)"
     }
 }
