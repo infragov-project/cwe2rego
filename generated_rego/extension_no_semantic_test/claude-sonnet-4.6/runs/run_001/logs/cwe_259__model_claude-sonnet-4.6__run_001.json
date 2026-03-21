@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T19:26:09.020488+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "259",
+  "type_name": "sec_hard_pass",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_259.rego",
+  "cwe_condition": "# CWE-259: Use of Hard-coded Password \u2014 Detection in IaC Scripts\n\n## Necessary Weaknesses to Detect\n\n### 1. Plaintext Literal Assignment to Sensitive Fields\nPasswords or secrets are directly assigned as static string values rather than referencing a secrets manager or encrypted store.\n\n### 2. Credentials Embedded in Connection Strings\nAuthentication credentials (username + password) are concatenated or inlined within connection string definitions.\n\n### 3. Default/Initial Credential Configuration\nStatic default passwords set during provisioning that are never rotated or externalized.\n\n### 4. Sensitive Data in Environment Variable Definitions\nEnvironment variables holding passwords are defined with literal values rather than dynamic or injected references.\n\n### 5. Unprotected Secret in Metadata or User-Data Blocks\nBootstrap scripts or instance initialization data containing credential assignments in cleartext.\n\n### 6. Absence of Secrets Management Reference\nCredentials defined locally instead of referencing an external vault, secrets manager, or key management service.\n\n---\n\n## Keywords, Attributes, and Fields That Imply This Weakness\n\n### \ud83d\udd11 Password/Secret Field Names\n| Category | Keywords |\n|---|---|\n| General | `password`, `passwd`, `pwd`, `pass`, `passphrase` |\n| Secrets | `secret`, `secret_key`, `secret_value`, `secret_string` |\n| Tokens | `token`, `access_token`, `auth_token`, `bearer_token` |\n| API Keys | `api_key`, `apikey`, `api_secret`, `client_secret` |\n| Private Keys | `private_key`, `private_secret`, `signing_key` |\n| Prefixed variants | `admin_password`, `root_password`, `db_password`, `ldap_password`, `smtp_password`, `default_password`, `master_password`, `initial_password` |\n\n---\n\n### \ud83d\udd0c Connection & Authentication Fields\n- `connection_string`, `connectionString`, `conn_str`, `dsn`\n- `database_url`, `db_url`, `jdbc_url`\n- `auth`, `authentication`, `credentials`, `credential`\n- `login`, `login_password`, `user_password`\n- `uid=`, `pwd=`, `password=` (embedded within connection string values)\n\n---\n\n### \u26a0\ufe0f Anti-Pattern Indicators (Value-level)\nThese signal a hardcoded credential when observed as **literal string values** (not references):\n\n- A non-empty string literal directly assigned to any of the above fields\n- Absence of dynamic references such as:\n  - Variable interpolation (e.g., `${VAR}`, `{{secret}}`, `$(VAR)`)\n  - Secrets manager references (e.g., references to vault paths, ARNs, key IDs)\n  - Encrypted blob markers (e.g., `ENC[...]`, `AES256:...`)\n- Passwords assigned in `default`, `value`, `default_value`, or `env_value` sub-fields\n\n---\n\n### \ud83d\udea8 Structural Red Flags in IaC\n| Section/Block | Risk Indicator |\n|---|---|\n| `environment` / `env_vars` blocks | Literal password values instead of secret references |\n| `user_data` / `metadata` / `startup_script` | Shell assignments like `PASSWORD=abc123` |\n| `properties` / `config` blocks | `key: password, value: plaintext_string` |\n| `variables` / `locals` | Sensitive variables defined with hardcoded string defaults |\n| `connection` blocks | Inline credentials without encryption or reference |\n| `provisioner` / `bootstrap` blocks | CLI commands containing credential flags with literal values |\n\n---\n\n### \ud83d\udee1\ufe0f Absence of Mitigating Attributes (Also a Signal)\nIf the following are **absent** near a credential field, the risk is elevated:\n\n- No reference to `kms_key_id`, `encryption_key`, `key_arn`\n- No reference to secrets backends (e.g., vault path, secrets manager ARN, key vault URI)\n- No `encrypted` flag set to `true`\n- No `ignore_changes` paired with a secrets injection mechanism\n- No use of `sealed secret`, `sops`, or equivalent encrypted secret wrapper\n\n---\n\n## Summary Table\n\n| Weakness Pattern | Key Signal |\n|---|---|\n| Literal string in password field | `password: \"abc123\"` |\n| Credentials in connection string | `pwd=MyPass;uid=admin` |\n| Env variable with plaintext default | `default: \"P@ssword1\"` |\n| Secret field without vault reference | No ARN/path reference present |\n| Bootstrap script with credentials | `PASSWORD=secret` in user-data |\n| API key as static value | `api_key: \"1234abcd...\"` |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsensitive_field_regex := \"(?i).*(password|passwd|passphrase|secret|access_token|auth_token|bearer_token|api_key|apikey|api_secret|client_secret|private_key|signing_key|connection_string|conn_str|database_url|db_url|login_password|user_password).*\"\n\ndynamic_ref_regex := \"(?i).*(\\\\$\\\\{|\\\\{\\\\{|\\\\$\\\\(|arn:|vault:|kms:|ENC\\\\[|AES256:).*\"\n\nis_sensitive_field(name) {\n    regex.match(sensitive_field_regex, name)\n}\n\nis_hardcoded_literal(val) {\n    val.ir_type == \"String\"\n    val.value != \"\"\n    not regex.match(dynamic_ref_regex, val.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_sensitive_field(attr.name)\n    is_hardcoded_literal(attr.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Credentials should not be hardcoded in IaC scripts. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    is_sensitive_field(var.name)\n    is_hardcoded_literal(var.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Credentials should not be hardcoded in IaC scripts. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i).*(pwd=|password=|passwd=)[^;\\\\s]+.*\", attr.value.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password in connection string - Credentials embedded in connection strings. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    var.value.ir_type == \"String\"\n    regex.match(\"(?i).*(pwd=|password=|passwd=)[^;\\\\s]+.*\", var.value.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password in connection string - Credentials embedded in connection strings. (CWE-259)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T19:26:09.043796+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

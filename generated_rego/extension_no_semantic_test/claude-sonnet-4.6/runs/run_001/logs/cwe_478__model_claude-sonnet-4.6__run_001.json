@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T19:53:34.500247+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "478",
+  "type_name": "sec_no_default_switch",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_478.rego",
+  "cwe_condition": "# CWE-478 Detection in Infrastructure as Code: Missing Default Case in Multiple Condition Expression\n\n## Core Weaknesses to Detect\n\n### 1. Incomplete Conditional Branch Coverage\nConditional blocks that evaluate multiple specific values or states but lack a terminal catch-all branch, leaving unhandled execution paths.\n\n**Keywords/Attributes to Flag:**\n- `if` / `elif` / `else if` chains with **no terminating** `else`\n- `when` / `unless` clauses with no fallback\n- `condition` / `conditions` blocks without exhaustive coverage\n- `choose` without a corresponding `otherwise`\n\n---\n\n### 2. Lookup and Mapping Without Default Fallback\nMap or dictionary lookups that reference specific keys without providing a default value for unmatched keys.\n\n**Keywords/Attributes to Flag:**\n- `lookup(map, key)` \u2014 absence of a third default argument\n- `map` / `mapping` blocks with no `default` key or wildcard entry\n- `find_in_map` / `select` without a fallback\n- `coalesce` or `try` functions absent where variable input is unbounded\n- `index` or `element` access without error handling\n\n---\n\n### 3. Missing Wildcard or Catch-All in Pattern Matching\nMatch/case or switch-like constructs that enumerate only known values without a pattern that catches unexpected inputs.\n\n**Keywords/Attributes to Flag:**\n- `match` / `case` / `switch` \u2014 absence of `default`, `_`, or wildcard\n- `otherwise` \u2014 its **absence** within `choose`/`select` constructs\n- `rules` / `filters` \u2014 no terminal deny-all or catch-all rule\n- Finite state machine (`state`, `transition`) definitions lacking a default transition\n\n---\n\n### 4. Incomplete Enumeration Handling\nVariables constrained to a finite set of values (enums) but conditions only handle a subset, ignoring unlisted values.\n\n**Keywords/Attributes to Flag:**\n- `allowed_values` / `enum` / `validation` \u2014 conditions that reference only some members\n- `type` / `kind` / `action` / `role` / `status` / `mode` \u2014 fields with fixed possible values handled selectively\n- `environment` / `region` / `tier` \u2014 partial handling without a default environment block\n\n---\n\n### 5. Unhandled Return or Status Codes in Provisioners/Scripts\nLogic evaluating exit codes, return values, or API responses from provisioner scripts that doesn't account for unexpected values.\n\n**Keywords/Attributes to Flag:**\n- `exit_code` / `return_code` / `result` / `response` \u2014 partial case matching\n- `on_failure` \u2014 its **absence** when specific success conditions are enumerated\n- `failed_when` / `changed_when` / `ignore_errors` \u2014 incomplete or missing fallback handling\n- `rescue` / `always` / `catch` \u2014 absent in blocks with multiple outcome paths\n\n---\n\n### 6. Conditional Resource Creation Without Default Behavior\nResource counts or iterations that conditionally create infrastructure based on a variable but leave edge cases unaddressed.\n\n**Keywords/Attributes to Flag:**\n- `count` / `for_each` \u2014 no fallback when input is `null`, empty, or unrecognized\n- `dynamic` blocks \u2014 absent default when the iterator produces unexpected values\n- `enabled` / `disabled` \u2014 boolean flags without handling a third/unknown state\n- `depends_on` / `triggers` \u2014 conditional logic without default trigger behavior\n\n---\n\n## Summary Table\n\n| Weakness Pattern | Key Indicators | Absence Of |\n|---|---|---|\n| Incomplete conditional chain | `if`, `elif`, `when` | `else`, `otherwise` |\n| Unsafe map lookup | `lookup`, `map`, `find_in_map` | Default/fallback argument |\n| Missing pattern wildcard | `match`, `case`, `switch`, `select` | `default`, `_`, wildcard |\n| Partial enum handling | `type`, `status`, `mode`, `action` | Catch-all condition |\n| Unhandled status codes | `exit_code`, `result`, `response` | `on_failure`, `rescue`, `catch` |\n| Conditional resource gaps | `count`, `for_each`, `dynamic` | Null/empty fallback |\n\n> **Detection Principle:** Flag any multi-branch conditional construct where the set of explicitly handled values is provably a **strict subset** of all possible input values, and no wildcard, default, or catch-all branch is present to absorb the remainder.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nconditional_chain_has_default(cs) {\n    walk(cs, [path, n])\n    n.ir_type == \"ConditionalStatement\"\n    n.is_default == true\n    not path_goes_through_statements(path)\n}\n\npath_goes_through_statements(path) {\n    path[_] == \"statements\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    walk(parent, [_, cs])\n    cs.ir_type == \"ConditionalStatement\"\n    cs.is_top == true\n    cs.else_statement != null\n    not conditional_chain_has_default(cs)\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": cs,\n        \"path\": parent.path,\n        \"description\": \"Missing default case in multiple condition expression - Conditional chain lacks a default/else branch to handle unmatched values. (CWE-478)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T19:53:34.524166+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

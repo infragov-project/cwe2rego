@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T19:21:55.158526+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "258",
+  "type_name": "sec_empty_pass",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_258.rego",
+  "cwe_condition": "# CWE-258: Empty Password in Configuration File \u2014 Detection in IaC Scripts\n\n## Core Weakness to Detect\n\nThe fundamental weakness is the **assignment of an empty/blank string (or null equivalent) to any field semantically representing a password or credential** within configuration definitions.\n\n---\n\n## Weakness Categories & Detection Signals\n\n### 1. Empty String Assignment to Password Fields\n**What to detect:** Any credential-bearing attribute explicitly set to an empty string, whitespace-only string, or null/absent value.\n\n**Indicative Keywords/Fields:**\n| Field Name Patterns | Notes |\n|---|---|\n| `password` | Most direct signal |\n| `passwd` | Unix-style shorthand |\n| `pwd` | Common abbreviation |\n| `passphrase` | Key/certificate contexts |\n| `pass` | Shortened form |\n| `db_password`, `database_password` | Database-specific |\n| `admin_password`, `root_password` | Privileged account |\n| `master_password`, `service_password` | Service account |\n| `user_password`, `login_password` | Authentication flows |\n| `auth_password`, `account_password` | Auth configuration |\n\n**Empty Value Indicators:**\n- `\"\"` \u2014 empty double-quoted string\n- `''` \u2014 empty single-quoted string\n- ` ` \u2014 whitespace-only string\n- Null/None/nil literal\n- Key present with no assigned value (bare key)\n\n---\n\n### 2. Empty Password in Connection Strings\n**What to detect:** Inline connection strings where the password segment is absent or empty.\n\n**Indicative Keywords/Fields:**\n| Field/Attribute | Pattern |\n|---|---|\n| `connection_string` / `connectionString` | `pwd=;` or `password=;` |\n| `dsn` | Data Source Name with blank password |\n| `jdbc_url` / `jdbc` | JDBC URI with empty credentials |\n| `database_url` | URL-form with empty password segment |\n| `mongo_uri` / `mongodb_uri` | NoSQL connection URI |\n| `redis_url` | Cache connection URI |\n| `broker_url` | Message broker connection |\n\n**Patterns in Connection String Values:**\n```\npwd=;\npwd=\"\";\nPassword=;\npassword=&\n:@host  (empty password in URI userinfo)\nuser:@host\n```\n\n---\n\n### 3. Empty Environment Variable Declarations for Credentials\n**What to detect:** Environment variable blocks where password-type variables are declared with empty values.\n\n**Indicative Variable Name Patterns:**\n| Pattern | Examples |\n|---|---|\n| `*_PASSWORD` | `DB_PASSWORD`, `MYSQL_PASSWORD`, `POSTGRES_PASSWORD` |\n| `*_PASSWD` | `APP_PASSWD`, `LDAP_PASSWD` |\n| `*_PWD` | `ROOT_PWD`, `ADMIN_PWD` |\n| `*_PASS` | `REDIS_PASS`, `CACHE_PASS` |\n| `*_SECRET` (credential use) | `DB_SECRET`, `AUTH_SECRET` |\n\n---\n\n### 4. Empty Credentials in Secret/Vault Definitions\n**What to detect:** Blocks defining credentials or secrets where the password value is empty.\n\n**Indicative Keywords/Fields:**\n| Keyword/Block | Context |\n|---|---|\n| `credentials` | Credential bundles |\n| `secret` / `secrets` | Secret management blocks |\n| `auth` / `authentication` | Auth configuration blocks |\n| `basic_auth` | Basic authentication settings |\n| `htpasswd` | HTTP authentication |\n| `bind_password` | LDAP/directory bindings |\n| `ldap_password` | Directory service auth |\n| `keystore_password` | Certificate stores |\n| `truststore_password` | TLS trust stores |\n| `private_key_passphrase` | Key encryption passphrase |\n| `token_password` | Token-based auth |\n\n---\n\n### 5. Inline Database/Service Credential Blocks\n**What to detect:** Structured credential blocks for databases or services with blank password fields.\n\n**Indicative Structural Patterns:**\n```\n# Credential pair where username exists but password is empty\nusername: <non-empty>\npassword: \"\"          \u2190 Vulnerability signal\n\n# Database config block\nhost: <value>\nport: <value>\nuser: <value>\npassword:             \u2190 bare key / null\n\n# Access key with empty secret\naccess_key: <value>\nsecret_key: \"\"        \u2190 Vulnerability signal\n```\n\n---\n\n## Summary Detection Rules\n\n| Rule | Signal |\n|---|---|\n| **R1** | Field name matches password pattern AND value is `\"\"`, `''`, null, or absent |\n| **R2** | Connection string field contains `pwd=;`, `password=;`, or `:<non-empty>@` with empty password |\n| **R3** | Environment variable with `*_PASSWORD`/`*_PASS`/`*_PWD` suffix assigned empty value |\n| **R4** | Credential block has non-empty username but empty/null password sibling field |\n| **R5** | Secret definition block contains any password-pattern field with empty value |\n\n> **Note:** Pay special attention to cases where a username/user field is populated (non-empty) but its paired password field is empty \u2014 this asymmetry is a strong indicator of CWE-258 and likely an unintentional omission rather than a placeholder.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_field_pattern := `(?i)(password|passwd|passphrase|pwd|secret_key|_secret$|(?:^|_)pass(?:_|$))`\n\nconnection_string_field_pattern := `(?i)(connection_string|connectionstring|dsn|jdbc|database_url|mongo_uri|mongodb_uri|redis_url|broker_url)`\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    regex.match(`^\\s+$`, value.value)\n}\n\nis_empty_value(value) {\n    value.ir_type == \"Null\"\n}\n\nis_empty_value(value) {\n    value.ir_type == \"Undef\"\n}\n\nis_password_field(name) {\n    regex.match(password_field_pattern, name)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_password_field(attr.name)\n    is_empty_value(attr.value)\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration - Password fields should not be assigned empty or null values. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    variables := glitch_lib.all_variables(parent)\n    v := variables[_]\n    is_password_field(v.name)\n    is_empty_value(v.value)\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration - Password fields should not be assigned empty or null values. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(connection_string_field_pattern, attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(`(?i)(password=;|pwd=;|://[^:@]*:@)`, attr.value.value)\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in connection string - Connection strings should not have empty password fields. (CWE-258)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T19:21:55.184758+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

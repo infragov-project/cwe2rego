@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T20:00:12.602370+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "798",
+  "type_name": "sec_hard_secr",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_798.rego",
+  "cwe_condition": "# CWE-798: Use of Hard-coded Credentials in Infrastructure as Code\n\n## Necessary Weaknesses to Detect\n\n### 1. Inline Plaintext Credential Assignment\nCredentials assigned directly as literal string values to configuration fields rather than referencing a secret management system.\n\n### 2. Cleartext Credential Storage in Configuration Files\nSensitive values stored without encryption or obfuscation directly within the IaC manifest/template.\n\n### 3. Hard-coded Connection Strings with Embedded Credentials\nFull connection strings (database, message broker, cache, etc.) that embed username and password inline.\n\n### 4. Static API Keys and Tokens\nAPI keys, bearer tokens, or access tokens written directly into resource definitions.\n\n### 5. Hard-coded Cryptographic Material\nPrivate keys, symmetric keys, certificates, or key pairs embedded directly in the IaC code.\n\n### 6. Hard-coded Default or Trivial Credentials\nUse of well-known default values (e.g., `admin`, `password`, `changeme`) as credential fields.\n\n### 7. Credentials Exposed in Environment Variable Definitions\nSensitive values passed directly as environment variable values within container, service, or function definitions.\n\n### 8. Embedded Cloud Provider Credentials\nCloud-provider-specific access credentials placed directly into resource configuration rather than using managed identity or role-based references.\n\n---\n\n## Keywords, Attributes, and Fields That Imply This Weakness\n\n### Password / Secret Fields\n| Category | Keywords / Field Names |\n|---|---|\n| Password fields | `password`, `passwd`, `pwd`, `pass`, `userpass`, `admin_password`, `root_password`, `default_password` |\n| Secret fields | `secret`, `secret_value`, `secret_key`, `secret_string`, `shared_secret`, `master_secret` |\n| Credential objects | `credentials`, `credential`, `auth_credentials`, `basic_auth` |\n\n### Token / Key Fields\n| Category | Keywords / Field Names |\n|---|---|\n| Tokens | `token`, `api_token`, `access_token`, `auth_token`, `bearer_token`, `session_token`, `csrf_token`, `registration_token` |\n| API keys | `api_key`, `apikey`, `api_secret`, `app_key`, `app_secret`, `client_key`, `service_key` |\n| Cryptographic keys | `private_key`, `public_key`, `encryption_key`, `decryption_key`, `signing_key`, `hmac_key`, `aes_key`, `rsa_key`, `secret_key` |\n\n### Connection String Fields\n| Category | Keywords / Field Names |\n|---|---|\n| DB connection | `connection_string`, `connectionstring`, `db_url`, `database_url`, `jdbc_url`, `dsn`, `mongo_uri`, `redis_url` |\n| Service endpoints with creds | `amqp_url`, `broker_url`, `smtp_url`, `ftp_url` |\n\n### Cloud Provider Credential Fields\n| Category | Keywords / Field Names |\n|---|---|\n| AWS | `access_key_id`, `secret_access_key`, `aws_access_key`, `aws_secret_key`, `aws_session_token` |\n| Azure | `client_secret`, `subscription_key`, `storage_account_key`, `sas_token` |\n| GCP | `service_account_key`, `gcp_credentials`, `private_key_id` |\n| Generic | `account_key`, `account_secret`, `service_account_json` |\n\n### SSH and Certificate Fields\n| Category | Keywords / Field Names |\n|---|---|\n| SSH | `ssh_private_key`, `ssh_key`, `id_rsa`, `authorized_keys`, `known_hosts` |\n| TLS/SSL | `tls_key`, `ssl_key`, `ssl_cert`, `tls_cert`, `ca_cert`, `cert_key`, `pem_key` |\n| PEM markers | `-----BEGIN \u2026 PRIVATE KEY-----`, `-----BEGIN RSA PRIVATE KEY-----` |\n\n### Configuration Value Patterns (Language-Agnostic)\n| Pattern | Implication |\n|---|---|\n| Directly assigned string literals to any of the above fields | Hard-coded credential |\n| Long hexadecimal strings (e.g., `68af404b513073584c4b6f22b6c63e6b`) | Hard-coded cryptographic key |\n| Base64-encoded blobs assigned to key/secret fields | Encoded but still hard-coded credential |\n| Values like `admin`, `root`, `password`, `123456`, `changeme`, `default` | Default/trivial hard-coded credentials |\n| Values not referencing a secrets manager path/ARN/URI | Likely inline credential rather than externalized secret |\n\n---\n\n## Detection Signals in IaC Context\n\n| Signal | Description |\n|---|---|\n| **No reference to a secrets store** | Value is a literal string rather than a reference to Vault, Secrets Manager, Key Vault, SSM Parameter Store, etc. |\n| **Credentials inside environment variable blocks** | `env`, `environment`, `env_vars` blocks containing plaintext secret literals |\n| **Credentials inside `metadata` or `annotations`** | Sensitive values placed in descriptive or labeling fields |\n| **`value` or `default` fields on sensitive parameters** | Parameter definitions that provide actual credential strings as defaults |\n| **Credentials in `userdata` or `startup_script` blocks** | Bootstrap scripts containing hardcoded connection or authentication strings |\n| **Inline database initialization scripts** | SQL or shell scripts embedded in IaC that contain `CREATE USER \u2026 IDENTIFIED BY 'password'` or equivalent |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\ncredential_name_pattern := \"(?i)(password|passwd|pwd|secret|token|api_key|apikey|api_secret|app_key|app_secret|client_key|service_key|private_key|encryption_key|decryption_key|signing_key|hmac_key|connection_string|connectionstring|db_url|database_url|jdbc_url|dsn|mongo_uri|redis_url|amqp_url|broker_url|smtp_url|access_key_id|secret_access_key|client_secret|storage_account_key|sas_token|service_account_key|gcp_credentials|ssh_key|id_rsa|tls_key|ssl_key|ssl_cert|tls_cert|ca_cert|pem_key|credentials|basic_auth)\"\n\npem_pattern := \"(?si)-----BEGIN.*(PRIVATE KEY|CERTIFICATE)\"\n\nconnection_string_pattern := \"(?i)(mongodb|postgresql|postgres|mysql|redis|amqp|smtp|ftp|jdbc)://[^:@\\\\s]+:[^@\\\\s]+@\"\n\nis_hardcoded_string(value) {\n    value.ir_type == \"String\"\n    value.value != \"\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(credential_name_pattern, attr.name)\n    is_hardcoded_string(attr.value)\n\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded credentials - Credentials should not be hard-coded in IaC scripts. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    regex.match(credential_name_pattern, var.name)\n    is_hardcoded_string(var.value)\n\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded credentials - Credentials should not be hard-coded in IaC scripts. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(pem_pattern, attr.value.value)\n\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Hard-coded cryptographic material - Private keys or certificates should not be embedded in IaC scripts. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(connection_string_pattern, attr.value.value)\n\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Hard-coded connection string with embedded credentials - Connection strings should not contain inline credentials. (CWE-798)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T20:00:12.736096+00:00",
+    "elapsed_time": "0m0s"
+  }
+}

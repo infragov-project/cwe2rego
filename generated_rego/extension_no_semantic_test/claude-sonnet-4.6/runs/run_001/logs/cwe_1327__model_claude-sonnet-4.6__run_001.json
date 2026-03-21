@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T20:01:47.027337+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "1327",
+  "type_name": "sec_invalid_bind",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_1327.rego",
+  "cwe_condition": "# CWE-1327: Binding to an Unrestricted IP Address \u2014 IaC Detection Guide\n\n## Core Weakness to Detect\n\nThe fundamental weakness is the **assignment of wildcard/unrestricted IP values to network binding fields**, effectively exposing a service on all available network interfaces without restriction.\n\n---\n\n## Weakness Indicators\n\n### 1. Unrestricted Address Values (Primary Signal)\nThese values, when assigned to any address/binding field, are the strongest indicators:\n\n| Value | Description |\n|-------|-------------|\n| `0.0.0.0` | IPv4 wildcard \u2014 binds to all interfaces |\n| `::` / `::0` | IPv6 wildcard \u2014 equivalent to IPv4 `0.0.0.0` |\n| `*` | Wildcard notation used in some service configs |\n| `\"\"` *(empty string)* | Implicit wildcard when address field is left blank/empty |\n\n---\n\n### 2. Sensitive Fields & Attributes to Inspect\n\nThese are generic attribute/field names that commonly control binding behavior across IaC tools and configuration templates:\n\n**Binding/Listening Address Fields:**\n```\nlisten_address     listenaddr        listen_addr\nbind_address       bindaddr          bind_addr\nbind               listen            address\nhost               hostname          ip\nip_address         listen_ip         bind_ip\nserver_address     server_host       network_address\nhost_address       interface         network_interface\nlistening_address  endpoint          socket_address\nconnect_address    incoming_address  advertised_address\n```\n\n**Port-Related Fields (used in combination):**\n```\nport               listen_port       bind_port\nserver_port        service_port      exposed_port\n```\n\n**Network/Interface Fields:**\n```\nnetwork_interface  allowed_interface  interface_name\nallowed_networks   trusted_networks   network\n```\n\n---\n\n### 3. Resource/Block Context Keywords\n\nDetections are most relevant when the above fields appear within these resource contexts:\n\n```\ndatabase_server        db_config          cache_server\nweb_server             api_server         application_server\nservice_instance       signing_server     metrics_server\nmessage_broker         proxy_config       gateway_config\ncontainer_config       pod_spec           service_endpoint\nmonitoring_endpoint    dashboard_config   cluster_service\n```\n\n---\n\n### 4. Absence of Compensating Controls (Secondary Signal)\n\nWhen a broad binding address is detected, also check for the **absence** of:\n\n```\nfirewall_rule          ingress_rule         security_group\nnetwork_policy         allowed_ips          ip_whitelist\nacl                    source_cidr          trusted_cidr\ninbound_rule           access_policy        ip_filter\n```\n\nIf a service binds to `0.0.0.0` **and** no restricting firewall/ACL rule is defined, the weakness is confirmed with high confidence.\n\n---\n\n## Detection Logic Summary\n\n```\nIF (address_field CONTAINS unrestricted_value)\n    AND (resource_type IS a network-accessible service)\n    AND (no compensating firewall/ACL rule present)\nTHEN flag as CWE-1327\n```\n\n### Unrestricted Values Pattern:\n```\n[\"0.0.0.0\", \"::\", \"::0\", \"*\", \"\"]\n```\n\n### Address Field Pattern (regex-friendly):\n```\n(listen|bind|host|address|ip|interface|endpoint)(addr|address|_addr|_address|_ip)?\n```\n\n---\n\n## Risk Escalation Signals\n\nFlag as **higher severity** when:\n- The resource is a **database**, **key signing server**, **metrics endpoint**, or **admin dashboard**\n- The binding is on a **publicly routable port** (e.g., 80, 443, 5432, 6379, 9200, 8080, 9100)\n- The deployment target is a **cloud environment** or **multi-tenant cluster**\n- **No authentication** mechanism is configured alongside the open binding",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nunrestricted_values := {\"0.0.0.0\", \"::\", \"::0\", \"*\", \"\"}\n\naddress_field_pattern := \"(?i)^(listen_?addr(ess)?|bind_?addr(ess)?|listen|bind|address|host(name)?|ip(_address)?|listen_?ip|bind_?ip|server_address|server_host|network_address|host_address|interface|network_interface|listening_address|endpoint|socket_address|connect_address|incoming_address|advertised_address)$\"\n\nis_unrestricted_address(value) {\n    value.ir_type == \"String\"\n    value.value == unrestricted_values[_]\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(address_field_pattern, attr.name)\n    is_unrestricted_address(attr.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Service is bound to a wildcard address, exposing it on all available network interfaces. (CWE-1327)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T20:01:47.161877+00:00",
+    "elapsed_time": "0m0s"
+  }
+}
