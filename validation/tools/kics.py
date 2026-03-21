@@ -10,6 +10,7 @@ from pathlib import Path
 from validation.tools.base import AnalysisTool
 
 KICS_REPO = "https://github.com/Checkmarx/kics.git"
+KICS_VERSION = "v2.1.20"
 KICS_LIBRARY_FILES = ("ansible.rego", "common.rego")
 
 
@@ -31,17 +32,44 @@ class KICSTool(AnalysisTool):
         validation_kics = base_dir / "validation" / "KICS"
         libraries_dir = validation_kics / "libraries"
         bin_dir = validation_kics / "bin"
+        local_binary = bin_dir / "kics"
+
+        need_binary = True
+        if local_binary.exists():
+            try:
+                version_result = subprocess.run(
+                    [str(local_binary.resolve()), "version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                reported_version = (
+                    (version_result.stdout or "") + (version_result.stderr or "")
+                )
+                expected_versions = (KICS_VERSION, KICS_VERSION.lstrip("v"))
+                need_binary = not any(v in reported_version for v in expected_versions)
+            except OSError:
+                need_binary = True
+
         need_libs = not libraries_dir.exists() or not all(
             (libraries_dir / f).exists() for f in KICS_LIBRARY_FILES
-        )
-        need_binary = (
-            shutil.which("kics") is None and not (bin_dir / "kics").exists()
         )
         if need_libs or need_binary:
             with tempfile.TemporaryDirectory() as tmp:
                 clone_dir = Path(tmp) / "kics"
                 subprocess.run(
-                    ["git", "clone", "--depth", "1", KICS_REPO, str(clone_dir)],
+                    [
+                        "git",
+                        "clone",
+                        "--branch",
+                        KICS_VERSION,
+                        "--depth",
+                        "1",
+                        "--single-branch",
+                        KICS_REPO,
+                        str(clone_dir),
+                    ],
                     check=True,
                     capture_output=True,
                 )
@@ -75,6 +103,13 @@ class KICSTool(AnalysisTool):
                             "build",
                             "-o",
                             str(out_binary.resolve()),
+                            "-ldflags",
+                            (
+                                "-X github.com/Checkmarx/kics/v2/internal/constants.Version="
+                                f"{KICS_VERSION} "
+                                "-X github.com/Checkmarx/kics/v2/internal/constants.SCMCommit="
+                                f"{KICS_VERSION}"
+                            ),
                             "cmd/console/main.go",
                         ],
                         cwd=clone_dir,
@@ -92,10 +127,10 @@ class KICSTool(AnalysisTool):
             raise FileNotFoundError(
                 f"KICS installation verification failed: libraries missing at {libraries_dir}."
             )
-        if not (bin_dir / "kics").exists() and shutil.which("kics") is None:
+        if not (bin_dir / "kics").exists():
             raise FileNotFoundError(
                 "KICS installation verification failed: kics binary not found. "
-                f"Expected at {bin_dir / 'kics'} or on PATH."
+                f"Expected at {bin_dir / 'kics'}."
             )
 
     def __init__(self, base_dir: Path):
@@ -109,9 +144,11 @@ class KICSTool(AnalysisTool):
                 f"KICS libraries not found at {self._libraries_dir}. "
                 "Run KICSTool.install(base_dir) first or copy assets/libraries there. See README."
             )
-        kics_cmd = shutil.which("kics")
-        if not kics_cmd and (self._bin_dir / "kics").exists():
+        kics_cmd = None
+        if (self._bin_dir / "kics").exists():
             kics_cmd = str((self._bin_dir / "kics").resolve())
+        else:
+            kics_cmd = shutil.which("kics")
         if not kics_cmd:
             raise FileNotFoundError(
                 "kics CLI not found on PATH and not at "
