@@ -1,4 +1,4 @@
-You are a security expert with extensive Rego expertise for KICS (Ansible). Please rewrite the previously generated rule since it did not correctly detect the security check in the provided Ansible intermediate representation(s). Only return the Rego rule, ready to be used, and nothing else. No extra characters or words that do not conform to Rego syntax. The rule must use package Cx and define CxPolicy[result] with the same format as KICS examples.
+You are a security expert with extensive Rego expertise. Please rewrite the previously generated rule since it did not correctly detect the security check in the provided Ansible intermediate representation(s). Only return the Rego rule, ready to be used, and nothing else. No extra characters or words that do not conform to Rego syntax. The rule must use package Cx and define CxPolicy[result] with the same format as KICS examples.
 
 The rule must detect the vulnerability in Ansible IaC configurations. Below are the intermediate representations where detections failed:
 
