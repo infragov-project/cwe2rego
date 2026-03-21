@@ -256,10 +256,13 @@ class KICSTool(AnalysisTool):
                 documents = payload.get("document", [])
                 if not isinstance(documents, list):
                     documents = []
-                for doc in documents:
-                    doc_file = doc.get("file", "")
-                    if path.name in doc_file or doc_file.endswith(path.name):
-                        return json.dumps(doc, indent=2)
+                if path.is_file():
+                    resolved_path = path.resolve()
+                    for doc in documents:
+                        doc_file = doc.get("file", "")
+                        if doc_file and Path(doc_file).resolve() == resolved_path:
+                            return json.dumps(doc, indent=2)
+                    return ""
                 if documents:
                     return json.dumps(documents, indent=2)
                 return ""
