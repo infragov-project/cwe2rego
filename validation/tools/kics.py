@@ -239,6 +239,8 @@ class KICSTool(AnalysisTool):
                     "scan",
                     "-p", str(scan_path.resolve()),
                     "-t", "Ansible",
+                    "-q", str(self._queries_dir.resolve()),
+                    "-b", str(self._libraries_dir.resolve()),
                     "-d", str(payload_file.resolve()),
                     "-o", str(tmpdir),
                     "--report-formats", "json",
@@ -247,7 +249,8 @@ class KICSTool(AnalysisTool):
                 result = subprocess.run(
                     cmd, capture_output=True, text=True, timeout=60
                 )
-                if result.returncode not in (0, 1, 2) or not payload_file.exists():
+                valid_exit_codes = (0, 20, 30, 40, 50, 60)
+                if result.returncode not in valid_exit_codes or not payload_file.exists():
                     return path.read_text(encoding="utf-8")
                 payload = json.loads(payload_file.read_text(encoding="utf-8"))
                 documents = payload.get("document", [])
