@@ -1,0 +1,48 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-03-21T22:39:05.526518+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "extension_no_semantic_test",
+  "cwe": "353",
+  "type_name": "sec_no_int_check",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": true,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_no_semantic_test/claude-sonnet-4.6/runs/run_001/cwe_353.rego",
+  "cwe_condition": "# CWE-353: Missing Support for Integrity Check \u2014 IaC Detection Guide\n\n## Core Weakness Categories to Detect\n\n### 1. Artifact/Package Download Without Integrity Verification\nOccurs when IaC scripts fetch external resources without validating their integrity.\n\n**Keywords & Attributes:**\n- `checksum`, `hash`, `sha256`, `sha512`, `md5`, `digest` \u2014 **absent** from download blocks\n- `skip_checksum`, `disable_checksum`, `no_verify` \u2014 set to `true`\n- `verify: false`, `insecure: true`, `unsafe: true`\n- `checksum_type: none` or omitted entirely\n- Download source URLs without an accompanying `checksum_url` or `checksum_value`\n\n---\n\n### 2. Container Image Integrity Not Enforced\nMutable image references allow silently substituted images.\n\n**Keywords & Attributes:**\n- `image` fields referencing only a mutable tag (e.g., `latest`, `stable`) without a digest pin\n- Absence of `@sha256:` digest in image references\n- `content_trust`, `image_signing`, `cosign_verify` \u2014 missing or disabled\n- `pull_policy: always` without accompanying digest verification\n- `allow_insecure_images: true`\n\n---\n\n### 3. Protocol/Transport Configuration Lacking Integrity Mechanisms\n\n**Keywords & Attributes:**\n- Protocol set to plain/unencrypted variants (e.g., `http://`, `ftp://`, `udp`)\n- `checksum_enabled: false`\n- `integrity_check: disabled`\n- `data_validation: false`\n- `etag_check: false` or absent\n- Missing `content_md5` or equivalent field in object storage operations\n- `disable_content_type_verification: true`\n\n---\n\n### 4. Package/Dependency Resolution Without Hash Locking\n\n**Keywords & Attributes:**\n- Dependency version ranges without pinned hashes (e.g., `>=1.0` without hash)\n- Missing `integrity`, `lock`, `hash_lock`, or `pinned_hash` fields\n- `allow_unverified: true`\n- `trust_on_first_use`, `tofu: true` \u2014 accepting first received content without verification\n- `skip_integrity_check: true`\n\n---\n\n### 5. Data Transfer / Storage Without Integrity Validation\n\n**Keywords & Attributes:**\n- `checksum_algorithm: none` or omitted on object storage resources\n- Missing `enable_checksum`, `server_side_checksum`, or `data_integrity` fields\n- `validate_content: false`\n- Replication or transfer configurations without `checksum_validation` block\n- `skip_validation: true` in data pipeline configurations\n\n---\n\n### 6. Message / API / Webhook Integrity Not Enforced\n\n**Keywords & Attributes:**\n- Missing `webhook_secret`, `signing_key`, `hmac_secret`, or `message_signature` fields\n- `signature_verification: disabled` or absent\n- `verify_signature: false`\n- Missing `x-hub-signature`, `x-signature`, or equivalent header enforcement\n- `replay_protection: false`\n\n---\n\n### 7. Software Update / Provisioning Without Verification\n\n**Keywords & Attributes:**\n- `gpg_check: false`, `signature_check: false`, `repo_gpgcheck: false`\n- Missing `public_key`, `trusted_key`, or `key_fingerprint` fields\n- `allow_unsigned: true`, `skip_gpg_check: true`\n- Provisioner scripts using raw download without a validation step following it\n\n---\n\n## Summary Table\n\n| Weakness Area | Key Indicators |\n|---|---|\n| Download integrity | Missing `checksum`, `sha256`, `hash` fields |\n| Container images | Tag-only references; no `@sha256:` digest |\n| Protocol selection | Plain `http`, `ftp`, `udp` without app-level checksum |\n| Dependency locking | Missing integrity hashes in dependency specs |\n| Storage/transfer | `checksum_algorithm` absent or `none` |\n| Messaging/APIs | Missing `hmac_secret`, `signing_key`, `signature_verification` |\n| Update mechanisms | `gpg_check: false`, `allow_unsigned: true` |\n\n## Detection Heuristics\n\n- **Presence of download/fetch operations** without an immediately following checksum comparison step\n- **`true` values** on any attribute containing: `skip`, `disable`, `allow`, `insecure`, `unsafe` combined with `checksum`, `verify`, `integrity`, or `signature`\n- **Absence of integrity-related blocks** in resource definitions that interact with external data sources\n- **Mutable version references** (floating tags, version ranges) without accompanying hash pins",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(gpg_check|signature_check|repo_gpgcheck|checksum_enabled|verify_signature|validate_content|data_validation|signature_verification|integrity_check|content_trust|image_signing|cosign_verify|verify|checksum_validation|enable_checksum|data_integrity)$\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_no_int_check\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Missing support for integrity check - An integrity check attribute is explicitly disabled. (CWE-353)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(skip_checksum|disable_checksum|no_verify|insecure|unsafe|allow_unsigned|skip_gpg_check|allow_unverified|skip_integrity_check|allow_insecure_images|tofu|trust_on_first_use|disable_content_type_verification|skip_validation)$\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == true\n    result := {\n        \"type\": \"sec_no_int_check\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Missing support for integrity check - A security bypass attribute is explicitly enabled. (CWE-353)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(checksum|integrity|signature|verification|validation|gpg)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(none|disabled|false|off|no)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_no_int_check\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Missing support for integrity check - An integrity-related attribute is set to none or disabled. (CWE-353)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^image$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i):(latest|stable|edge|master|main|current|release|dev|nightly|snapshot)$\", attr.value.value)\n    not regex.match(\"@sha256:[a-fA-F0-9]+\", attr.value.value)\n    result := {\n        \"type\": \"sec_no_int_check\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Missing support for integrity check - Container image uses a mutable tag without a digest pin. (CWE-353)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(url|source|src|download|fetch|uri|remote_url|download_url)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(http|ftp)://\", attr.value.value)\n    result := {\n        \"type\": \"sec_no_int_check\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Missing support for integrity check - Resource is fetched over an insecure protocol without integrity verification. (CWE-353)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-03-21T22:39:05.662471+00:00",
+    "elapsed_time": "0m0s"
+  }
+}
