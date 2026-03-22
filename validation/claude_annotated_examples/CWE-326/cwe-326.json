@@ -1,0 +1,21 @@
+{
+    "examples": [
+        {
+            "file": "compliance_ssl_benchmark.rb",
+            "lines": [
+                54,
+                68,
+                82,
+                96,
+                104
+            ]
+        },
+        {
+            "file": "cookbook_profiler_identifiers.rb",
+            "lines": [
+                21,
+                42
+            ]
+        }
+    ]
+}

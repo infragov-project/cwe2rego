@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "provision_aws_ec2_vpc_routetable.yml",
+            "lines": [
+                62
+            ]
+        },
+        {
+            "file": "monitoring.coreos.com_podmonitors.yaml",
+            "lines": [
+                198
+            ]
+        },
+        {
+            "file": "hadoop_service.rb",
+            "lines": [
+                27,
+                33
+            ]
+        },
+        {
+            "file": "chef_zabbix.rb",
+            "lines": [
+                5
+            ]
+        },
+        {
+            "file": "manifests_facts.pp",
+            "lines": [
+                23
+            ]
+        },
+        {
+            "file": "hiera_override.pp",
+            "lines": [
+                204
+            ]
+        }
+    ]
+}

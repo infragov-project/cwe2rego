@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "huawei_oceanstor_block.yaml",
+            "lines": [
+                9
+            ]
+        },
+        {
+            "file": "expected_with_all_param.yml",
+            "lines": [
+                326,
+                730
+            ]
+        },
+        {
+            "file": "integration_common_options_spec.rb",
+            "lines": [
+                62
+            ]
+        },
+        {
+            "file": "minidash_metadata.rb",
+            "lines": [
+                42
+            ]
+        },
+        {
+            "file": "examples_host.pp",
+            "lines": [
+                134
+            ]
+        },
+        {
+            "file": "run_tests.pp",
+            "lines": [
+                52
+            ]
+        }
+    ]
+}

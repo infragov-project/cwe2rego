@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "file": "elastic_zypper_repos.yml",
+            "lines": [
+                28
+            ]
+        },
+        {
+            "file": "rbd_mirror.yaml",
+            "lines": [
+                42
+            ]
+        },
+        {
+            "file": "fetch_spdx_license_json_spec.rb",
+            "lines": [
+                28
+            ]
+        },
+        {
+            "file": "recipes_install_from_release.rb",
+            "lines": [
+                38
+            ]
+        },
+        {
+            "file": "gnocchi.pp",
+            "lines": [
+                120
+            ]
+        },
+        {
+            "file": "manifests_wikibase_repo.pp",
+            "lines": [
+                29
+            ]
+        }
+    ]
+}

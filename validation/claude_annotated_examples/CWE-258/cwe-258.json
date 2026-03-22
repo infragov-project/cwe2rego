@@ -1,0 +1,41 @@
+{
+    "examples": [
+        {
+            "file": "start-orchestration.yml",
+            "lines": [
+                76
+            ]
+        },
+        {
+            "file": "inventory.unix.yml",
+            "lines": [
+                3
+            ]
+        },
+        {
+            "file": "resources_pg_sqitch.rb",
+            "lines": [
+                7
+            ]
+        },
+        {
+            "file": "provider_windows_task.rb",
+            "lines": [
+                326,
+                329
+            ]
+        },
+        {
+            "file": "manifests_aptrepo.pp",
+            "lines": [
+                4
+            ]
+        },
+        {
+            "file": "pagerduty_contact.pp",
+            "lines": [
+                20
+            ]
+        }
+    ]
+}

@@ -1,0 +1,118 @@
+# Copyright 2019 The OpenSDS Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+# Start OpenSDS Workflow Manager
+- name: Get stackstorm password
+  shell: cat conf/stackstorm.env | grep ST2_PASSWORD | cut -d '=' -f 2
+  args:
+    chdir: "{{ st2_installer_work_dir }}"
+    warn: false
+  register: st2_pass
+
+- name: Upgrade python pip
+  pip:
+    name: pip
+    extra_args: --upgrade
+  become: yes
+
+- name: Install python virtual environment
+  pip:
+    name: virtualenv
+    state: latest
+  become: yes
+  ignore_errors: yes
+
+- name: Install python requirements
+  pip:
+    requirements: '{{ orchestration_work_dir }}/requirements.txt'
+    virtualenv: '{{ orchestration_work_dir }}/venv'
+  become: yes
+  ignore_errors: yes
+
+- name: Install python virtual environment activate script
+  template:
+    src: ./script/virtualenv_exec.j2
+    dest: '{{ venv }}/exec'
+    mode: 755
+  become: yes
+
+- name: Set orchestration.conf with orchestration options
+  ini_file:
+    create: no
+    path: "{{ orchestration_work_dir }}/orchestration.conf"
+    section: orchestration
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+        - { option: host, value: "{{ orchestration_ip }}" }
+        - { option: port, value: "{{ orchestration_port }}" }
+  become: yes
+
+- name: Set orchestration.conf with workflow options
+  ini_file:
+    create: no
+    path: "{{ orchestration_work_dir }}/orchestration.conf"
+    section: workflow
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+        - { option: tech, value: "St2" }
+        - { option: host, value: "{{ workflow_ip }}" }
+        - { option: username, value: "st2admin" }
+        - { option: password, value: "{{ st2_pass.stdout }}" }
+        - { option: encrypted_password, value: "false" }
+        - { option: phrase, value: "" }
+  become: yes
+
+- name: Set orchestration.conf with hotpot options
+  ini_file:
+    create: no
+    path: "{{ orchestration_work_dir }}/orchestration.conf"
+    section: hotpot
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+        - { option: host, value: "{{ hotpot_ip }}" }
+        - { option: port, value: "{{ hotpot_port }}" }
+  become: yes
+
+- name: Set orchestration.conf with gelato options
+  ini_file:
+    create: no
+    path: "{{ orchestration_work_dir }}/orchestration.conf"
+    section: gelato
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+        - { option: host, value: "{{ gelato_ip }}" }
+        - { option: port, value: "{{ gelato_port }}" }
+  become: yes
+
+- name: Install orchestration manager
+  command: '{{ venv }}/exec setup.py install'
+  args:
+    chdir: "{{ orchestration_work_dir }}"
+  become: yes
+
+- name: Execute orchestration manager
+  shell: '{{ venv }}/exec {{ orchestration_work_dir }}/orchestration/server.py {{ orchestration_work_dir }}/orchestration.conf </dev/null >/dev/null 2>&1 &'
+  args:
+    chdir: "{{ orchestration_work_dir }}"
+  become: yes
+
+- name: Register orchestration services
+  script: ./script/orchestration_addservices.py "{{ host_ip }}" "{{ orchestration_ip }}" "{{ orchestration_port }}"
+  become: yes
+  ignore_errors: yes

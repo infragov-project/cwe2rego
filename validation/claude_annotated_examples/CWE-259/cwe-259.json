@@ -1,0 +1,65 @@
+{
+    "examples": [
+        {
+            "file": "dnsrecord_env_cleanup.yml",
+            "lines": [
+                5,
+                20,
+                35,
+                50,
+                71,
+                92,
+                113,
+                123,
+                132
+            ]
+        },
+        {
+            "file": "devstack_common_ansible_overrides.yml",
+            "lines": [
+                11
+            ]
+        },
+        {
+            "file": "sensu_json_file_spec.rb",
+            "lines": [
+                9
+            ]
+        },
+        {
+            "file": "auth_credentials_spec.rb",
+            "lines": [
+                155,
+                243,
+                255,
+                270
+            ]
+        },
+        {
+            "file": "agent_mysql.pp",
+            "lines": [
+                58,
+                63,
+                68,
+                73,
+                78,
+                83,
+                88,
+                96
+            ]
+        },
+        {
+            "file": "s_development.pp",
+            "lines": [
+                101,
+                105,
+                109,
+                113,
+                121,
+                132,
+                147,
+                156
+            ]
+        }
+    ]
+}

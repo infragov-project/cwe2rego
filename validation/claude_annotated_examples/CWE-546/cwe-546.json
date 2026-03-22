@@ -1,0 +1,44 @@
+{
+    "examples": [
+        {
+            "file": "assert_prereqs_and_vserver_exists.yml",
+            "lines": [
+                57
+            ]
+        },
+        {
+            "file": "dependent.yml",
+            "lines": [
+                121,
+                134
+            ]
+        },
+        {
+            "file": "create_custom_spp_spec.rb",
+            "lines": [
+                30,
+                40
+            ]
+        },
+        {
+            "file": "remi-php70.rb",
+            "lines": [
+                8,
+                13,
+                18
+            ]
+        },
+        {
+            "file": "storage_loopback.pp",
+            "lines": [
+                6
+            ]
+        },
+        {
+            "file": "search_admin_db.pp",
+            "lines": [
+                1
+            ]
+        }
+    ]
+}

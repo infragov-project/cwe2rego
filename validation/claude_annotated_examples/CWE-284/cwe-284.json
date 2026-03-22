@@ -1,0 +1,40 @@
+{
+    "examples": [
+        {
+            "file": "inventory_import.yml",
+            "lines": [
+                10
+            ]
+        },
+        {
+            "file": "fantastical.yml",
+            "lines": [
+                9
+            ]
+        },
+        {
+            "file": "mysql_database.rb",
+            "lines": [
+                26
+            ]
+        },
+        {
+            "file": "restore-database.rb",
+            "lines": [
+                93
+            ]
+        },
+        {
+            "file": "manifests_wrapper.pp",
+            "lines": [
+                26
+            ]
+        },
+        {
+            "file": "manifests_gui.pp",
+            "lines": [
+                93
+            ]
+        }
+    ]
+}

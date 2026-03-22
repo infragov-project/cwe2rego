@@ -1,0 +1,33 @@
+{
+    "examples": [
+        {
+            "file": "mq.rb",
+            "lines": [
+                100
+            ]
+        },
+        {
+            "file": "file_system_chef_repository_file_system_cookbooks_dir.rb",
+            "lines": [
+                31
+            ]
+        },
+        {
+            "file": "dump_rabbitmq_definitions.pp",
+            "lines": [
+                17
+            ]
+        },
+        {
+            "file": "openstack_network_networks.pp",
+            "lines": [
+                11,
+                35,
+                39,
+                40,
+                87,
+                88
+            ]
+        }
+    ]
+}

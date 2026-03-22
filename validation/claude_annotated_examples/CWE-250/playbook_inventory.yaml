@@ -1,0 +1,16 @@
+- hosts: info
+  
+  vars:
+   username: "root"
+   age: "50"
+   role: "Administrator"
+
+  tasks:
+   - name:
+      include_vars:
+       file: myvar.yaml
+       name: information
+ 
+   - name: Display all variables/facts known for a host
+      debug:
+       var: hostvars[vars]

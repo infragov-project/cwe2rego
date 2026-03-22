@@ -1,0 +1,51 @@
+{
+    "examples": [
+        {
+            "file": "playbook_inventory.yaml",
+            "lines": [
+                4,
+                6
+            ]
+        },
+        {
+            "file": "server_keys.yml",
+            "lines": [
+                132,
+                133,
+                183
+            ]
+        },
+        {
+            "file": "recipes_plugin.rb",
+            "lines": [
+                24,
+                52,
+                71,
+                78
+            ]
+        },
+        {
+            "file": "recipes_webplayer.rb",
+            "lines": [
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "file": "opt.pp",
+            "lines": [
+                23,
+                29
+            ]
+        },
+        {
+            "file": "keystone_cleanup.pp",
+            "lines": [
+                22,
+                40,
+                48
+            ]
+        }
+    ]
+}
