@@ -228,7 +228,7 @@ if __name__ == "__main__":
     if not OPENROUTER_API_KEY:
         raise ValueError("OPENROUTER_API_KEY environment variable not set")
 
-    initialize_model_settings()
+    initialize_model_settings(args.model)
     if not args.model:
         raise ValueError("Model argument is required")
     if args.validation_history_pinned_messages < 0:

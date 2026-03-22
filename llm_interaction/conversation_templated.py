@@ -29,17 +29,25 @@ def initialize_examples_model(api_key: str, model: str):
     global examples_model_instance
     examples_model_instance = OpenRouterModel(model, provider=provider)
 
-def initialize_model_settings():
+def initialize_model_settings(model: str | None = None):
     """Initialize model settings."""
-    global model_settings
-    model_settings = OpenRouterModelSettings(
-        openrouter_reasoning={
+    settings: OpenRouterModelSettings = {
+        'openrouter_reasoning': {
             'effort': 'high',
         },
-        openrouter_usage={
+        'openrouter_usage': {
             'include': True,
+        },
+    }
+
+    # Force Anthropic models to route through Amazon Bedrock on OpenRouter.
+    if model and model.lower().startswith("anthropic/"):
+        settings['openrouter_provider'] = {
+            'order': ['amazon-bedrock'],
         }
-    )
+
+    global model_settings
+    model_settings = OpenRouterModelSettings(**settings)
 
 def ask_model_prompt(template_path: str):
     """Decorator for model interactions using prompt templates.
