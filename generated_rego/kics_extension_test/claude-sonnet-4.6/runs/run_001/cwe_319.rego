@@ -3,81 +3,98 @@ package Cx
 import data.generic.ansible as ansLib
 import data.generic.common as commonLib
 
-insecure_when_false := {
-	"validate_certs",
-	"ssl_enabled",
-	"tls_enabled",
-	"enable_ssl",
-	"use_ssl",
-	"use_tls",
-	"https_only",
-	"enforce_https",
-	"require_secure_transport",
-	"secure_transfer_required",
-	"encryption_in_transit",
-	"transit_encryption_enabled",
+# Detect cleartext HTTP scheme in URL-type fields anywhere in the document
+CxPolicy[result] {
+    document := input.document[i]
+    [path, value] := walk(document)
+    is_string(value)
+    startswith(lower(value), "http://")
+
+    count(path) > 0
+    key := path[count(path)-1]
+    is_string(key)
+
+    url_hints := {"url", "uri", "endpoint", "backend", "target", "connection", "link", "addr", "href"}
+    contains(lower(key), url_hints[_])
+
+    searchKey := commonLib.concat_path(commonLib.build_search_line(path, []))
+
+    result := {
+        "documentId": document.id,
+        "resourceType": "n/a",
+        "resourceName": "n/a",
+        "searchKey": searchKey,
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": sprintf("'%s' should use HTTPS to prevent cleartext transmission of sensitive information", [key]),
+        "keyActualValue": sprintf("'%s' uses HTTP, transmitting sensitive information in cleartext", [key]),
+    }
 }
 
-ssl_mode_fields := {"ssl_mode", "sslmode"}
-
+# Detect insecure cleartext protocol declared in any 'protocol' field
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	[path, value] := walk(task)
-	count(path) == 2
-	field := path[1]
-	insecure_when_false[field]
-	ansLib.isAnsibleFalse(value)
-	module_name := path[0]
+    document := input.document[i]
+    [path, value] := walk(document)
+    is_string(value)
 
-	result := {
-		"documentId": id,
-		"resourceType": module_name,
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, module_name, field]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s.%s' should be enabled to ensure encrypted and verified connections", [module_name, field]),
-		"keyActualValue": sprintf("'%s.%s' is disabled, allowing cleartext or unverified transmission of sensitive information", [module_name, field]),
-	}
+    insecure_protocols := {"http", "ftp", "telnet", "ldap", "smtp", "pop3", "imap"}
+    insecure_protocols[lower(value)]
+
+    count(path) > 0
+    key := path[count(path)-1]
+    key == "protocol"
+
+    searchKey := commonLib.concat_path(commonLib.build_search_line(path, []))
+
+    result := {
+        "documentId": document.id,
+        "resourceType": "n/a",
+        "resourceName": "n/a",
+        "searchKey": searchKey,
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": "'protocol' should be set to a secure encrypted protocol to prevent cleartext transmission",
+        "keyActualValue": sprintf("'protocol' is set to '%s', an insecure cleartext protocol", [value]),
+    }
 }
 
+# Task-level: Detect cleartext HTTP URL in Ansible request modules
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	[path, value] := walk(task)
-	count(path) == 2
-	field := path[1]
-	ssl_mode_fields[field]
-	is_string(value)
-	lower(value) == "disable"
-	module_name := path[0]
+    task := ansLib.tasks[id][_]
+    req_modules := {"uri", "ansible.builtin.uri", "get_url", "ansible.builtin.get_url"}
+    module_name := req_modules[_]
+    module := task[module_name]
+    is_object(module)
 
-	result := {
-		"documentId": id,
-		"resourceType": module_name,
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, module_name, field]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s.%s' should not be set to 'disable' to ensure encrypted connections", [module_name, field]),
-		"keyActualValue": sprintf("'%s.%s' is set to 'disable', allowing cleartext database connections", [module_name, field]),
-	}
+    url := module.url
+    is_string(url)
+    startswith(lower(url), "http://")
+
+    result := {
+        "documentId": id,
+        "resourceType": module_name,
+        "resourceName": task.name,
+        "searchKey": sprintf("name={{%s}}.{{%s}}.url", [task.name, module_name]),
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": sprintf("'%s.url' should use HTTPS to protect data in transit", [module_name]),
+        "keyActualValue": sprintf("'%s.url' uses HTTP, transmitting data in cleartext", [module_name]),
+    }
 }
 
+# Task-level: Detect disabled SSL/TLS certificate validation
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	[path, value] := walk(task)
-	count(path) == 2
-	path[1] == "url"
-	is_string(value)
-	insecure_prefixes := {"http://", "ftp://", "telnet://", "ldap://"}
-	startswith(lower(value), insecure_prefixes[_])
-	module_name := path[0]
+    task := ansLib.tasks[id][_]
+    some module_name
+    module := task[module_name]
+    is_object(module)
+    commonLib.valid_key(module, "validate_certs")
+    ansLib.isAnsibleFalse(module.validate_certs)
 
-	result := {
-		"documentId": id,
-		"resourceType": module_name,
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.url", [task.name, module_name]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s.url' should use a secure protocol such as https://", [module_name]),
-		"keyActualValue": sprintf("'%s.url' uses an insecure cleartext protocol", [module_name]),
-	}
+    result := {
+        "documentId": id,
+        "resourceType": module_name,
+        "resourceName": task.name,
+        "searchKey": sprintf("name={{%s}}.{{%s}}.validate_certs", [task.name, module_name]),
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": "'validate_certs' should be 'true' to verify SSL/TLS certificates",
+        "keyActualValue": "'validate_certs' is 'false', bypassing SSL/TLS certificate verification",
+    }
 }

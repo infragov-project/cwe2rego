@@ -3,106 +3,202 @@ package Cx
 import data.generic.ansible as ansLib
 import data.generic.common as commonLib
 
-password_field_names := {
-	"password", "passwd", "pass", "pwd",
-	"secret", "secret_key", "secret_string", "secret_value",
-	"admin_password", "root_password", "master_password", "db_password",
-	"database_password", "user_password", "service_password", "auth_password",
-	"login_password",
+is_credential_field(key) {
+	names := {
+		"password", "passwd", "passphrase", "pwd", "pass",
+		"secret", "secret_key", "secret_value", "client_secret", "app_secret", "shared_secret",
+		"api_key", "access_key", "private_key", "encryption_key", "signing_key", "auth_key",
+		"auth_token", "access_token", "api_token", "bearer_token",
+		"login_password", "bind_pw", "db_password", "database_password",
+		"connection_password", "master_password", "admin_password", "root_password", "user_password",
+	}
+	lower(key) == names[_]
+}
+
+is_credential_field(key) {
+	endswith(lower(key), "_password")
+}
+
+is_credential_field(key) {
+	endswith(lower(key), "_passwd")
+}
+
+is_credential_field(key) {
+	endswith(lower(key), "_secret")
+}
+
+is_credential_field(key) {
+	endswith(lower(key), "_token")
+}
+
+is_hardcoded(val) {
+	is_string(val)
+	val != ""
+	not contains(val, "{{")
+	not startswith(val, "$(")
+	not startswith(val, "${")
+	not startswith(val, "$ANSIBLE_VAULT")
+}
+
+to_path_str(path) = s {
+	parts := [p | e := path[_]; is_string(e); p := e]
+	s := concat(".", parts)
 }
 
 task_meta_keys := {
-	"name", "become", "become_user", "when", "register", "tags",
-	"notify", "with_items", "loop", "vars", "environment", "delegate_to",
-	"ignore_errors", "changed_when", "failed_when", "no_log", "run_once",
-	"any_errors_fatal", "check_mode", "diff", "timeout", "block", "rescue",
-	"always", "listen", "until", "retries", "delay",
+	"name", "become", "become_user", "when", "register",
+	"notify", "tags", "loop", "with_items", "environment",
+	"vars", "no_log", "ignore_errors", "failed_when",
+	"changed_when", "delegate_to", "run_once", "listen",
+	"block", "rescue", "always",
 }
 
-is_password_field(name) {
-	password_field_names[lower(name)]
+kics_meta_keys := {"id", "file", "playbooks"}
+
+auth_parent_terms := {"auth", "cred", "passw", "login", "secret", "token"}
+
+is_auth_context_parent(path) {
+	count(path) >= 2
+	parent := path[count(path) - 2]
+	is_string(parent)
+	contains(lower(parent), auth_parent_terms[_])
 }
 
-is_hardcoded_password(val) {
-	is_string(val)
-	val != ""
-	not regex.match(`\{\{.*\}\}`, val)
-}
-
-# Playbook-level vars: detect hardcoded passwords including in nested structures
 CxPolicy[result] {
-	playbook := input.document[i].playbooks[_]
-	commonLib.valid_key(playbook, "vars")
-	vars := playbook.vars
-
-	walk(vars, [path, val])
-	count(path) > 0
-
-	field_name := path[minus(count(path), 1)]
-	is_string(field_name)
-	is_password_field(field_name)
-	is_hardcoded_password(val)
-
+	document := input.document[i]
+	playbook := document.playbooks[_]
+	is_object(playbook.vars)
+	walk(playbook.vars, [path, value])
+	count(path) >= 1
+	field := path[count(path) - 1]
+	is_string(field)
+	is_credential_field(field)
+	is_hardcoded(value)
+	sk := sprintf("name={{%s}}.vars.%s", [playbook.name, to_path_str(path)])
 	result := {
-		"documentId": input.document[i].id,
+		"documentId": document.id,
+		"resourceType": "n/a",
+		"resourceName": playbook.name,
+		"searchKey": sk,
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' should reference a vault secret or variable, not a hardcoded value", [field]),
+		"keyActualValue": sprintf("'%s' is set to a hardcoded credential value", [field]),
+	}
+}
+
+CxPolicy[result] {
+	document := input.document[i]
+	playbook := document.playbooks[_]
+	is_object(playbook.vars)
+	walk(playbook.vars, [path, value])
+	count(path) >= 2
+	field := path[count(path) - 1]
+	is_string(field)
+	lower(field) == "key"
+	is_auth_context_parent(path)
+	is_hardcoded(value)
+	sk := sprintf("name={{%s}}.vars.%s={{%s}}", [playbook.name, to_path_str(path), value])
+	result := {
+		"documentId": document.id,
+		"resourceType": "n/a",
+		"resourceName": playbook.name,
+		"searchKey": sk,
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' in auth context should not be hardcoded; use Ansible Vault", [field]),
+		"keyActualValue": sprintf("'%s' contains a hardcoded authentication key", [field]),
+	}
+}
+
+CxPolicy[result] {
+	task := ansLib.tasks[id][_]
+	some module_name
+	module := task[module_name]
+	not task_meta_keys[module_name]
+	is_object(module)
+	walk(module, [path, value])
+	count(path) >= 1
+	field := path[count(path) - 1]
+	is_string(field)
+	is_credential_field(field)
+	is_hardcoded(value)
+	sk := sprintf("name={{%s}}.{{%s}}.%s", [task.name, module_name, to_path_str(path)])
+	result := {
+		"documentId": id,
+		"resourceType": module_name,
+		"resourceName": task.name,
+		"searchKey": sk,
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' should reference a vault secret or variable, not a hardcoded value", [field]),
+		"keyActualValue": sprintf("'%s' is set to a hardcoded credential value", [field]),
+	}
+}
+
+CxPolicy[result] {
+	task := ansLib.tasks[id][_]
+	is_object(task.environment)
+	some env_key
+	env_val := task.environment[env_key]
+	is_credential_field(env_key)
+	is_hardcoded(env_val)
+	sk := sprintf("name={{%s}}.environment.%s", [task.name, env_key])
+	result := {
+		"documentId": id,
+		"resourceType": "n/a",
+		"resourceName": task.name,
+		"searchKey": sk,
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("Environment variable '%s' should not contain a hardcoded credential", [env_key]),
+		"keyActualValue": sprintf("Environment variable '%s' is set to a hardcoded value", [env_key]),
+	}
+}
+
+CxPolicy[result] {
+	document := input.document[i]
+	not commonLib.valid_key(document, "playbooks")
+	some top_key
+	not kics_meta_keys[top_key]
+	top_section := document[top_key]
+	is_object(top_section)
+	walk(top_section, [path, value])
+	count(path) >= 1
+	field := path[count(path) - 1]
+	is_string(field)
+	is_credential_field(field)
+	is_hardcoded(value)
+	sk := sprintf("%s.%s", [top_key, to_path_str(path)])
+	result := {
+		"documentId": document.id,
 		"resourceType": "n/a",
 		"resourceName": "n/a",
-		"searchKey": sprintf("vars.%s", [field_name]),
+		"searchKey": sk,
 		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s' should reference a secrets manager instead of containing a hardcoded value", [field_name]),
-		"keyActualValue": sprintf("'%s' contains a hardcoded password", [field_name]),
+		"keyExpectedValue": sprintf("'%s' should reference a vault secret or variable, not a hardcoded value", [field]),
+		"keyActualValue": sprintf("'%s' is set to a hardcoded credential value", [field]),
 	}
 }
 
-# Task-level module parameters: detect hardcoded passwords including nested structures
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-
-	some module_key
-	module_params := task[module_key]
-	not task_meta_keys[module_key]
-	is_object(module_params)
-
-	walk(module_params, [path, val])
-	count(path) > 0
-
-	field_name := path[minus(count(path), 1)]
-	is_string(field_name)
-	is_password_field(field_name)
-	is_hardcoded_password(val)
-
+	document := input.document[i]
+	not commonLib.valid_key(document, "playbooks")
+	some top_key
+	not kics_meta_keys[top_key]
+	top_section := document[top_key]
+	is_object(top_section)
+	walk(top_section, [path, value])
+	count(path) >= 2
+	field := path[count(path) - 1]
+	is_string(field)
+	lower(field) == "key"
+	is_auth_context_parent(path)
+	is_hardcoded(value)
+	sk := sprintf("%s.%s={{%s}}", [top_key, to_path_str(path), value])
 	result := {
-		"documentId": id,
-		"resourceType": module_key,
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, module_key, field_name]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s' should reference a secrets manager instead of containing a hardcoded value", [field_name]),
-		"keyActualValue": sprintf("'%s' contains a hardcoded password", [field_name]),
-	}
-}
-
-# Task-level environment blocks: detect hardcoded passwords in sensitive env vars
-CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	commonLib.valid_key(task, "environment")
-	env := task.environment
-	is_object(env)
-
-	some env_key
-	env_val := env[env_key]
-
-	sensitive_env_patterns := {"password", "passwd", "pwd", "secret", "credential", "auth_token", "api_key"}
-	contains(lower(env_key), sensitive_env_patterns[_])
-	is_hardcoded_password(env_val)
-
-	result := {
-		"documentId": id,
+		"documentId": document.id,
 		"resourceType": "n/a",
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.environment.%s", [task.name, env_key]),
+		"resourceName": "n/a",
+		"searchKey": sk,
 		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("Environment variable '%s' should not contain a hardcoded password", [env_key]),
-		"keyActualValue": sprintf("Environment variable '%s' contains a hardcoded literal value", [env_key]),
+		"keyExpectedValue": sprintf("'%s' in auth context should not be hardcoded; use Ansible Vault", [field]),
+		"keyActualValue": sprintf("'%s' contains a hardcoded authentication key", [field]),
 	}
 }

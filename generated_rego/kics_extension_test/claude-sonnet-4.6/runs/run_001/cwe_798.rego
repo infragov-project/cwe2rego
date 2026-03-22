@@ -4,107 +4,77 @@ import data.generic.ansible as ansLib
 import data.generic.common as commonLib
 
 sensitive_keys := {
-	"password", "passwd", "pass", "pwd", "passphrase",
-	"user_password", "admin_password", "root_password", "default_password", "master_password",
-	"secret", "secret_key", "client_secret", "shared_secret", "jwt_secret", "app_secret",
-	"token", "access_token", "auth_token", "api_token", "bearer_token", "refresh_token", "session_token",
-	"api_key", "apikey", "api_secret", "access_key", "secret_access_key",
-	"private_key", "encryption_key", "signing_key", "hmac_key", "aes_key", "rsa_key", "key_data",
-	"ssh_key", "ssh_private_key", "ssh_authorized_keys", "identity_key",
-	"db_password", "database_password", "db_secret",
-	"community_string", "snmp_community",
+	"password", "passwd", "pass", "pwd",
+	"secret", "secret_key", "shared_secret", "master_secret",
+	"api_key", "apikey", "api_token", "access_token", "auth_token",
+	"private_key", "private_key_pem", "signing_key", "encryption_key",
+	"community_string", "client_secret", "consumer_secret", "webhook_secret",
+	"ssh_key", "ssh_private_key", "rsa_key",
+	"admin_password", "root_password", "db_password", "database_password",
+	"login_password", "hmac_key", "jwt_secret", "token_secret",
+	"oauth_secret", "master_key",
 }
 
-task_meta_keys := {
-	"name", "become", "become_user", "when", "register", "tags", "notify",
-	"loop", "loop_control", "with_items", "vars", "no_log", "ignore_errors",
-	"changed_when", "failed_when", "check_mode", "environment", "delegate_to",
-	"run_once", "block", "rescue", "always", "listen", "args", "any_errors_fatal",
-	"with_dict", "with_list", "with_sequence", "with_nested", "with_indexed_items",
-	"collections", "connection", "debugger", "diff", "timeout", "module_defaults",
+is_sensitive(fname) {
+	lower(fname) == sensitive_keys[_]
 }
 
-is_hardcoded_credential(value) {
-	is_string(value)
-	count(value) > 0
-	not contains(value, "{{")
+is_sensitive(fname) {
+	contains(lower(fname), "password")
 }
 
-is_sensitive_key(key) {
-	lower(key) == sensitive_keys[_]
+is_sensitive(fname) {
+	contains(lower(fname), "secret")
 }
 
-# Task-level: detect hardcoded credentials in module parameters
+is_hardcoded(val) {
+	is_string(val)
+	val != ""
+	not contains(val, "{{")
+	not contains(val, "${")
+	not startswith(lower(val), "vault://")
+}
+
+# Detect hardcoded credentials in named credential fields anywhere in the document
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	task_name := object.get(task, "name", "n/a")
-
-	[path, value] := walk(task)
-	count(path) >= 2
-
-	module_name := path[0]
-	is_string(module_name)
-	not task_meta_keys[module_name]
-
-	cred_key := path[count(path) - 1]
-	is_string(cred_key)
-	is_sensitive_key(cred_key)
-	is_hardcoded_credential(value)
-
+	doc := input.document[i]
+	walk(doc, [path, val])
+	count(path) > 0
+	fname := path[minus(count(path), 1)]
+	is_string(fname)
+	is_sensitive(fname)
+	is_hardcoded(val)
+	sk := commonLib.concat_path(path)
 	result := {
-		"documentId": id,
-		"resourceType": module_name,
-		"resourceName": task_name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task_name, module_name, cred_key]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s' should reference a variable or secret manager, not contain a hardcoded value", [cred_key]),
-		"keyActualValue": sprintf("'%s' contains a hardcoded credential value", [cred_key]),
-	}
-}
-
-# Task-level: detect hardcoded credentials defined in task vars
-CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	task_name := object.get(task, "name", "n/a")
-
-	vars := task.vars
-	is_object(vars)
-
-	value := vars[key]
-	is_string(key)
-	is_sensitive_key(key)
-	is_hardcoded_credential(value)
-
-	result := {
-		"documentId": id,
-		"resourceType": "n/a",
-		"resourceName": task_name,
-		"searchKey": sprintf("name={{%s}}.vars.%s", [task_name, key]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'vars.%s' should not contain a hardcoded credential; use a variable or vault reference", [key]),
-		"keyActualValue": sprintf("'vars.%s' contains a hardcoded credential value", [key]),
-	}
-}
-
-# Playbook-level: detect hardcoded credentials defined in playbook vars
-CxPolicy[result] {
-	playbook := input.document[i].playbooks[_]
-
-	vars := playbook.vars
-	is_object(vars)
-
-	value := vars[key]
-	is_string(key)
-	is_sensitive_key(key)
-	is_hardcoded_credential(value)
-
-	result := {
-		"documentId": input.document[i].id,
+		"documentId": doc.id,
 		"resourceType": "n/a",
 		"resourceName": "n/a",
-		"searchKey": sprintf("vars.%s", [key]),
+		"searchKey": sk,
 		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'vars.%s' should not contain a hardcoded credential; use a variable or vault reference", [key]),
-		"keyActualValue": sprintf("'vars.%s' contains a hardcoded credential value", [key]),
+		"keyExpectedValue": sprintf("'%s' should use a vault or secret manager reference instead of a hardcoded value", [fname]),
+		"keyActualValue": sprintf("'%s' contains a hardcoded credential", [fname]),
+	}
+}
+
+# Detect hardcoded key in authentication blocks that declare key-based method
+CxPolicy[result] {
+	doc := input.document[i]
+	walk(doc, [path, auth_obj])
+	is_object(auth_obj)
+	method := auth_obj.method
+	is_string(method)
+	lower(method) == "key"
+	key_val := auth_obj["key"]
+	is_hardcoded(key_val)
+	parent_path_str := commonLib.concat_path(path)
+	sk := sprintf("%s.key={{%s}}", [parent_path_str, key_val])
+	result := {
+		"documentId": doc.id,
+		"resourceType": "n/a",
+		"resourceName": "n/a",
+		"searchKey": sk,
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": "'key' in a key-based authentication block should reference a vault or secret manager, not be hardcoded",
+		"keyActualValue": sprintf("'key' contains a hardcoded authentication credential '%s'", [key_val]),
 	}
 }

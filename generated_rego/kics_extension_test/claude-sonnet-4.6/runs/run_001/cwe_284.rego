@@ -3,45 +3,74 @@ package Cx
 import data.generic.ansible as ansLib
 import data.generic.common as commonLib
 
-bind_ip_keywords := {"bindip", "bind_ip", "bind_addr", "bindaddr", "listen_addr", "listen_ip"}
+# CWE-284: Detect bind to all interfaces (0.0.0.0) in playbook-level vars
+CxPolicy[result] {
+    doc := input.document[i]
+    playbook := doc.playbooks[_]
+    vars := playbook.vars
+    [path, value] := walk(vars)
+    count(path) == 1
+    key := path[0]
+    is_string(key)
+    is_string(value)
+    contains(lower(key), "bind")
+    value == "0.0.0.0"
 
-unrestricted_binds := {"0.0.0.0", "::"}
-
-is_unrestricted_bind_var(key, value) {
-	contains(lower(key), bind_ip_keywords[_])
-	unrestricted_binds[value]
+    result := {
+        "documentId": doc.id,
+        "resourceType": "n/a",
+        "resourceName": playbook.name,
+        "searchKey": sprintf("name={{%s}}.vars.{{%s}}", [playbook.name, key]),
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": sprintf("'%s' should not bind to all interfaces (0.0.0.0)", [key]),
+        "keyActualValue": sprintf("'%s' is set to '0.0.0.0'", [key]),
+    }
 }
 
+# CWE-284: Detect bind to all interfaces (0.0.0.0) in flat variable files (group_vars, host_vars)
 CxPolicy[result] {
-	playbook := input.document[i].playbooks[_]
-	some key
-	value := playbook.vars[key]
-	is_unrestricted_bind_var(key, value)
+    doc := input.document[i]
+    not commonLib.valid_key(doc, "playbooks")
+    [path, value] := walk(doc)
+    count(path) == 1
+    key := path[0]
+    is_string(key)
+    is_string(value)
+    contains(lower(key), "bind")
+    value == "0.0.0.0"
 
-	result := {
-		"documentId": input.document[i].id,
-		"resourceType": "n/a",
-		"resourceName": playbook.name,
-		"searchKey": sprintf("vars.%s", [key]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'vars.%s' should not bind to all interfaces; use a specific IP address", [key]),
-		"keyActualValue": sprintf("'vars.%s' is set to '%s' which binds the service to all network interfaces", [key, value]),
-	}
+    result := {
+        "documentId": doc.id,
+        "resourceType": "n/a",
+        "resourceName": "n/a",
+        "searchKey": key,
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": sprintf("'%s' should not bind to all interfaces (0.0.0.0)", [key]),
+        "keyActualValue": sprintf("'%s' is set to '0.0.0.0'", [key]),
+    }
 }
 
+# CWE-284: Detect bind to all interfaces (0.0.0.0) in task-level module parameters
 CxPolicy[result] {
-	task := ansLib.tasks[id][t]
-	some key
-	value := task.vars[key]
-	is_unrestricted_bind_var(key, value)
+    task := ansLib.tasks[id][t]
+    [modPath, module] := walk(task)
+    count(modPath) == 1
+    is_object(module)
+    [path, value] := walk(module)
+    count(path) == 1
+    key := path[0]
+    is_string(key)
+    is_string(value)
+    contains(lower(key), "bind")
+    value == "0.0.0.0"
 
-	result := {
-		"documentId": id,
-		"resourceType": "n/a",
-		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.vars.%s", [task.name, key]),
-		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'vars.%s' should not bind to all interfaces; use a specific IP address", [key]),
-		"keyActualValue": sprintf("'vars.%s' is set to '%s' which binds the service to all network interfaces", [key, value]),
-	}
+    result := {
+        "documentId": id,
+        "resourceType": modPath[0],
+        "resourceName": task.name,
+        "searchKey": sprintf("name={{%s}}.{{%s}}.{{%s}}", [task.name, modPath[0], key]),
+        "issueType": "IncorrectValue",
+        "keyExpectedValue": sprintf("'%s' should not bind to all interfaces (0.0.0.0)", [key]),
+        "keyActualValue": sprintf("'%s' is set to '0.0.0.0'", [key]),
+    }
 }

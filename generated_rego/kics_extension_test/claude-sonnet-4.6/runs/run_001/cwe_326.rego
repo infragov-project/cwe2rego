@@ -3,80 +3,165 @@ package Cx
 import data.generic.ansible as ansLib
 import data.generic.common as commonLib
 
-weak_hash_filters := {"md5", "sha1", "sha-1", "md4", "md2", "ripemd128", "ripemd160"}
-
-contains_weak_jinja_hash_filter(val) {
-	filter := weak_hash_filters[_]
-	contains(lower(val), sprintf("| hash('%s')", [filter]))
+weak_hash_filter(value) {
+	is_string(value)
+	weak_hashes := {"sha1", "md5", "md4", "md2"}
+	hash_name := weak_hashes[_]
+	contains(lower(value), sprintf("hash('%s')", [hash_name]))
 }
 
-contains_weak_jinja_hash_filter(val) {
-	filter := weak_hash_filters[_]
-	contains(lower(val), sprintf("| hash(\"%s\")", [filter]))
+weak_hash_filter(value) {
+	is_string(value)
+	weak_hashes := {"sha1", "md5", "md4", "md2"}
+	hash_name := weak_hashes[_]
+	contains(lower(value), sprintf("hash(\"%s\")", [hash_name]))
 }
 
-contains_weak_jinja_hash_filter(val) {
-	filter := weak_hash_filters[_]
-	contains(lower(val), sprintf("|hash('%s')", [filter]))
+weak_encrypt_algo(algo) {
+	weak := {"md5_crypt", "des_crypt", "sha1_crypt", "bsdi_crypt"}
+	lower(algo) == weak[_]
 }
 
-contains_weak_jinja_hash_filter(val) {
-	filter := weak_hash_filters[_]
-	contains(lower(val), sprintf("|hash(\"%s\")", [filter]))
+weak_cipher_value(value) {
+	is_string(value)
+	weak := {"des", "3des", "triple_des", "tripledes", "rc2", "rc4", "rc5", "idea", "blowfish"}
+	lower(value) == weak[_]
 }
 
-task_meta_keys := {
-	"name", "become", "become_user", "become_method", "become_flags",
-	"register", "when", "tags", "vars", "notify", "with_items", "loop",
-	"loop_control", "ignore_errors", "failed_when", "changed_when",
-	"delegate_to", "delegate_facts", "environment", "no_log", "run_once",
-	"listen", "block", "rescue", "always", "collections", "module_defaults",
-	"any_errors_fatal", "check_mode", "diff", "async", "poll", "timeout",
-	"debugger", "ignore_unreachable", "retries", "delay", "until",
-	"args", "with_fileglob", "with_dict", "with_nested", "with_sequence",
+weak_hash_value(value) {
+	is_string(value)
+	weak := {"md5", "md4", "md2", "sha1", "sha-1", "sha_1", "hmac-md5", "hmac-sha1"}
+	lower(value) == weak[_]
 }
 
+weak_tls_value(value) {
+	is_string(value)
+	weak := {"sslv2", "sslv3", "ssl2", "ssl3", "tlsv1", "tlsv1.0", "tlsv1.1", "tls_1_0", "tls_1_1"}
+	lower(value) == weak[_]
+}
+
+weak_tls_value(value) {
+	is_string(value)
+	patterns := {"tls-1-0", "tls-1-1"}
+	contains(lower(value), patterns[_])
+}
+
+is_enc_field(field) {
+	fields := {"algorithm", "cipher", "cipher_suite", "encryption_algorithm", "server_side_encryption", "sse_algorithm", "encryption_type", "encryption_method"}
+	fields[field]
+}
+
+is_hash_field(field) {
+	fields := {"hash_algorithm", "signing_algorithm", "digest_algorithm", "key_algorithm", "signature_algorithm", "checksum_algorithm"}
+	fields[field]
+}
+
+is_tls_field(field) {
+	fields := {"minimum_tls_version", "min_tls_version", "tls_version", "ssl_policy", "security_policy", "ssl_protocol", "protocol_version", "tls_policy"}
+	fields[field]
+}
+
+# Detect weak Jinja2 hash filter in any task string value (any depth)
 CxPolicy[result] {
-	task := ansLib.tasks[id][_]
-	[path, val] := walk(task)
-	count(path) == 2
-	module_key := path[0]
-	field_key := path[1]
-	is_string(module_key)
-	is_string(field_key)
-	not task_meta_keys[module_key]
-	is_string(val)
-	contains_weak_jinja_hash_filter(val)
+	task := ansLib.tasks[id][t]
+	walk(task, [path, value])
+	is_string(value)
+	count(path) > 0
+	is_string(path[0])
+	path[0] != "name"
+	weak_hash_filter(value)
+
+	path_parts := [p | p := path[_]; is_string(p)]
+	path_key := concat(".", path_parts)
 
 	result := {
 		"documentId": id,
-		"resourceType": module_key,
+		"resourceType": "n/a",
 		"resourceName": task.name,
-		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, module_key, field_key]),
+		"searchKey": sprintf("name={{%s}}.%s", [task.name, path_key]),
 		"issueType": "IncorrectValue",
-		"keyExpectedValue": sprintf("'%s' should not use weak hash algorithms (md5, sha1) in Jinja2 expressions", [field_key]),
-		"keyActualValue": sprintf("'%s' uses a weak hash function in a Jinja2 template expression", [field_key]),
+		"keyExpectedValue": "Jinja2 hash filter should use a strong algorithm such as sha256 or sha512",
+		"keyActualValue": sprintf("Weak hash algorithm detected in Jinja2 template filter: '%s'", [value]),
 	}
 }
 
-is_weak_prompt_encrypt(val) {
-	weak := {"md5_crypt", "sha1_crypt", "des_crypt", "bsdi_crypt"}
-	lower(val) == weak[_]
-}
-
+# Detect weak encrypt algorithm in vars_prompt (playbook level)
 CxPolicy[result] {
 	playbook := input.document[i].playbooks[_]
-	vp := playbook.vars_prompt[_]
-	commonLib.valid_key(vp, "encrypt")
-	is_weak_prompt_encrypt(vp.encrypt)
+	prompt := playbook.vars_prompt[_]
+	commonLib.valid_key(prompt, "encrypt")
+	weak_encrypt_algo(prompt.encrypt)
 
 	result := {
 		"documentId": input.document[i].id,
 		"resourceType": "n/a",
-		"resourceName": "n/a",
-		"searchKey": sprintf("vars_prompt.name={{%s}}.encrypt", [vp.name]),
+		"resourceName": prompt.name,
+		"searchKey": sprintf("vars_prompt.name={{%s}}.encrypt", [prompt.name]),
 		"issueType": "IncorrectValue",
-		"keyExpectedValue": "vars_prompt 'encrypt' should use a strong hashing algorithm such as 'sha256_crypt' or 'sha512_crypt'",
-		"keyActualValue": sprintf("vars_prompt 'encrypt' is set to weak algorithm '%s'", [vp.encrypt]),
+		"keyExpectedValue": "vars_prompt 'encrypt' should use a strong algorithm (e.g., sha256_crypt, sha512_crypt)",
+		"keyActualValue": sprintf("vars_prompt 'encrypt' is set to weak algorithm '%s'", [prompt.encrypt]),
+	}
+}
+
+# Detect weak cipher in encryption-related module fields (depth 2)
+CxPolicy[result] {
+	task := ansLib.tasks[id][t]
+	walk(task, [path, value])
+	is_string(value)
+	count(path) == 2
+	is_string(path[1])
+	is_enc_field(path[1])
+	weak_cipher_value(value)
+
+	result := {
+		"documentId": id,
+		"resourceType": path[0],
+		"resourceName": task.name,
+		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, path[0], path[1]]),
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' should use a strong encryption algorithm (e.g., AES-256)", [path[1]]),
+		"keyActualValue": sprintf("'%s' is set to weak algorithm '%s'", [path[1], value]),
+	}
+}
+
+# Detect weak hash algorithm in hash-related module fields (depth 2)
+CxPolicy[result] {
+	task := ansLib.tasks[id][t]
+	walk(task, [path, value])
+	is_string(value)
+	count(path) == 2
+	is_string(path[1])
+	is_hash_field(path[1])
+	weak_hash_value(value)
+
+	result := {
+		"documentId": id,
+		"resourceType": path[0],
+		"resourceName": task.name,
+		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, path[0], path[1]]),
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' should use a strong hash algorithm (e.g., SHA-256 or higher)", [path[1]]),
+		"keyActualValue": sprintf("'%s' is set to weak hash algorithm '%s'", [path[1], value]),
+	}
+}
+
+# Detect deprecated TLS/SSL protocol in TLS-related module fields (depth 2)
+CxPolicy[result] {
+	task := ansLib.tasks[id][t]
+	walk(task, [path, value])
+	is_string(value)
+	count(path) == 2
+	is_string(path[1])
+	is_tls_field(path[1])
+	weak_tls_value(value)
+
+	result := {
+		"documentId": id,
+		"resourceType": path[0],
+		"resourceName": task.name,
+		"searchKey": sprintf("name={{%s}}.{{%s}}.%s", [task.name, path[0], path[1]]),
+		"issueType": "IncorrectValue",
+		"keyExpectedValue": sprintf("'%s' should use TLS 1.2 or higher", [path[1]]),
+		"keyActualValue": sprintf("'%s' is set to deprecated protocol '%s'", [path[1], value]),
 	}
 }
