@@ -1,24 +1,17 @@
 {
     "examples": [
         {
-            "file": "hellogo.yaml",
-            "lines": [
-                21
-            ]
-        },
-        {
-            "file": "playbook_inventory.yaml",
-            "lines": [
-                4,
-                6
-            ]
-        },
-        {
             "file": "server_keys.yml",
             "lines": [
                 132,
                 133,
                 183
+            ]
+        },
+        {
+            "file": "setup_autodeploy.yml",
+            "lines": [
+                53
             ]
         },
         {
