@@ -1,6 +1,12 @@
 {
     "examples": [
         {
+            "file": "hellogo.yaml",
+            "lines": [
+                21
+            ]
+        },
+        {
             "file": "playbook_inventory.yaml",
             "lines": [
                 4,
