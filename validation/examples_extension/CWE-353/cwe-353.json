@@ -7,7 +7,7 @@
             ]
         },
         {
-            "file": "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+            "file": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
             "lines": [
                 22,
                 29

@@ -1,13 +1,13 @@
 {
     "examples": [
         {
-            "file": "Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+            "file": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
             "lines": [
                 5
             ]
         },
         {
-            "file": "debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+            "file": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
             "lines": [
                 481
             ]

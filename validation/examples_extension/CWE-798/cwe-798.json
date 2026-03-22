@@ -1,7 +1,7 @@
 {
     "examples": [
         {
-            "file": "aristanetworks_ansible-avd-ansible_collections-arista-avd-molecule-evpn_underlay_ospf_overlay_ebgp-intended-structured_configs-DC1-SVC3B.yml",
+            "file": "group_vars/aristanetworks_ansible-avd-ansible_collections-arista-avd-molecule-evpn_underlay_ospf_overlay_ebgp-intended-structured_configs-DC1-SVC3B.yml",
             "lines": [
                 14,
                 57,
@@ -9,7 +9,7 @@
             ]
         },
         {
-            "file": "redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "file": "group_vars/redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
             "lines": [
                 12
             ]

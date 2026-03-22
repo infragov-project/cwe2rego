@@ -7,7 +7,7 @@
             ]
         },
         {
-            "file": "pulibrary_princeton_ansible-group_vars-mysql-staging.yml",
+            "file": "group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml",
             "lines": [
                 4
             ]

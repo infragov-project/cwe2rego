@@ -7,7 +7,7 @@
             ]
         },
         {
-            "file": "cloudalchemy_ansible-grafana-defaults-main.yml",
+            "file": "group_vars/cloudalchemy_ansible-grafana-defaults-main.yml",
             "lines": [
                 25,
                 32
