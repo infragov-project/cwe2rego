@@ -9,6 +9,7 @@ from llm_interaction.conversation_templated import (
     initialize_model,
     initialize_examples_model,
     initialize_model_settings,
+    set_usage_callback,
 )
 from llm_interaction.history import trim_validation_history
 from llm_interaction.generation_logging import (
@@ -150,6 +151,24 @@ def add_line_numbers(content: str) -> str:
     return "\n".join(f"{index}: {line}" for index, line in enumerate(lines, start=1))
 
 
+def _init_llm_usage_totals() -> dict:
+    return {
+        "calls": 0,
+        "input_tokens_total": 0,
+        "output_tokens_total": 0,
+        "reasoning_tokens_total": 0,
+        "cache_read_tokens_total": 0,
+    }
+
+
+def _accumulate_llm_usage(totals: dict, usage: dict) -> None:
+    totals["calls"] += 1
+    totals["input_tokens_total"] += int(usage.get("input_tokens", 0) or 0)
+    totals["output_tokens_total"] += int(usage.get("output_tokens", 0) or 0)
+    totals["reasoning_tokens_total"] += int(usage.get("reasoning_tokens", 0) or 0)
+    totals["cache_read_tokens_total"] += int(usage.get("cache_read_tokens", 0) or 0)
+
+
 def build_argument_parser() -> ArgumentParser:
     """Build and configure the CLI argument parser."""
     parser = ArgumentParser(description="LLM Interaction Client")
@@ -236,6 +255,9 @@ if __name__ == "__main__":
     initialize_model(OPENROUTER_API_KEY, args.model)
     if getattr(args, "use_llm_examples", False):
         initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
+
+    llm_usage_totals = _init_llm_usage_totals()
+    set_usage_callback(lambda usage: _accumulate_llm_usage(llm_usage_totals, usage))
 
     base_dir = Path(__file__).parent
     static_examples_dir = None
@@ -368,6 +390,7 @@ if __name__ == "__main__":
         validation_history_pinned_messages=args.validation_history_pinned_messages,
         static_examples_dir=static_examples_dir,
     )
+    generation_log["llm_usage"] = llm_usage_totals
     persist_generation_log(log_path, generation_log)
 
     examples_folder = None

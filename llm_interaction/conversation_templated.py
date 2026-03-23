@@ -5,7 +5,7 @@ Decorator for model interactions using prompt templates.
 from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, TextPart
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterProvider
 from .agent import InfraAgent
-from typing import Callable, TypeVar, get_type_hints
+from typing import Any, Callable, TypeVar, get_type_hints
 import inspect
 from .prompt_loader import get_prompt_loader
 
@@ -14,6 +14,67 @@ T = TypeVar('T')
 model_instance: OpenRouterModel = None
 examples_model_instance: OpenRouterModel = None
 model_settings: OpenRouterModelSettings = None
+_usage_callback: Callable[[dict[str, Any]], None] | None = None
+
+
+def set_usage_callback(callback: Callable[[dict[str, Any]], None] | None):
+    """Register a callback that receives usage summary after each model call."""
+    global _usage_callback
+    _usage_callback = callback
+
+
+def _usage_get(obj: Any, key: str, default=None):
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _extract_usage_summary(usage: Any) -> dict[str, Any]:
+    # OpenRouter raw responses can wrap token fields inside `usage`.
+    usage_payload = _usage_get(usage, "usage", None)
+    usage_data = usage_payload if isinstance(usage_payload, dict) else usage
+
+    completion_details = _usage_get(usage_data, "completion_tokens_details", {}) or {}
+    if not isinstance(completion_details, dict):
+        completion_details = {}
+
+    prompt_details = _usage_get(usage_data, "prompt_tokens_details", {}) or {}
+    if not isinstance(prompt_details, dict):
+        prompt_details = {}
+
+    usage_details = _usage_get(usage_data, "details", {}) or {}
+    if not isinstance(usage_details, dict):
+        usage_details = {}
+
+    # Prefer OpenRouter field names, keep minimal fallback aliases.
+    input_tokens = _usage_get(usage_data, "prompt_tokens", _usage_get(usage_data, "input_tokens", 0))
+    output_tokens = _usage_get(usage_data, "completion_tokens", _usage_get(usage_data, "output_tokens", 0))
+
+    reasoning_tokens = int(
+        completion_details.get("reasoning_tokens")
+        or usage_details.get("reasoning_tokens")
+        or usage_details.get("reasoningTokens")
+        or usage_details.get("thoughts_token_count")
+        or 0
+    )
+
+    cache_read_tokens = int(
+        _usage_get(usage_data, "cache_read_tokens", None)
+        or prompt_details.get("cached_tokens")
+        or usage_details.get("cache_read_tokens")
+        or usage_details.get("cache_read_input_tokens")
+        or usage_details.get("cached_tokens")
+        or 0
+    )
+
+    return {
+        "input_tokens": int(input_tokens or 0),
+        "output_tokens": int(output_tokens or 0),
+        "reasoning_tokens": reasoning_tokens,
+        "cache_read_tokens": cache_read_tokens,
+    }
 
 def initialize_model(api_key: str, model: str):
     """Initialize the global model instance and settings."""
@@ -101,19 +162,22 @@ def ask_model_prompt(template_path: str):
                 # Run the agent
                 print(f"🤖 Model Prompt `{func.__name__}` (\"{template_path}\"):")
                 result, usage = agent.run(rendered_prompt, message_history=chat_history if chat_history else [])
-                    
+                
+                if _usage_callback is not None:
+                    _usage_callback(_extract_usage_summary(usage))
+
                 if chat_history is not None:
-                    
+
                     user_message = ModelRequest(parts=[UserPromptPart(content=rendered_prompt)])
 
                     response_content = str(result) if result is not None else "(empty response)"
                     model_message = ModelResponse(parts=[TextPart(content=response_content)])
-                    
+
                     chat_history.append(user_message)
                     chat_history.append(model_message)
 
                 return result
-                
+
             except Exception as e:
                 raise e
         
