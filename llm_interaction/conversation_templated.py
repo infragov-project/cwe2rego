@@ -105,6 +105,7 @@ def initialize_model_settings(model: str | None = None):
     if model and model.lower().startswith("anthropic/"):
         settings['openrouter_provider'] = {
             'order': ['amazon-bedrock'],
+            'allow_fallbacks': False,
         }
 
     global model_settings
