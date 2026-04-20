@@ -11,7 +11,12 @@ from llm_interaction.conversation_templated import (
     initialize_model_settings,
     set_usage_callback,
 )
-from llm_interaction.history import trim_validation_history
+from llm_interaction.history import (
+    trim_validation_history,
+    build_syntactic_error_summary,
+    build_semantic_error_summary,
+    append_iteration_summary_to_history,
+)
 from llm_interaction.generation_logging import (
     build_run_paths,
     create_generation_log,
@@ -356,6 +361,10 @@ if __name__ == "__main__":
             example_rule_2=example_rule_2,
             chat_history=conversation_history,
         )
+    
+    # Pop the initial response, keeping only the user prompt
+    if len(conversation_history) >= 2:
+        conversation_history.pop()
 
     run_paths = build_run_paths(
         base_dir=base_dir,
@@ -470,6 +479,10 @@ if __name__ == "__main__":
             iteration_log["status"] = "syntactic_error"
             append_iteration_and_persist(iteration_log)
 
+            # Add summary of this tested rule
+            summary = build_syntactic_error_summary(rego_rule, error)
+            append_iteration_summary_to_history(conversation_history, summary)
+
             # If at max attempts, don't regenerate - just exit
             if attempt >= MAX_VALIDATION_ATTEMPTS:
                 break
@@ -501,6 +514,11 @@ if __name__ == "__main__":
                         error_message=error,
                         chat_history=conversation_history
                     )
+            
+            # Pop the auto-appended user prompt and model response
+            if len(conversation_history) >= 2:
+                conversation_history.pop()  # Remove model response
+                conversation_history.pop()  # Remove user prompt
             continue
         
         if args.skip_semantic_check:
@@ -510,7 +528,7 @@ if __name__ == "__main__":
             validation_passed = True
             break
 
-        failures, skipped_empty_ir = semantic_check(
+        failures, passed, skipped_empty_ir = semantic_check(
             tool,
             rego_rule,
             args.type_name,
@@ -528,6 +546,10 @@ if __name__ == "__main__":
             iteration_log["errors"] = serialize_semantic_failures(failures)
             iteration_log["status"] = "semantic_error"
             append_iteration_and_persist(iteration_log)
+
+            # Add summary of this tested rule
+            summary = build_semantic_error_summary(rego_rule, failures, passed)
+            append_iteration_summary_to_history(conversation_history, summary)
 
             # If at max attempts, don't regenerate - just exit
             if attempt >= MAX_VALIDATION_ATTEMPTS:
@@ -572,9 +594,14 @@ if __name__ == "__main__":
                 rego_rule = get_semantic_error_generation(
                     failures=formatted_failures,
                     target_technologies=target_technologies,
-                target_technologies_text=target_technologies_text,
-                chat_history=conversation_history,
-            )
+                    target_technologies_text=target_technologies_text,
+                    chat_history=conversation_history,
+                )
+            
+            # Pop the auto-appended user prompt and model response
+            if len(conversation_history) >= 2:
+                conversation_history.pop()  # Remove model response
+                conversation_history.pop()  # Remove user prompt
             continue
 
         iteration_log["status"] = "passed"
