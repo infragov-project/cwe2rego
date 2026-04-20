@@ -179,9 +179,3 @@ Notes:
 - Set `--validation-history-iterations 0 --validation-history-pinned-messages 2` to keep only the initial rule-generation prompt/response pair.
 - Set `--validation-history-iterations 0 --validation-history-pinned-messages 0` to keep no history.
 - Set `--validation-history-iterations -1` (or omit the flag) to keep full validation history.
-
-Recommended for large extension sets:
-
-```bash
-python llm_interaction.py xiaomi/mimo-v2-flash --cwe 798 --type-name sec_https --experiment-name false_positives --semantic-examples-dir validation/examples_extension --validation-history-iterations 3
-```
