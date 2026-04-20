@@ -119,6 +119,46 @@ The Rego filename is `cwe_<cwe>.rego` and logs are written under `generated_rego
 
 When `--use-llm-examples` is enabled, generated examples are saved under `generated_rego/<experiment_name>/<model_name>/runs/<run_id>/generated_examples/CWE-<cwe>/`.
 
+
+## Batch running multiple CWEs: `run_all_cwes.sh`
+
+The `run_all_cwes.sh` script automates running `llm_interaction.py` for multiple CWEs in sequence, with retry logic and type-name mapping.
+
+### Usage
+
+```bash
+./run_all_cwes.sh <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] <cwe1> [cwe2 ...]
+```
+
+**Arguments:**
+- `<model>`: Model name (e.g., `openai/gpt-5.2-codex`)
+- `<experiment_name>`: Experiment name for grouping outputs
+- `<examples_dir>`: Directory with semantic examples (e.g., `validation/examples_extension`)
+- `<analysis_tool>`: Analysis tool (`glitch` or `kics`)
+- `<validation_history_iterations>`: Number of validation history iterations to keep
+- `[--max-runs N]`: (Optional) Maximum attempts per CWE (default: 1). Can also be set via the `MAX_RUNS` environment variable.
+- `<cwe1> [cwe2 ...]`: List of CWE numbers to process
+
+### Example
+
+```bash
+./run_all_cwes.sh openai/gpt-5.2-codex extension_examples_test validation/examples_extension glitch 1 --max-runs 5 284 250 319
+```
+
+This will run each specified CWE up to 5 times (or until success), using the provided model, experiment name, examples directory, and analysis tool.
+
+### Features
+- Maps each CWE to a type-name automatically (see script for supported mappings)
+- Retries failed runs up to `--max-runs` times
+- Reports any CWEs that ultimately fail after all attempts
+- Exits with code 1 if any CWEs fail, 0 if all succeed
+
+### Notes
+- The `--max-runs` flag or `MAX_RUNS` environment variable must be a positive integer.
+- Only CWEs with a known type-name mapping are supported (see script for details).
+
+---
+
 When `--use-llm-examples` is disabled, static semantic examples are loaded from `validation/examples/CWE-<cwe>/` by default. Override this with `--semantic-examples-dir`; it accepts either:
 
 - A base directory with `CWE-<cwe>/` subfolders (for example, `validation/examples_extension`)
