@@ -231,7 +231,7 @@ def semantic_check(
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
-) -> Tuple[List[Tuple[str, str, List[int], List[int], str, float]], List[str]]:
+) -> Tuple[List[Tuple[str, str, List[int], List[int], str]], List[Tuple[str, str]], List[str]]:
     """
     Verify all examples for a CWE using a preloaded examples manifest.
 
@@ -248,6 +248,7 @@ def semantic_check(
                 A tuple with:
                 - List of tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
                     for failed files.
+                - List of tuples (file_name, iac_language) for passed files.
                 - List of files skipped due to empty KICS IR.
     """
     print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
@@ -260,7 +261,8 @@ def semantic_check(
 
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / f"{tool.name}_lint.csv"
-    failures: List[Tuple[str, str, List[int], List[int], str, float]] = []
+    failures: List[Tuple[str, str, List[int], List[int], str]] = []
+    passed: List[Tuple[str, str]] = []
     skipped_empty_ir: List[str] = []
 
     for i, example in enumerate(examples, 1):
@@ -292,6 +294,10 @@ def semantic_check(
             if len(failures) >= 3:
                 print(f"  Reached maximum of 3 failures, stopping verification")
                 break
+        else:
+            # File passed - record it
+            file_name = example.get("file") or script_path.name
+            passed.append((file_name, tech))
 
     if skipped_empty_ir:
         print(
@@ -302,6 +308,6 @@ def semantic_check(
 
     if failures:
         print(f"Semantic check failed ❌ ({len(failures)} file(s) failed)")
-        return failures, skipped_empty_ir
+        return failures, passed, skipped_empty_ir
     print(f"Semantic check passed ✅")
-    return [], skipped_empty_ir
+    return [], passed, skipped_empty_ir
