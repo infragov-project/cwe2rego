@@ -275,9 +275,18 @@ class GlitchTool(AnalysisTool):
             end_line = node.get("end_line")
 
             # Check if this node covers any target
-            if is_valid_line(line) and is_valid_line(end_line):
+            # Accept if: both line and end_line are valid, OR line is valid and target equals line (handles single-line nodes like comments)
+            if is_valid_line(line):
                 for target in targets:
-                    if line <= target <= end_line:
+                    covers_target = False
+                    if is_valid_line(end_line):
+                        # Normal case: line range is valid
+                        covers_target = line <= target <= end_line
+                    elif target == line:
+                        # Special case: end_line is unknown/sentinel, but target matches the line (single-line nodes)
+                        covers_target = True
+                    
+                    if covers_target:
                         # Update or add match only if it's deeper than existing matches
                         if target not in matches_by_id:
                             matches_by_id[target] = []
@@ -376,11 +385,28 @@ class GlitchTool(AnalysisTool):
 
         # This node is an ancestor: rebuild it with pruned children
         result = {}
+        
+        # Check if this is a key-value pair dict (has both "key" and "value" fields)
+        is_kv_pair = "key" in node and "value" in node and len(node) == 2
+        keep_kv_pair_as_is = False
+        
+        if is_kv_pair:
+            key_node = node.get("key")
+            value_node = node.get("value")
+            key_matched = isinstance(key_node, dict) and id(key_node) in matched
+            value_matched = isinstance(value_node, dict) and id(value_node) in matched
+            keep_kv_pair_as_is = key_matched or value_matched
+        
         for key, value in node.items():
             if isinstance(value, dict):
-                # Single-node fields
-                pruned = self._prune(value, relevant, matched)
-                result[key] = pruned
+                # Single-node dict fields
+                if keep_kv_pair_as_is:
+                    # For key-value pairs where at least one part is matched, keep both as-is
+                    result[key] = value
+                else:
+                    # For other dict fields, recursively prune
+                    pruned = self._prune(value, relevant, matched)
+                    result[key] = pruned
             elif isinstance(value, list):
                 # List fields: keep items if relevant, or if they're descendants of relevant nodes
                 pruned_list = []
