@@ -126,12 +126,22 @@ def _verify_examples(
     false_positives = [line for line in detected_lines if line not in expected_set]
 
     if missing or false_positives:
-        ir = tool.extract_ir(str(script_path), unit_type)
+        ir_str = tool.extract_ir(str(script_path), unit_type)
+        
+        # Slice the IR to focus on relevant code
+        try:
+            ir_json = json.loads(ir_str)
+            ir_json = tool.slice_ir(ir_json, false_positives, missing, str(script_path))
+            ir_str = json.dumps(ir_json)
+        except (json.JSONDecodeError, Exception):
+            # If slicing fails, use full IR
+            pass
+        
         if missing:
             print(f"    ❌ Missing detections on lines: {missing}")
         if false_positives:
             print(f"    ❌ False positives on lines: {false_positives}")
-        return (ir, tech, missing, false_positives, file_name)
+        return (ir_str, tech, missing, false_positives, file_name)
 
     print(f"    ✅ All expected lines detected")
     return None

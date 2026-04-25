@@ -58,6 +58,29 @@ class AnalysisTool(ABC):
         """Extract IR from the file (or raw content if the tool has no IR)."""
         pass
 
+    def slice_ir(
+        self,
+        ir: dict,
+        false_positive_lines: list[int],
+        false_negative_lines: list[int],
+        file_path: str | None = None,
+    ) -> dict:
+        """
+        Slice the IR to keep only nodes relevant to given line numbers.
+
+        Default implementation returns the IR unchanged. Tools can override to provide slicing.
+
+        Args:
+            ir: The intermediate representation dict
+            false_positive_lines: List of line numbers for false positives
+            false_negative_lines: List of line numbers for false negatives
+            file_path: Optional file path (may be used by some tools)
+
+        Returns:
+            Sliced IR dict with only relevant code (or unchanged IR if not implemented)
+        """
+        return ir
+
     def get_file_type(self, file_path: str) -> str | None:
         """Return the tech name for the file (e.g. 'ansible') from its extension, or None if unsupported."""
         ext = Path(file_path).suffix.lower()

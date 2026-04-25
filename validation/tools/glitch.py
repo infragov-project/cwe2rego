@@ -7,6 +7,9 @@ from validation.tools.base import AnalysisTool
 
 GLITCH_REPO = "https://github.com/sr-lab/GLITCH.git"
 
+# Unknown line sentinels: if a node's line is in this set, it has no reliable location
+UNKNOWN_SENTINELS = {-33550336, 2**32, 2**63 - 1, 2**63, -(2**63), 0}
+
 
 class GlitchTool(AnalysisTool):
     name = "glitch"
@@ -161,3 +164,236 @@ class GlitchTool(AnalysisTool):
                 f"Output: {result.output}"
             )
         return result.output
+
+    def slice_ir(
+        self,
+        ir: dict,
+        false_positive_lines: list[int],
+        false_negative_lines: list[int],
+        file_path: str | None = None,
+    ) -> dict:
+        """
+        Slice the IR to keep only nodes relevant to given line numbers.
+
+        Combines false_positive_lines and false_negative_lines into a target set,
+        finds all nodes covering those lines, applies escalation rules for semantic
+        coupling and SWITCH/IF chains, then prunes the tree to keep only matched
+        nodes and their ancestors.
+
+        Args:
+            ir: The intermediate representation dict
+            false_positive_lines: List of line numbers for false positives
+            false_negative_lines: List of line numbers for false negatives
+            file_path: Optional file path (may be used by other tools; GlitchTool ignores)
+
+        Returns:
+            Sliced IR dict with only relevant code
+        """
+        # Deduplicate targets
+        targets = set(false_positive_lines) | set(false_negative_lines)
+        if not targets:
+            return ir
+
+        # Pass 1: Find matched nodes with their ancestry paths
+        matches_by_id = self._find_matches(ir, targets)
+        if not matches_by_id:
+            return ir
+
+        # Collect all matched node ids and their descendants
+        matched_ids = set()
+        ancestor_ids = set()
+
+        def collect_descendants(node):
+            """Recursively collect id of node and all its descendants."""
+            if not isinstance(node, dict):
+                return
+            matched_ids.add(id(node))
+            for value in node.values():
+                if isinstance(value, dict):
+                    collect_descendants(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            collect_descendants(item)
+
+        for matched_node, ancestry_path in (
+            item for match_list in matches_by_id.values() for item in [(m, a) for m, a in match_list]
+        ):
+            collect_descendants(matched_node)
+            for ancestor in ancestry_path:
+                ancestor_ids.add(id(ancestor))
+
+        # Collect all siblings of matched nodes
+        sibling_ids = set()
+
+        def collect_siblings(node):
+            """Recursively find siblings of matched nodes in list fields."""
+            if not isinstance(node, dict):
+                return
+            for value in node.values():
+                if isinstance(value, list):
+                    for i, item in enumerate(value):
+                        if isinstance(item, dict) and id(item) in matched_ids:
+                            # Add adjacent siblings
+                            if i > 0 and isinstance(value[i - 1], dict):
+                                sibling_ids.add(id(value[i - 1]))
+                            if i < len(value) - 1 and isinstance(value[i + 1], dict):
+                                sibling_ids.add(id(value[i + 1]))
+                        if isinstance(item, dict):
+                            collect_siblings(item)
+                elif isinstance(value, dict):
+                    collect_siblings(value)
+
+        collect_siblings(ir)
+
+        # Combine relevant ids: ancestors + siblings + matched
+        relevant_ids = ancestor_ids | sibling_ids | matched_ids
+
+        # Pass 2: Prune
+        return self._prune(ir, relevant_ids, matched_ids)
+
+    def _find_matches(self, ir: dict, targets: set[int]) -> dict:
+        """
+        Find all nodes covering target lines using DFS, returning greatest-depth matches.
+
+        Returns:
+            {target_line: [(matched_node, ancestry_path, depth), ...]} for all deepest matches per line
+        """
+        matches_by_id = {}  # {target_line: [(node, ancestry, depth), ...]}
+
+        def is_valid_line(line):
+            """Check if line is a valid location (not sentinel and positive)."""
+            return line is not None and line not in UNKNOWN_SENTINELS and line > 0
+
+        def dfs(node, ancestry, depth):
+            """DFS to find nodes covering target lines, tracking depth."""
+            if not isinstance(node, dict):
+                return
+
+            # Get line range of this node
+            line = node.get("line")
+            end_line = node.get("end_line")
+
+            # Check if this node covers any target
+            if is_valid_line(line) and is_valid_line(end_line):
+                for target in targets:
+                    if line <= target <= end_line:
+                        # Update or add match only if it's deeper than existing matches
+                        if target not in matches_by_id:
+                            matches_by_id[target] = []
+                        
+                        existing_depths = [d for _, _, d in matches_by_id[target]]
+                        if not existing_depths or depth > max(existing_depths):
+                            # Deeper match found, replace all existing
+                            matches_by_id[target] = [(node, ancestry, depth)]
+                        elif depth == max(existing_depths):
+                            # Same depth, add to list of matches
+                            matches_by_id[target].append((node, ancestry, depth))
+
+            # Recurse into children
+            new_ancestry = ancestry + [node]
+            for value in node.values():
+                if isinstance(value, dict):
+                    dfs(value, new_ancestry, depth + 1)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            dfs(item, new_ancestry, depth + 1)
+
+        dfs(ir, [], 0)
+
+        # Apply escalation rules
+        final_matches = {}
+        for target, match_list in matches_by_id.items():
+            final_matches[target] = []
+            for matched_node, ancestry, _ in match_list:
+                escalated_node = matched_node
+                escalated_ancestry = ancestry
+
+                # Escalation rule 1: Semantic coupling
+                if len(ancestry) >= 2:
+                    parent = ancestry[-2]
+                    
+                    # KeyValue escalation: if matched is the value of Variable/Attribute, or on same line
+                    if parent.get("ir_type") in ("Variable", "Attribute"):
+                        parent_value = parent.get("value")
+                        parent_line = parent.get("line")
+                        matched_line = matched_node.get("line")
+                        # Escalate if: matched is the value field OR (same line and valid)
+                        if matched_node is parent_value or \
+                           (parent_line is not None and parent_line == matched_line):
+                            escalated_node = parent
+                            escalated_ancestry = ancestry[:-1]
+                    
+                    # BinaryOperation/UnaryOperation escalation: if matched is an operand
+                    # Check for operand fields rather than ir_type, since concrete types don't have ir_type="BinaryOperation"
+                    if matched_node is parent.get("left") or \
+                       matched_node is parent.get("right"):
+                        escalated_node = parent
+                        escalated_ancestry = ancestry[:-1]
+
+                # Escalation rule 2: SWITCH/IF chain
+                for ancestor in reversed(escalated_ancestry):
+                    if ancestor.get("ir_type") == "ConditionalStatement" and \
+                       ancestor.get("is_top") is True:
+                        escalated_node = ancestor
+                        # Keep ancestry up to and including this ancestor (use original ancestry as source)
+                        ancestor_index = ancestry.index(ancestor)
+                        escalated_ancestry = ancestry[:ancestor_index + 1]
+                        break
+
+                final_matches[target].append((escalated_node, escalated_ancestry))
+
+        return final_matches
+
+    def _prune(self, node: dict, relevant: set[int], matched: set[int]) -> dict:
+        """
+        Recursively rebuild the IR tree, keeping:
+        - Matched nodes (fully intact)
+        - Ancestors of matched (structural, recursively pruned children)
+        - Immediate prev/next siblings of matched (fully intact)
+
+        Args:
+            node: Current node being processed
+            relevant: Set of id()s of relevant nodes (ancestors + siblings + matched)
+            matched: Set of id()s of matched nodes and their descendants
+
+        Returns:
+            Pruned node dict, or None if pruned away
+        """
+        if not isinstance(node, dict):
+            return node
+
+        node_id = id(node)
+
+        # If this node is matched, keep it fully intact
+        if node_id in matched:
+            return node
+
+        # If this node is not relevant, prune it
+        if node_id not in relevant:
+            return None
+
+        # This node is an ancestor: rebuild it with pruned children
+        result = {}
+        for key, value in node.items():
+            if isinstance(value, dict):
+                # Single-node fields
+                pruned = self._prune(value, relevant, matched)
+                result[key] = pruned
+            elif isinstance(value, list):
+                # List fields: keep items if relevant, or if they're descendants of relevant nodes
+                pruned_list = []
+                for item in value:
+                    if isinstance(item, dict):
+                        pruned_item = self._prune(item, relevant, matched)
+                        if pruned_item is not None:
+                            pruned_list.append(pruned_item)
+                    else:
+                        pruned_list.append(item)
+                result[key] = pruned_list
+            else:
+                # Keep all scalars (line, end_line, code, etc.)
+                result[key] = value
+
+        return result
