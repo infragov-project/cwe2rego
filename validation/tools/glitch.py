@@ -341,10 +341,10 @@ class GlitchTool(AnalysisTool):
                         escalated_node = parent
                         escalated_ancestry = ancestry[:-1]
 
-                # Escalation rule 2: SWITCH/IF chain
+                # Escalation rule 2: SWITCH chain
                 for ancestor in reversed(escalated_ancestry):
                     if ancestor.get("ir_type") == "ConditionalStatement" and \
-                       ancestor.get("is_top") is True:
+                       ancestor.get("is_top") is True and ancestor.get("type") == "SWITCH":
                         escalated_node = ancestor
                         # Keep ancestry up to and including this ancestor (use original ancestry as source)
                         ancestor_index = ancestry.index(ancestor)
