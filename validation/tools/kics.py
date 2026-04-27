@@ -305,3 +305,7 @@ class KICSTool(AnalysisTool):
                 return ""
         except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
             return ""
+
+    def count_ir_nodes(self, ir: dict) -> int:
+        """KICS IR node counting not yet implemented. Returns 0."""
+        return 0

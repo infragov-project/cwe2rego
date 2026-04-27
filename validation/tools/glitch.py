@@ -1,6 +1,7 @@
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 from click.testing import CliRunner
 
 from validation.tools.base import AnalysisTool
@@ -19,6 +20,24 @@ class GlitchTool(AnalysisTool):
         ".rb": "chef",
         ".pp": "puppet",
     }
+
+    def _count_nodes_recursive(self, node: Any) -> int:
+        """Recursively count nodes in GLITCH IR structure."""
+        if not isinstance(node, dict):
+            return 0
+        count = 1
+        for value in node.values():
+            if isinstance(value, dict):
+                count += self._count_nodes_recursive(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        count += self._count_nodes_recursive(item)
+        return count
+
+    def count_ir_nodes(self, ir: dict) -> int:
+        """Count the number of nodes in GLITCH IR structure."""
+        return self._count_nodes_recursive(ir)
 
     @classmethod
     def install(cls, base_dir: Path) -> None:

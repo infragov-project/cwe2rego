@@ -212,11 +212,11 @@ def list_generated_example_files(examples_dir: Path) -> list[str]:
 
 
 def serialize_semantic_failures(
-    failures: list[tuple[str, str, list[int], list[int], str]]
+    failures: list[tuple[str, str, list[int], list[int], str, float]]
 ) -> list[dict[str, Any]]:
     """Convert semantic failure tuples into JSON-serializable error entries."""
     serialized: list[dict[str, Any]] = []
-    for ir_file, iac_language, missing_lines, false_positives, file_name in failures:
+    for ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage in failures:
 
         serialized.append(
             {
@@ -227,6 +227,7 @@ def serialize_semantic_failures(
                 "false_positives": false_positives,
                 "file_name": file_name,
                 "ir_file": ir_file,
+                "ir_node_reduction_percentage": round(ir_reduction_percentage, 1),
             }
         )
     return serialized

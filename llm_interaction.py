@@ -536,12 +536,13 @@ if __name__ == "__main__":
             # Format failures for the prompt
             formatted_failures = []
             for f in failures:
-                # f is a tuple: (ir_file, iac_language, missing_lines, false_positives, file_name)
+                # f is a tuple: (ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage)
                 ir_file = f[0]
                 iac_language = f[1]
                 missing_lines = f[2]
                 false_positives = f[3]
                 file_name = f[4]
+                ir_reduction_percentage = f[5]
                 
                 # Load original file content with line numbers
                 original_file_path = Path(examples_folder) / file_name
@@ -556,6 +557,7 @@ if __name__ == "__main__":
                     "false_positives": false_positives,
                     "ir_file": ir_file,
                     "original_file_numbered": original_file_numbered,
+                    "ir_reduction_percentage": ir_reduction_percentage,
                 })
             
             # Call appropriate semantic error generation function based on analysis tool
