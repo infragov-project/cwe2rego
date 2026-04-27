@@ -81,6 +81,21 @@ class AnalysisTool(ABC):
         """
         return ir
 
+    def count_ir_nodes(self, ir: dict) -> int:
+        """
+        Count the number of nodes in the IR structure.
+        
+        Tool-specific implementation. Must be overridden by subclasses if they support node counting.
+        Default implementation returns 0 (no counting).
+        
+        Args:
+            ir: The intermediate representation dict
+            
+        Returns:
+            Number of nodes in the IR, or 0 if not supported
+        """
+        return 0
+
     def get_file_type(self, file_path: str) -> str | None:
         """Return the tech name for the file (e.g. 'ansible') from its extension, or None if unsupported."""
         ext = Path(file_path).suffix.lower()

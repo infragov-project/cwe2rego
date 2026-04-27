@@ -66,12 +66,12 @@ def _verify_examples(
     example: Dict[str, Any],
     type_name: str,
     csv_path: Path,
-) -> Tuple[str, str, List[int], List[int], str] | None:
+) -> Tuple[str, str, List[int], List[int], str, float] | None:
     """
     Verify a single example.
 
     Returns:
-        Tuple of (ir_file, iac_language, missing_lines, false_positives, file_name)
+        Tuple of (ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage)
         if validation fails, None if passes
     """
     file_name = example.get("file")
@@ -127,11 +127,16 @@ def _verify_examples(
 
     if missing or false_positives:
         ir_str = tool.extract_ir(str(script_path), unit_type)
+        ir_reduction_percentage = 0.0
         
-        # Slice the IR to focus on relevant code
+        # Slice the IR to focus on relevant code and calculate reduction
         try:
             ir_json = json.loads(ir_str)
+            original_node_count = tool.count_ir_nodes(ir_json)
             ir_json = tool.slice_ir(ir_json, false_positives, missing, str(script_path))
+            sliced_node_count = tool.count_ir_nodes(ir_json)
+            if original_node_count > 0:
+                ir_reduction_percentage = (1 - sliced_node_count / original_node_count) * 100
             ir_str = json.dumps(ir_json)
         except (json.JSONDecodeError, Exception):
             # If slicing fails, use full IR
@@ -141,7 +146,8 @@ def _verify_examples(
             print(f"    ❌ Missing detections on lines: {missing}")
         if false_positives:
             print(f"    ❌ False positives on lines: {false_positives}")
-        return (ir_str, tech, missing, false_positives, file_name)
+        print(f"    📊 IR node reduction: {ir_reduction_percentage:.1f}%")
+        return (ir_str, tech, missing, false_positives, file_name, ir_reduction_percentage)
 
     print(f"    ✅ All expected lines detected")
     return None
@@ -225,7 +231,7 @@ def semantic_check(
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
-) -> Tuple[List[Tuple[str, str, List[int], List[int], str]], List[str]]:
+) -> Tuple[List[Tuple[str, str, List[int], List[int], str, float]], List[str]]:
     """
     Verify all examples for a CWE using a preloaded examples manifest.
 
@@ -254,7 +260,7 @@ def semantic_check(
 
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / f"{tool.name}_lint.csv"
-    failures: List[Tuple[str, str, List[int], List[int], str]] = []
+    failures: List[Tuple[str, str, List[int], List[int], str, float]] = []
     skipped_empty_ir: List[str] = []
 
     for i, example in enumerate(examples, 1):
