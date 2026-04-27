@@ -242,31 +242,8 @@ class GlitchTool(AnalysisTool):
             for ancestor in ancestry_path:
                 ancestor_ids.add(id(ancestor))
 
-        # Collect all siblings of matched nodes
-        sibling_ids = set()
-
-        def collect_siblings(node):
-            """Recursively find siblings of matched nodes in list fields."""
-            if not isinstance(node, dict):
-                return
-            for value in node.values():
-                if isinstance(value, list):
-                    for i, item in enumerate(value):
-                        if isinstance(item, dict) and id(item) in matched_ids:
-                            # Add adjacent siblings
-                            if i > 0 and isinstance(value[i - 1], dict):
-                                sibling_ids.add(id(value[i - 1]))
-                            if i < len(value) - 1 and isinstance(value[i + 1], dict):
-                                sibling_ids.add(id(value[i + 1]))
-                        if isinstance(item, dict):
-                            collect_siblings(item)
-                elif isinstance(value, dict):
-                    collect_siblings(value)
-
-        collect_siblings(ir)
-
-        # Combine relevant ids: ancestors + siblings + matched
-        relevant_ids = ancestor_ids | sibling_ids | matched_ids
+        # Combine relevant ids: ancestors + matched (no siblings)
+        relevant_ids = ancestor_ids | matched_ids
 
         # Pass 2: Prune
         return self._prune(ir, relevant_ids, matched_ids)
@@ -339,19 +316,8 @@ class GlitchTool(AnalysisTool):
                 escalated_ancestry = ancestry
 
                 # Escalation rule 1: Semantic coupling
-                if len(ancestry) >= 2:
-                    parent = ancestry[-2]
-                    
-                    # KeyValue escalation: if matched is the value of Variable/Attribute, or on same line
-                    if parent.get("ir_type") in ("Variable", "Attribute"):
-                        parent_value = parent.get("value")
-                        parent_line = parent.get("line")
-                        matched_line = matched_node.get("line")
-                        # Escalate if: matched is the value field OR (same line and valid)
-                        if matched_node is parent_value or \
-                           (parent_line is not None and parent_line == matched_line):
-                            escalated_node = parent
-                            escalated_ancestry = ancestry[:-1]
+                if len(ancestry) >= 1:
+                    parent = ancestry[-1]
                     
                     # BinaryOperation/UnaryOperation escalation: if matched is an operand
                     # Check for operand fields rather than ir_type, since concrete types don't have ir_type="BinaryOperation"
@@ -360,14 +326,29 @@ class GlitchTool(AnalysisTool):
                         escalated_node = parent
                         escalated_ancestry = ancestry[:-1]
 
-                # Escalation rule 2: SWITCH chain
+                # Escalation rule 2: Attribute/Variable node escalation
+                # If a node is within an Attribute or Variable's line range, escalate to that node
+                for ancestor in reversed(escalated_ancestry):
+                    if ancestor.get("ir_type") in ("Attribute", "Variable"):
+                        attr_line = ancestor.get("line")
+                        attr_end = ancestor.get("end_line")
+                        matched_line = escalated_node.get("line")
+                        # Escalate if matched node is within Attribute/Variable's line range
+                        if attr_line is not None and attr_line > 0 and matched_line is not None and matched_line > 0:
+                            if attr_line <= matched_line <= attr_end:
+                                escalated_node = ancestor
+                                ancestor_index = ancestry.index(ancestor)
+                                escalated_ancestry = ancestry[:ancestor_index]
+                                break
+
+                # Escalation rule 3: SWITCH chain
                 for ancestor in reversed(escalated_ancestry):
                     if ancestor.get("ir_type") == "ConditionalStatement" and \
                        ancestor.get("is_top") is True and ancestor.get("type") == "SWITCH":
                         escalated_node = ancestor
-                        # Keep ancestry up to and including this ancestor (use original ancestry as source)
-                        ancestor_index = ancestry.index(ancestor)
-                        escalated_ancestry = ancestry[:ancestor_index + 1]
+                        # Keep ancestry up to (but not including) this ancestor
+                        ancestor_index = escalated_ancestry.index(ancestor)
+                        escalated_ancestry = escalated_ancestry[:ancestor_index]
                         break
 
                 final_matches[target].append((escalated_node, escalated_ancestry))
@@ -379,11 +360,10 @@ class GlitchTool(AnalysisTool):
         Recursively rebuild the IR tree, keeping:
         - Matched nodes (fully intact)
         - Ancestors of matched (structural, recursively pruned children)
-        - Immediate prev/next siblings of matched (fully intact)
 
         Args:
             node: Current node being processed
-            relevant: Set of id()s of relevant nodes (ancestors + siblings + matched)
+            relevant: Set of id()s of relevant nodes (ancestors + matched)
             matched: Set of id()s of matched nodes and their descendants
 
         Returns:
