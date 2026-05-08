@@ -319,7 +319,7 @@ class GlitchTool(AnalysisTool):
                 if len(ancestry) >= 1:
                     parent = ancestry[-1]
                     
-                    # BinaryOperation/UnaryOperation escalation: if matched is an operand
+                    # BinaryOperation escalation: if matched is an operand
                     # Check for operand fields rather than ir_type, since concrete types don't have ir_type="BinaryOperation"
                     if matched_node is parent.get("left") or \
                        matched_node is parent.get("right"):
