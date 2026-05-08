@@ -246,7 +246,10 @@ class GlitchTool(AnalysisTool):
         relevant_ids = ancestor_ids | matched_ids
 
         # Pass 2: Prune
-        return self._prune(ir, relevant_ids, matched_ids)
+        sliced = self._prune(ir, relevant_ids, matched_ids)
+
+        # Pass 3: Clean up unnecessary metadata fields
+        return self._clean_ir(sliced)
 
     def _find_matches(self, ir: dict, targets: set[int]) -> dict:
         """
@@ -422,3 +425,46 @@ class GlitchTool(AnalysisTool):
                 result[key] = value
 
         return result
+
+    def _clean_ir(self, node: dict) -> dict:
+        """
+        Recursively remove unnecessary metadata fields from IR nodes.
+        
+        Removes: column, end_column, end_line
+        Keeps: line (semantically important), code, ir_type, and all other fields
+        
+        Args:
+            node: IR node to clean
+            
+        Returns:
+            Cleaned IR node with unnecessary fields removed
+        """
+        if not isinstance(node, dict):
+            return node
+        
+        # Fields to remove
+        fields_to_remove = {"column", "end_column", "end_line"}
+        
+        result = {}
+        for key, value in node.items():
+            if key in fields_to_remove:
+                # Skip these fields
+                continue
+            elif isinstance(value, dict):
+                # Recursively clean nested dicts
+                result[key] = self._clean_ir(value)
+            elif isinstance(value, list):
+                # Recursively clean items in lists
+                cleaned_list = []
+                for item in value:
+                    if isinstance(item, dict):
+                        cleaned_list.append(self._clean_ir(item))
+                    else:
+                        cleaned_list.append(item)
+                result[key] = cleaned_list
+            else:
+                # Keep all other scalar values
+                result[key] = value
+        
+        return result
+
