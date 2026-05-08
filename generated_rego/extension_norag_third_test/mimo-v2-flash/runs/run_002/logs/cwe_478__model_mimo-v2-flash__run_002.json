@@ -1,0 +1,287 @@
+{
+  "run_id": "run_002",
+  "run_started_at_utc": "2026-04-25T09:52:42.150019+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002",
+  "experiment_name": "extension_norag_third_test",
+  "cwe": "478",
+  "type_name": "sec_no_default_switch",
+  "model_used": "xiaomi/mimo-v2-flash",
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego",
+  "cwe_condition": "Based on the provided CWE-478, here are the key weaknesses to detect in Infrastructure as Code (IaC) scripts, along with relevant keywords and attributes that imply this weakness:\n\n## Necessary Weaknesses to Detect\n\n1. **Missing Default Case in Conditional Logic**\n   - Keywords: `default`, `else`, `otherwise`, `fallback`, `catch-all`\n   - Attributes: Conditional blocks (if/elif/else, switch/case) without a final default branch\n\n2. **Incomplete Condition Coverage**\n   - Keywords: `case`, `when`, `condition`, `match`, `branch`\n   - Attributes: Multiple conditional branches that don't account for all possible input values or states\n\n3. **Unhandled Input States**\n   - Keywords: `unknown`, `unhandled`, `unexpected`, `undefined`\n   - Attributes: Variables or parameters that can take values not explicitly handled by conditional logic\n\n4. **Incomplete Switch/Case Equivalents**\n   - Keywords: `select`, `choose`, `match`, `case` (in IaC templating languages)\n   - Attributes: Template conditions that lack a final catch-all branch\n\n## Detection Patterns in IaC\n\n### Conditional Logic Patterns\n- **If-Else Chains**: Multiple `if`/`elif` blocks without a final `else`\n- **Switch/Case Statements**: Case statements missing the `default` branch\n- **Conditional Templates**: Template conditions that don't handle all possible values\n\n### Common IaC Manifestations\n- **Terraform**: `count` conditions, `for_each` with incomplete key coverage, `conditional` expressions without defaults\n- **CloudFormation**: `Conditions` section with incomplete mappings, `Fn::If` without default branches\n- **Ansible**: `when` conditionals without fallback tasks, `case` statements in Jinja2 templates\n- **Kubernetes**: Init containers or probes with conditional logic missing default behaviors\n\n### Critical Attributes to Monitor\n- **Resource Creation Conditions**: When resources are created based on variable values\n- **Security Group Rules**: Conditional rules that might miss edge cases\n- **IAM Policy Conditions**: Conditional permission grants without fallback denials\n- **Network Configuration**: Routing or firewall rules with incomplete condition coverage\n\n## Detection Methodology\n\nUse **Automated Static Analysis (SAST)** to identify:\n- Conditional blocks without default branches\n- Variable assignments within conditional logic that might remain uninitialized\n- Template expressions with limited value coverage\n- Resource dependencies that assume all conditions are handled\n\nThis weakness is particularly critical in IaC because unhandled conditions can lead to security gaps, misconfigurations, or deployment failures that affect infrastructure integrity and availability.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-478",
+    "entries_count": 4
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\nimport data.graph\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n\n    graph_edges := {[from, to] |\n        from := conditionals[_]\n        to := from.else_statement\n        to != null\n    }\n\n    chain := graph.reachable(graph_edges, {top_conditional})\n\n    has_default := false\n    some node in chain\n    node.is_default == true\n    has_default = true\n\n    not has_default\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:22: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some node in chain\n\t              ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\nimport data.graph\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n\n    graph_edges := {[from, to] |\n        from := conditionals[_]\n        to := from.else_statement\n        to != null\n    }\n\n    chain := graph.reachable(graph_edges, {top_conditional})\n\n    default_nodes := {node | node := chain[_]; node.is_default == true}\n    count(default_nodes) == 0\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:19: rego_type_error: undefined function data.graph.reachable\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n\n    chain := {top_conditional}\n    current := top_conditional\n    count := 0\n    count <= 10  # Limit chain length to avoid infinite loops\n    \n    current.else_statement != null\n    chain := chain | {current.else_statement}\n    current := current.else_statement\n    count := count + 1\n\n    default_nodes := {node | node := chain[_]; node.is_default == true}\n    count(default_nodes) == 0\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "4 errors occurred:\n/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:18: rego_compile_error: var chain assigned above\n/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:19: rego_compile_error: var current assigned above\n/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:20: rego_compile_error: var count assigned above\n/home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:23: rego_compile_error: called function count shadowed\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 4,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nhas_default_in_chain(conditional) {\n    conditional.is_default == true\n} else {\n    conditional.else_statement != null\n    has_default_in_chain(conditional.else_statement)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    not has_default_in_chain(top_conditional)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:7: rego_recursion_error: rule data.glitch.has_default_in_chain is recursive: data.glitch.has_default_in_chain -> data.glitch.has_default_in_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 5,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nhas_default_in_chain(conditional) = result {\n    conditional.is_default == true\n    result = true\n} else = result {\n    conditional.else_statement != null\n    result = has_default_in_chain(conditional.else_statement)\n} else = result {\n    result = false\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    not has_default_in_chain(top_conditional)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:8: rego_recursion_error: rule data.glitch.has_default_in_chain is recursive: data.glitch.has_default_in_chain -> data.glitch.has_default_in_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 6,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\ncollect_chain(conditional, chain) = result {\n    conditional == null\n    result = chain\n} else = result {\n    conditional != null\n    new_chain = array.concat(chain, [conditional])\n    result = collect_chain(conditional.else_statement, new_chain)\n}\n\nhas_default_in_chain(conditional) = result {\n    chain = collect_chain(conditional, [])\n    result = count([c | c := chain[_]; c.is_default == true]) > 0\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    not has_default_in_chain(top_conditional)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:8: rego_recursion_error: rule data.glitch.collect_chain is recursive: data.glitch.collect_chain -> data.glitch.collect_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 7,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\ncollect_chain(conditional, chain) = result {\n    conditional == null\n    result = chain\n} else = result {\n    conditional != null\n    new_chain = array.concat(chain, [conditional])\n    result = collect_chain(conditional.else_statement, new_chain)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    \n    # Build chain without recursion using fixed depth\n    chain := [top_conditional]\n    chain1 := top_conditional.else_statement != null ? array.concat(chain, [top_conditional.else_statement]) : chain\n    chain2 := chain1[count(chain1)-1].else_statement != null ? array.concat(chain1, [chain1[count(chain1)-1].else_statement]) : chain1\n    chain3 := chain2[count(chain2)-1].else_statement != null ? array.concat(chain2, [chain2[count(chain2)-1].else_statement]) : chain2\n    chain4 := chain3[count(chain3)-1].else_statement != null ? array.concat(chain3, [chain3[count(chain3)-1].else_statement]) : chain3\n    chain5 := chain4[count(chain4)-1].else_statement != null ? array.concat(chain4, [chain4[count(chain4)-1].else_statement]) : chain4\n    \n    # Check if any in chain has is_default == true\n    has_default := false\n    some c in chain5\n    c.is_default == true\n    has_default = true\n    \n    not has_default\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:23: rego_parse_error: illegal token\n\t    chain1 := top_conditional.else_statement != null ? array.concat(chain, [top_conditional.else_statement]) : chain\n\t                                                     ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 8,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n\n    # Build chain without recursion using graph traversal\n    edges := {[from, to] |\n        from := conditionals[_]\n        to := from.else_statement\n        to != null\n    }\n\n    chain := {top_conditional}\n    chain := chain | {to | [from, to] := edges; from in chain}\n\n    # Check if any in chain has is_default == true\n    has_default := false\n    some c in chain\n    c.is_default == true\n    has_default = true\n\n    not has_default\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:20: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    chain := chain | {to | [from, to] := edges; from in chain}\n\t                                                     ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 9,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n\n    # Check if there's an else_statement chain and none are default\n    not has_default_in_chain(top_conditional)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\nhas_default_in_chain(conditional) {\n    conditional.is_default == true\n} else {\n    conditional.else_statement != null\n    has_default_in_chain(conditional.else_statement)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:25: rego_recursion_error: rule data.glitch.has_default_in_chain is recursive: data.glitch.has_default_in_chain -> data.glitch.has_default_in_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 10,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals\n    top_conditionals := {c | c := conditionals[_]; c.is_top == true}\n    \n    # For each top conditional, check if there's a default in its else chain\n    top_conditional := top_conditionals[_]\n    \n    # Build the chain of else statements iteratively using a set\n    chain := build_chain(top_conditional)\n    \n    # Check if any conditional in the chain is a default\n    has_default := false\n    some c in chain\n    c.is_default == true\n    has_default = true\n    \n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper function to build the chain of else statements\nbuild_chain(conditional) = chain {\n    chain := {conditional}\n    conditional.else_statement != null\n    # Add the else statement and continue building\n    else_chain := build_chain(conditional.else_statement)\n    chain := chain | else_chain\n} else = {conditional} {\n    # Base case: no else statement\n    conditional.else_statement == null\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:23: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some c in chain\n\t           ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 11,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals\n    top_conditionals := {c | c := conditionals[_]; c.is_top == true}\n    \n    # For each top conditional, check if there's a default in its else chain\n    top_conditional := top_conditionals[_]\n    \n    # Build the chain of else statements\n    chain := build_chain(top_conditional)\n    \n    # Check if any conditional in the chain is a default using set comprehension\n    has_default := count({c | c := chain[_]; c.is_default == true}) > 0\n    \n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper function to build the chain of else statements\nbuild_chain(conditional) = chain {\n    # Base case: no else statement\n    conditional.else_statement == null\n    chain := {conditional}\n} {\n    # Recursive case: has else statement\n    conditional.else_statement != null\n    else_chain := build_chain(conditional.else_statement)\n    chain := {conditional} | else_chain\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:39: rego_recursion_error: rule data.glitch.build_chain is recursive: data.glitch.build_chain -> data.glitch.build_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 12,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals\n    top_conditionals := {c | c := conditionals[_]; c.is_top == true}\n    \n    # For each top conditional, check if there's a default in its else chain\n    top_conditional := top_conditionals[_]\n    \n    # Check the else chain for defaults\n    has_default := false\n    \n    # Check the top conditional itself\n    top_conditional.is_default == false\n    \n    # Check the else chain recursively\n    current := top_conditional\n    while {\n        current.else_statement != null\n        current := current.else_statement\n        current.is_default == false\n    }\n    \n    # If we reach here without finding a default, then there's no default\n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:26: rego_parse_error: unexpected { token: expected \\n or ; or }\n\t    while {\n\t          ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 13,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals that are not defaults\n    top_conditionals := {c | c := conditionals[_]; c.is_top == true; c.is_default == false}\n    \n    # For each top conditional, check if there's a default in its else chain\n    top_conditional := top_conditionals[_]\n    \n    # Start with the top conditional and follow the else chain\n    # We'll use a helper rule to check the chain\n    has_default := false\n    \n    # Check if the current conditional is a default\n    current := top_conditional\n    current.is_default == false\n    \n    # Check the else chain - we'll use a simple approach without recursion\n    # This works by checking if any conditional in the chain has is_default == true\n    chain_has_default := false\n    \n    # Check the entire chain by walking through conditionals\n    some c in conditionals\n    c.is_default == true\n    in_else_chain(top_conditional, c)\n    \n    # If we found a default in the chain, then has_default is true\n    chain_has_default = true\n    \n    # If we didn't find a default in the chain, report the issue\n    not chain_has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper rule to check if a conditional is in the else chain of another conditional\nin_else_chain(top, target) {\n    top == target\n} else {\n    top.else_statement != null\n    in_else_chain(top.else_statement, target)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:31: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some c in conditionals\n\t           ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 14,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Helper rule to check if a conditional is in the else chain of another conditional\nhas_default_in_chain(top) {\n    top.is_default == true\n} else {\n    top.else_statement != null\n    has_default_in_chain(top.else_statement)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals that are not defaults\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Check if there's a default in the else chain\n    not has_default_in_chain(top_conditional)\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:8: rego_recursion_error: rule data.glitch.has_default_in_chain is recursive: data.glitch.has_default_in_chain -> data.glitch.has_default_in_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 15,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\nimport future.keywords.in\n\n# Check if a conditional has a default in its else chain without recursion\nhas_default_in_chain(top) {\n    # Get all conditionals in the parent\n    conditionals := glitch_lib.all_conditional_statements(top)\n    \n    # Build the chain by following else_statements\n    chain := {top}\n    current := top\n    while current.else_statement != null {\n        current := current.else_statement\n        chain := chain | {current}\n    }\n    \n    # Check if any conditional in the chain is a default\n    some c in chain\n    c.is_default == true\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals that are not defaults\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Check if there's a default in the else chain\n    not has_default_in_chain(top_conditional)\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    while current.else_statement != null {\n\t          ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 16,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\nimport future.keywords.in\n\nhas_default_in_chain(top) = result {\n    # Get all conditionals in the parent\n    conditionals := glitch_lib.all_conditional_statements(top)\n    \n    # Find the chain by following else_statements\n    chain := {top}\n    current := top\n    while current.else_statement != null {\n        current := current.else_statement\n        chain := chain | {current}\n    }\n    \n    # Check if any conditional in the chain is a default\n    result := false\n    some c in chain\n    c.is_default == true\n    result := true\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all conditional statements in the parent\n    conditionals := glitch_lib.all_conditional_statements(parent)\n    \n    # Find top-level conditionals that are not defaults\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Check if there's a default in the else chain\n    not has_default_in_chain(top_conditional)\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:13: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    while current.else_statement != null {\n\t          ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 17,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Check if there's a default in the else chain using recursion\n    not has_default_in_chain(top_conditional)\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper rule to recursively check if a conditional or its else chain has a default\nhas_default_in_chain(conditional) {\n    conditional.is_default == true\n} else {\n    conditional.else_statement != null\n    has_default_in_chain(conditional.else_statement)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:28: rego_recursion_error: rule data.glitch.has_default_in_chain is recursive: data.glitch.has_default_in_chain -> data.glitch.has_default_in_chain\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 18,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Check if there's a default in the chain by collecting all conditionals\n    # and checking if any default is reachable via else_statement\n    all_conditionals := glitch_lib.all_conditional_statements(parent)\n    reachable_from_top := {c | \n        c := all_conditionals[_]\n        is_reachable_from(c, top_conditional)\n    }\n    \n    # Check if any reachable conditional is a default\n    has_default := false\n    some c in reachable_from_top\n    c.is_default == true\n    has_default = true\n    \n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper rule to check if a conditional is reachable from another via else_statement\nis_reachable_from(target, start) {\n    # Direct match\n    target == start\n} else {\n    # Check if target is reachable via else_statement chain\n    start.else_statement != null\n    is_reachable_from(target, start.else_statement)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:24: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some c in reachable_from_top\n\t           ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 19,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Get all conditionals in the chain by traversing else_statements\n    chain := get_conditional_chain(top_conditional)\n    \n    # Check if any conditional in the chain is a default\n    has_default := false\n    some conditional in chain\n    conditional.is_default == true\n    has_default = true\n    \n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}\n\n# Helper rule to get all conditionals in the chain starting from a given conditional\nget_conditional_chain[cond] {\n    cond := _get_chain_helper[_]\n}\n\n# Internal helper that builds the chain using recursion\n_get_chain_helper[cond] {\n    cond := top_conditional\n}\n\n_get_chain_helper[cond] {\n    some parent in _get_chain_helper\n    parent.else_statement != null\n    cond := parent.else_statement\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:19: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some conditional in chain\n\t                     ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 20,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    conditionals := glitch_lib.all_conditional_statements(parent)\n    top_conditional := conditionals[_]\n    top_conditional.is_top == true\n    top_conditional.is_default == false\n    \n    # Build list of conditionals in the chain by following else_statements\n    chain := []\n    current := top_conditional\n    while current != null {\n        chain := array.concat(chain, [current])\n        current := current.else_statement\n    }\n    \n    # Check if any conditional in the chain is a default\n    has_default := false\n    count_default := count([c | c := chain[_]; c.is_default == true])\n    has_default = (count_default > 0)\n    \n    not has_default\n    \n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": top_conditional,\n        \"path\": parent.path,\n        \"description\": \"Conditional block without a default branch - This can lead to unhandled cases and potential security issues. (CWE-478)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_third_test/mimo-v2-flash/runs/run_002/cwe_478.rego:17: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    while current != null {\n\t          ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    }
+  ],
+  "result": {
+    "passed": false,
+    "attempts_used": 20,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-04-25T09:59:01.181311+00:00",
+    "elapsed_time": "6m19s"
+  },
+  "llm_usage": {
+    "calls": 21,
+    "input_tokens_total": 128123,
+    "output_tokens_total": 73651,
+    "reasoning_tokens_total": 67620,
+    "cache_read_tokens_total": 103899
+  }
+}
