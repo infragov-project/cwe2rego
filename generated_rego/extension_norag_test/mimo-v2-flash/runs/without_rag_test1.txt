@@ -1,0 +1,49 @@
+Pooled runs: extension_norag_test | model=mimo-v2-flash | 5 run(s)
+Runs parent: /home/daniel/InfraGov/cwe2rego/generated_rego/extension_norag_test/mimo-v2-flash/runs
+
+Primary read (RAG only runs after syntactic_error): among edges that start from
+syntactic_error, what fraction go to semantic_error vs stay syntactic vs pass outright.
+
+=== extension_norag_test ===
+  CWEs with logs: 12
+  After syntactic_error -> next status (counts across CWEs, 456 edges):
+    -> semantic_error (OPA OK):     199
+    -> syntactic_error (still OPA):  256
+    -> passed:                       1
+    P(next is semantic | prior syntactic) = 0.4364 (199/456)
+
+  Secondary: semantic->syntactic regressions (total): 189
+  CWEs with at least one sem->syn: 12
+  Mean similarity between consecutive attempts: 0.7092
+  Mean similarity after semantic_error -> next attempt: 0.6000 (n=455)
+  Mean similarity after syntactic_error -> next attempt: 0.8183 (n=456)
+  All transition counts:
+    semantic_error->passed: 4
+    semantic_error->semantic_error: 262
+    semantic_error->syntactic_error: 189
+    syntactic_error->passed: 1
+    syntactic_error->semantic_error: 199
+    syntactic_error->syntactic_error: 256
+
+  Similarity per run (mean over CWEs in that run):
+    run_001  consecutive=0.6902  after_semantic=0.5914  after_syntactic=0.8056
+    run_002  consecutive=0.6927  after_semantic=0.5468  after_syntactic=0.8326
+    run_003  consecutive=0.6992  after_semantic=0.6089  after_syntactic=0.7857
+    run_004  consecutive=0.7375  after_semantic=0.6105  after_syntactic=0.8485
+    run_005  consecutive=0.7402  after_semantic=0.6579  after_syntactic=0.8236
+
+=== Per CWE ===
+  CWE   syn->sem%    sem->syn      sim*     sim|sem
+  syn->sem% = share of transitions out of syntactic_error that reach semantic_error.
+  250       50.0%           2     0.615       0.347
+  258       73.1%          17     0.827       0.782
+  259       71.1%          25     0.717       0.631
+  284       42.9%          10     0.598       0.424
+  319       40.0%          24     0.721       0.513
+  326       54.3%          19     0.645       0.570
+  327       57.1%          17     0.705       0.637
+  353       35.5%          22     0.652       0.381
+  478       15.2%          12     0.734       0.568
+  546      100.0%           3     0.788       0.810
+  798       51.0%          22     0.749       0.627
+ 1327       40.5%          16     0.689       0.489
