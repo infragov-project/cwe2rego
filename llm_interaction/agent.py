@@ -55,8 +55,6 @@ class InfraAgent:
 
         reasoning_tokens = int(
             usage_details.get('reasoning_tokens')
-            or usage_details.get('reasoningTokens')
-            or usage_details.get('thoughts_token_count')
             or 0
         )
         visible_completion_tokens = max(completion_tokens - reasoning_tokens, 0)
