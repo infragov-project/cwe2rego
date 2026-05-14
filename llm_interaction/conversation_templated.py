@@ -32,42 +32,16 @@ def _usage_get(obj: Any, key: str, default=None):
 
 
 def _extract_usage_summary(usage: Any) -> dict[str, Any]:
-    # OpenRouter raw responses can wrap token fields inside `usage`.
-    usage_payload = _usage_get(usage, "usage", None)
-    usage_data = usage_payload if isinstance(usage_payload, dict) else usage
-
-    completion_details = _usage_get(usage_data, "completion_tokens_details", {}) or {}
-    if not isinstance(completion_details, dict):
-        completion_details = {}
-
-    prompt_details = _usage_get(usage_data, "prompt_tokens_details", {}) or {}
-    if not isinstance(prompt_details, dict):
-        prompt_details = {}
-
-    usage_details = _usage_get(usage_data, "details", {}) or {}
+    # Extract usage
+    input_tokens = _usage_get(usage, "input_tokens", 0)
+    output_tokens = _usage_get(usage, "output_tokens", 0)
+    cache_read_tokens = _usage_get(usage, "cache_read_tokens", 0) or 0
+    
+    usage_details = _usage_get(usage, "details", {}) or {}
     if not isinstance(usage_details, dict):
         usage_details = {}
-
-    # Prefer OpenRouter field names, keep minimal fallback aliases.
-    input_tokens = _usage_get(usage_data, "prompt_tokens", _usage_get(usage_data, "input_tokens", 0))
-    output_tokens = _usage_get(usage_data, "completion_tokens", _usage_get(usage_data, "output_tokens", 0))
-
-    reasoning_tokens = int(
-        completion_details.get("reasoning_tokens")
-        or usage_details.get("reasoning_tokens")
-        or usage_details.get("reasoningTokens")
-        or usage_details.get("thoughts_token_count")
-        or 0
-    )
-
-    cache_read_tokens = int(
-        _usage_get(usage_data, "cache_read_tokens", None)
-        or prompt_details.get("cached_tokens")
-        or usage_details.get("cache_read_tokens")
-        or usage_details.get("cache_read_input_tokens")
-        or usage_details.get("cached_tokens")
-        or 0
-    )
+    
+    reasoning_tokens = int(usage_details.get("reasoning_tokens") or 0)
 
     return {
         "input_tokens": int(input_tokens or 0),
