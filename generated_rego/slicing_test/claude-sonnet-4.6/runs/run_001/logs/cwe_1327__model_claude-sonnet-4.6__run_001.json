@@ -1,0 +1,115 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-05-13T16:17:33.801681+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/slicing_test/claude-sonnet-4.6/runs/run_001",
+  "experiment_name": "slicing_test",
+  "cwe": "1327",
+  "type_name": "sec_invalid_bind",
+  "model_used": "anthropic/claude-sonnet-4.6",
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/slicing_test/claude-sonnet-4.6/runs/run_001/cwe_1327.rego",
+  "cwe_condition": "# CWE-1327: Binding to an Unrestricted IP Address \u2014 IaC Detection Guide\n\n## Core Weakness to Detect\n\nThe fundamental issue is a **network binding configuration that accepts connections from all interfaces**, rather than a specific, intended IP address.\n\n---\n\n## Suspicious Values (Language-Agnostic)\n\n| Value | Description |\n|---|---|\n| `0.0.0.0` | IPv4 wildcard \u2014 listens on all interfaces |\n| `::` / `::0` / `0:0:0:0:0:0:0:0` | IPv6 wildcard equivalent |\n| `*` | Wildcard character used in some frameworks |\n| `\"\"` (empty string) | Many services default to all-interface binding |\n| `0.0.0.0/0` | CIDR notation indicating unrestricted range |\n\n---\n\n## Keywords, Attributes & Fields to Inspect\n\n### Binding/Listening Fields\n```\nbind\nbind_address / bind_addr / bindaddr / bindaddress\nlisten / listen_address / listen_addr / listenaddr / listen_on\naddress / network_address / socket_address\nhost / hostname / host_address\nip / ip_address / ip_bind / bind_ip\ninterface / network_interface\n```\n\n### Service-Specific Fields\n```\nhttp_addr / https_addr\napi_address / api_addr\ngrpc_addr\nclient_addr\ncluster_address / cluster_advertise\nadvertise_addr\nadmin_addr / mgmt_address\nendpoint / endpoints\n```\n\n### Network/Firewall Rule Fields\n```\ncidr / cidr_block\ningress / egress\nsource_ranges / source_address\nallowed_ips / whitelist / allowlist\ninbound_rules / security_rules\nfrom_port / to_port (when paired with 0.0.0.0/0)\n```\n\n---\n\n## Contextual Patterns That Imply the Weakness\n\n### 1. Unrestricted Binding on Sensitive Services\n```\n# Flags: database/cache/admin service + wildcard address\n[database_service]\n  bind_address = \"0.0.0.0\"\n  port = <any>\n```\n\n### 2. Security Group / Firewall Rule with Wildcard Source\n```\n# Flags: open ingress from all IPs to any port\ningress:\n  from: \"0.0.0.0/0\"\n  port: <any>\n```\n\n### 3. Missing Binding Restriction (Absence Pattern)\n- A listening port is defined **without** a corresponding explicit bind address \u2192 may default to `0.0.0.0`\n\n### 4. Advertised Address Mismatches\n- A service advertises a specific address but binds to `0.0.0.0`, exposing more interfaces than intended.\n\n---\n\n## High-Risk Resource/Service Types to Prioritize\n\n| Category | Examples |\n|---|---|\n| **Databases** | SQL engines, NoSQL stores, time-series DBs |\n| **Cache services** | In-memory data stores |\n| **Admin dashboards** | Cluster management UIs, container dashboards |\n| **Message brokers** | Queue/stream services |\n| **API gateways** | gRPC, REST management endpoints |\n| **Secret stores** | Vault-type services, key signing servers |\n| **Cluster coordination** | Configuration stores, distributed consensus services |\n\n---\n\n## Detection Logic Summary\n\n```\nIF (binding_field IN [known_bind_keywords])\nAND (value IN [\"0.0.0.0\", \"::\", \"*\", \"\"] OR value matches /^0\\.0\\.0\\.0/)\nAND (resource_type IN [server, database, cache, broker, admin_service])\nTHEN FLAG as CWE-1327\n```\n\n**Additional signal:** Co-occurrence of an unrestricted bind address **with a publicly routable port** or **no firewall rule restricting ingress** significantly elevates severity.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 1,
+    "truncation_enabled": true,
+    "mode": "last_n_iterations",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nbind_keywords := {\n    \"bind\", \"bind_address\", \"bind_addr\", \"bindaddr\", \"bindaddress\",\n    \"listen\", \"listen_address\", \"listen_addr\", \"listenaddr\", \"listen_on\",\n    \"address\", \"network_address\", \"socket_address\",\n    \"host\", \"host_address\",\n    \"ip\", \"ip_address\", \"ip_bind\", \"bind_ip\",\n    \"interface\", \"network_interface\",\n    \"http_addr\", \"https_addr\",\n    \"api_address\", \"api_addr\", \"grpc_addr\",\n    \"client_addr\", \"advertise_addr\",\n    \"admin_addr\", \"mgmt_address\",\n    \"cluster_address\", \"source_ranges\", \"source_address\"\n}\n\nwildcard_values := {\"0.0.0.0\", \"::\", \"::0\", \"0:0:0:0:0:0:0:0\", \"*\", \"0.0.0.0/0\"}\n\nis_bind_attr(name) {\n    lower(name) == bind_keywords[_]\n}\n\nis_wildcard_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == wildcard_values[_]\n}\n\nis_wildcard_value(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^0\\\\.0\\\\.0\\\\.0(/[0-9]+)?$\", value.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    is_bind_attr(attr.name)\n    is_wildcard_value(attr.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses like 0.0.0.0 or ::. (CWE-1327)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            14
+          ],
+          "false_positives": [],
+          "file_name": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 14, \"code\": \"    mongodb_net_bindip: 0.0.0.0\\n\", \"name\": \"mongodb_net_bindip\", \"value\": {\"ir_type\": \"String\", \"line\": 14, \"code\": \"0.0.0.0\", \"value\": \"0.0.0.0\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"Converge\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/UnderGreen_ansible-role-mongodb-molecule-default-converge.yml\", \"type\": \"block\", \"lines\": 23}], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/UnderGreen_ansible-role-mongodb-molecule-default-converge.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/UnderGreen_ansible-role-mongodb-molecule-default-converge.yml\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 92.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            4
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 4, \"code\": \"mysql_bind_address: \\\"0.0.0.0\\\"\\n\", \"name\": \"mysql_bind_address\", \"value\": {\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"0.0.0.0\\\"\", \"value\": \"0.0.0.0\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml\", \"type\": \"vars\", \"lines\": 5}",
+          "ir_node_reduction_percentage": 66.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            61
+          ],
+          "false_positives": [],
+          "file_name": "Soluciones_ey-cloud-recipes-cookbooks-mongodb-recipes-configure.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 56, \"code\": \"mongodb_options\", \"name\": \"mongodb_options\", \"value\": {\"ir_type\": \"Hash\", \"line\": 56, \"code\": \"{ :exec => \\\"#{mongodb_bin}/mongod\\\",\\n                    :data_path => mongo_data,\\n                    :log_path => mongo_log,\\n                    :user => user[:username],\\n                    :pid_path => \\\"/var/run/mongodb\\\",\\n                    :ip => \\\"0.0.0.0\\\",\\n                    :port => @node[:mongo_port],\\n                    :extra_opts => '' }\", \"value\": [{\"key\": {\"ir_type\": \"VariableReference\", \"line\": 56, \"code\": \":exec\", \"value\": \":exec\"}, \"value\": {\"ir_type\": \"Sum\", \"line\": 56, \"code\": \"#{mongodb_bin}/mongod\", \"left\": {\"ir_type\": \"VariableReference\", \"line\": 56, \"code\": \"mongodb_bin\", \"value\": \"mongodb_bin\"}, \"right\": {\"ir_type\": \"String\", \"line\": 56, \"code\": \"/mongod\", \"value\": \"/mongod\"}, \"type\": \"sum\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 57, \"code\": \":data_path\", \"value\": \":data_path\"}, \"value\": {\"ir_type\": \"VariableReference\", \"line\": 57, \"code\": \"mongo_data\", \"value\": \"mongo_data\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 58, \"code\": \":log_path\", \"value\": \":log_path\"}, \"value\": {\"ir_type\": \"VariableReference\", \"line\": 58, \"code\": \"mongo_log\", \"value\": \"mongo_log\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 59, \"code\": \":user\", \"value\": \":user\"}, \"value\": {\"ir_type\": \"Access\", \"line\": 59, \"code\": \"user[:username]\", \"left\": {\"ir_type\": \"VariableReference\", \"line\": 59, \"code\": \"user\", \"value\": \"user\"}, \"right\": {\"ir_type\": \"VariableReference\", \"line\": 59, \"code\": \":username\", \"value\": \":username\"}, \"type\": \"access\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 60, \"code\": \":pid_path\", \"value\": \":pid_path\"}, \"value\": {\"ir_type\": \"String\", \"line\": 60, \"code\": \"/var/run/mongodb\", \"value\": \"/var/run/mongodb\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 61, \"code\": \":ip\", \"value\": \":ip\"}, \"value\": {\"ir_type\": \"String\", \"line\": 61, \"code\": \"0.0.0.0\", \"value\": \"0.0.0.0\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 62, \"code\": \":port\", \"value\": \":port\"}, \"value\": {\"ir_type\": \"Access\", \"line\": 62, \"code\": \"@node[:mongo_port]\", \"left\": {\"ir_type\": \"VariableReference\", \"line\": 62, \"code\": \"@node\", \"value\": \"@node\"}, \"right\": {\"ir_type\": \"VariableReference\", \"line\": 62, \"code\": \":mongo_port\", \"value\": \":mongo_port\"}, \"type\": \"access\"}}, {\"key\": {\"ir_type\": \"VariableReference\", \"line\": 63, \"code\": \":extra_opts\", \"value\": \":extra_opts\"}, \"value\": {\"ir_type\": \"String\", \"line\": 9223372036854775807, \"code\": \"\", \"value\": \"\"}}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"Soluciones_ey-cloud-recipes-cookbooks-mongodb-recipes-configure.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/Soluciones_ey-cloud-recipes-cookbooks-mongodb-recipes-configure.rb\", \"type\": \"script\", \"lines\": 101}",
+          "ir_node_reduction_percentage": 84.4
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_bind_name(name) {\n    regex.match(\"(?i).*(bind|listen_addr|listen_address|listen_on|ip_addr|ip_address|bind_ip|bind_addr|bindip|net_bind|http_addr|https_addr|api_addr|grpc_addr|admin_addr|mgmt_addr|client_addr|socket_addr|network_addr|source_range).*\", name)\n}\n\nis_bind_name(name) {\n    regex.match(\"(?i)^:?(ip|bind|listen|address|addr|interface|endpoint|host)$\", name)\n}\n\nis_wildcard_str(v) {\n    v.ir_type == \"String\"\n    wv := {\"0.0.0.0\", \"::\", \"::0\", \"0:0:0:0:0:0:0:0\", \"*\", \"0.0.0.0/0\"}\n    v.value == wv[_]\n}\n\nis_wildcard_str(v) {\n    v.ir_type == \"String\"\n    regex.match(\"^0\\\\.0\\\\.0\\\\.0(/[0-9]+)?$\", v.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    is_bind_name(v.name)\n    is_wildcard_str(v.value)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_bind_name(attr.name)\n    is_wildcard_str(attr.value)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    walk(parent, [_, entry])\n    not entry.ir_type\n    k := entry.key\n    val := entry.value\n    k.ir_type\n    val.ir_type\n    is_bind_name(k.value)\n    is_wildcard_str(val)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": val,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [],
+          "file_name": "cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 22, \"code\": \"default[:redis][:server][:addr]\", \"name\": \"default[:redis][:server][:addr]\", \"value\": {\"ir_type\": \"String\", \"line\": 22, \"code\": \"0.0.0.0\", \"value\": \"0.0.0.0\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-1327/cookbooks_ic-zookeeper-cookbooks-redis-attributes-default.rb\", \"type\": \"script\", \"lines\": 51}",
+          "ir_node_reduction_percentage": 96.4
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_bind_name(name) {\n    regex.match(\"(?i).*(bind_addr|bind_ip|bind_address|listen_addr|listen_address|listen_on|ip_address|ip_addr|net_bind|http_addr|https_addr|api_addr|grpc_addr|admin_addr|client_addr|socket_addr|network_addr|source_range|bindip|bindaddr).*\", name)\n}\n\nis_bind_name(name) {\n    regex.match(\"(?i)(^|[^a-zA-Z0-9])(:?)(ip|addr|address|bind|listen|interface|endpoint|host)([^a-zA-Z0-9]|$)\", name)\n}\n\nis_wildcard_str(v) {\n    v.ir_type == \"String\"\n    wv := {\"0.0.0.0\", \"::\", \"::0\", \"0:0:0:0:0:0:0:0\", \"*\", \"0.0.0.0/0\"}\n    v.value == wv[_]\n}\n\nis_wildcard_str(v) {\n    v.ir_type == \"String\"\n    regex.match(\"^0\\\\.0\\\\.0\\\\.0(/[0-9]+)?$\", v.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    is_bind_name(v.name)\n    is_wildcard_str(v.value)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_bind_name(attr.name)\n    is_wildcard_str(attr.value)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    walk(parent, [_, entry])\n    not entry.ir_type\n    k := entry.key\n    val := entry.value\n    k.ir_type\n    val.ir_type\n    is_bind_name(k.value)\n    is_wildcard_str(val)\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": val,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses. (CWE-1327)\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 3,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-05-13T16:23:08.688580+00:00",
+    "elapsed_time": "5m34s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 28894,
+    "output_tokens_total": 37199,
+    "reasoning_tokens_total": 9031,
+    "cache_read_tokens_total": 0
+  }
+}
