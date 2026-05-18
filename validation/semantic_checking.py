@@ -59,20 +59,20 @@ def _resolve_static_examples_folder(examples_dir: Path, cwe_number: str) -> Path
     return examples_dir
 
 
-def _verify_examples(
+def _verify_example(
     tool: AnalysisTool,
     runner: CliRunner,
     folder: Path,
     example: Dict[str, Any],
     type_name: str,
     csv_path: Path,
-) -> Tuple[str, str, List[int], List[int], str, float] | None:
+) -> tuple[str, tuple]:
     """
     Verify a single example.
 
     Returns:
-        Tuple of (ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage)
-        if validation fails, None if passes
+        ("pass", (file_name, tech, detected_lines)) if validation passes
+        ("fail", (ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage)) if fails
     """
     file_name = example.get("file")
     if not file_name:
@@ -133,7 +133,7 @@ def _verify_examples(
         try:
             ir_json = json.loads(ir_str)
             original_node_count = tool.count_ir_nodes(ir_json)
-            ir_json = tool.slice_ir(ir_json, false_positives, missing, str(script_path))
+            ir_json = tool.slice_ir(ir_json, false_positives, missing)
             sliced_node_count = tool.count_ir_nodes(ir_json)
             if original_node_count > 0:
                 ir_reduction_percentage = (1 - sliced_node_count / original_node_count) * 100
@@ -147,10 +147,10 @@ def _verify_examples(
         if false_positives:
             print(f"    ❌ False positives on lines: {false_positives}")
         print(f"    📊 IR node reduction: {ir_reduction_percentage:.1f}%")
-        return (ir_str, tech, missing, false_positives, file_name, ir_reduction_percentage)
+        return ("fail", (ir_str, tech, missing, false_positives, file_name, ir_reduction_percentage))
 
     print(f"    ✅ All expected lines detected")
-    return None
+    return ("pass", (file_name, tech, detected_lines))
 
 
 def prepare_semantic_examples(
@@ -262,7 +262,7 @@ def semantic_check(
     runner = CliRunner(mix_stderr=False)
     csv_path = Path.cwd() / f"{tool.name}_lint.csv"
     failures: List[Tuple[str, str, List[int], List[int], str]] = []
-    passed: List[Tuple[str, str]] = []
+    passed: List[Tuple[str, str, List[int]]] = []
     skipped_empty_ir: List[str] = []
 
     for i, example in enumerate(examples, 1):
@@ -286,18 +286,16 @@ def semantic_check(
                 skipped_empty_ir.append(example.get("file") or script_path.name)
                 continue
 
-        failure = _verify_examples(
+        status, data = _verify_example(
             tool, runner, folder, example, type_name, csv_path
         )
-        if failure is not None:
-            failures.append(failure)
+        if status == "fail":
+            failures.append(data)
             if len(failures) >= 3:
                 print(f"  Reached maximum of 3 failures, stopping verification")
                 break
-        else:
-            # File passed - record it
-            file_name = example.get("file") or script_path.name
-            passed.append((file_name, tech))
+        else:  # status == "pass"
+            passed.append(data)
 
     if skipped_empty_ir:
         print(
