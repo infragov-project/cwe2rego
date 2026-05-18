@@ -2,10 +2,13 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+import yaml
 
 from validation.tools.base import AnalysisTool
 
@@ -306,6 +309,239 @@ class KICSTool(AnalysisTool):
         except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
             return ""
 
+    # Consts
+    _ALWAYS_KEEP = {"file", "id"}
+
+    def _parse_yaml_with_lines(self, filepath: str) -> dict[str, tuple[int, int]]:
+        """
+        Parse YAML file and return mapping of dot-separated paths to (start_line, end_line).
+        Lines are 1-indexed (converted from yaml marks which are 0-indexed).
+        
+        Handles multi-document YAML by composing all documents.
+        """
+        try:
+            with open(filepath, encoding="utf-8") as f:
+                root = yaml.compose(f)
+        except Exception:
+            # If parsing fails, return empty map
+            return {}
+        
+        if root is None:
+            return {}
+        
+        result = {}
+        self._walk_yaml_node(root, "", result)
+        return result
+
+    def _walk_yaml_node(self, node, path: str, out: dict) -> None:
+        """Recursively walk YAML node tree and record paths with line ranges."""
+        if node is None:
+            return
+        
+        # Both marks are 0-indexed, convert to 1-indexed
+        s = node.start_mark.line + 1
+        e = node.end_mark.line + 1
+        
+        if isinstance(node, yaml.MappingNode):
+            for key_node, val_node in node.value:
+                # Get key string
+                key_str = key_node.value if hasattr(key_node, 'value') else str(key_node)
+                new_path = f"{path}.{key_str}" if path else key_str
+                self._walk_yaml_node(val_node, new_path, out)
+        elif isinstance(node, yaml.SequenceNode):
+            for i, item in enumerate(node.value):
+                new_path = f"{path}[{i}]"
+                self._walk_yaml_node(item, new_path, out)
+        
+        out[path] = (s, e)
+
+    def _resolve_paths(self, target_line: int, yaml_map: dict[str, tuple[int, int]]) -> list[str]:
+        """
+        Find all YAML paths that contain the target line.
+        Return sorted by specificity (deepest/most specific first).
+        """
+        hits = [
+            path for path, (s, e) in yaml_map.items()
+            if s <= target_line <= e
+        ]
+        # Sort by specificity: more dots and brackets = more specific
+        hits.sort(key=lambda p: p.count('.') + p.count('['), reverse=True)
+        return hits
+
+    def _escalate(self, path: str) -> str:
+        """
+        Escalate a path to the semantic granularity appropriate for IR.
+        
+        Rules (in order):
+        R1: Inside a playbooks task → escalate to playbooks[i]
+        R2: Root-level sequence → map [i] to playbooks[i] (YAML sequences wrap in playbooks key)
+        R3: Inside a nested object → escalate to top-level key
+        R4: Already at top-level → no change
+        """
+        if not path:
+            return path
+        
+        parts = self._split_path(path)
+        
+        # R1: Check if inside a playbooks task
+        for i, part in enumerate(parts):
+            if part.startswith("playbooks["):
+                return self._join_path(parts[:i+1])
+        
+        # R2: Root-level sequence index → map to playbooks[i]
+        # If path starts with [i], it's a root sequence that wraps to playbooks[i] in IR
+        if len(parts) >= 1 and parts[0].startswith("["):
+            # Extract index and create playbooks path
+            return f"playbooks{parts[0]}"
+        
+        # R3/R4: Return top-level key
+        if len(parts) >= 1:
+            return parts[0]
+        
+        return path
+
+    def _split_path(self, path: str) -> list[str]:
+        """Split dot-separated path into parts, preserving [i] indices."""
+        if not path:
+            return []
+        # Split on dots; brackets are kept attached to their keys
+        # e.g. "playbooks[0].get_url.validate_certs" → ["playbooks[0]", "get_url", "validate_certs"]
+        parts = path.split('.')
+        return [p for p in parts if p]  # Remove empty strings
+
+    def _join_path(self, parts: list[str]) -> str:
+        """Join path parts back into dot-separated path."""
+        return '.'.join(parts) if parts else ""
+
+    def _parse_indexed(self, indexed_str: str) -> tuple[str, int]:
+        """
+        Parse 'playbooks[0]' → ('playbooks', 0).
+        """
+        match = re.match(r'(\w+)\[(\d+)\]', indexed_str)
+        if match:
+            return match.group(1), int(match.group(2))
+        return indexed_str, -1
+
+    def _prune(self, ir: dict, escalated_paths: set[str]) -> dict:
+        """
+        Prune IR to keep only:
+        - Keys in _ALWAYS_KEEP (file, id)
+        - Top-level keys matched in escalated_paths
+        
+        For playbooks[i] paths, append only that task to result["playbooks"].
+        """
+        result = {k: v for k, v in ir.items() if k in self._ALWAYS_KEEP}
+        
+        # Sort paths for consistent ordering
+        sorted_paths = sorted(escalated_paths)
+        
+        # Collect indices for playbooks, if any
+        playbook_indices = []
+        other_keys = set()
+        
+        for path in sorted_paths:
+            parts = self._split_path(path)
+            top_key = parts[0] if parts else path
+            
+            if "[" in top_key:
+                # Parse playbooks[i]
+                key, idx = self._parse_indexed(top_key)
+                if key == "playbooks" and idx >= 0:
+                    playbook_indices.append(idx)
+            else:
+                # Top-level dict key (Shape B, or top-level playbook keys)
+                other_keys.add(top_key)
+        
+        # Add playbooks (preserving order)
+        if playbook_indices and "playbooks" in ir:
+            result["playbooks"] = []
+            playbook_indices = sorted(set(playbook_indices))
+            for idx in playbook_indices:
+                if idx < len(ir["playbooks"]):
+                    result["playbooks"].append(ir["playbooks"][idx])
+        
+        # Add other top-level keys
+        for key in other_keys:
+            if key in ir:
+                result[key] = ir[key]
+        
+        return result
+
     def count_ir_nodes(self, ir: dict) -> int:
-        """KICS IR node counting not yet implemented. Returns 0."""
-        return 0
+        """
+        Recursively count all nodes in KICS IR structure.
+        Includes nested keys and values at all depths.
+        """
+        return self._count_nodes_recursive(ir)
+
+    def _count_nodes_recursive(self, node: any) -> int:
+        """Recursively count nodes in KICS IR structure."""
+        if not isinstance(node, dict):
+            return 0
+        count = 1  # Count this dict node itself
+        for value in node.values():
+            if isinstance(value, dict):
+                count += self._count_nodes_recursive(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        count += self._count_nodes_recursive(item)
+        return count
+
+    def slice_ir(
+        self,
+        ir: dict,
+        false_positive_lines: list[int],
+        false_negative_lines: list[int],
+        file_path: str | None = None,
+    ) -> dict:
+        """
+        Slice the IR to keep only nodes relevant to given line numbers.
+        
+        Algorithm:
+        1. Parse original YAML with line tracking
+        2. Resolve each smell line to YAML paths
+        3. Escalate paths to semantic granularity
+        4. Prune IR keeping only matched + essential keys
+        
+        Args:
+            ir: The intermediate representation dict
+            false_positive_lines: List of line numbers for false positives
+            false_negative_lines: List of line numbers for false negatives
+            
+        Returns:
+            Sliced IR dict with only relevant nodes
+        """
+        # Get file path from IR
+        filepath = ir.get("file")
+        if not filepath:
+            # No file path, return IR as-is
+            return ir
+        
+        # Parse YAML to get line → path mappings
+        yaml_map = self._parse_yaml_with_lines(filepath)
+        if not yaml_map:
+            # Failed to parse YAML, return IR as-is
+            return ir
+        
+        # Combine all smell lines
+        smell_lines = set(false_positive_lines) | set(false_negative_lines)
+        if not smell_lines:
+            # No smell lines, return IR as-is
+            return ir
+        
+        # Resolve and escalate paths
+        escalated = set()
+        for line in smell_lines:
+            paths = self._resolve_paths(line, yaml_map)
+            if paths:
+                # Take deepest match and escalate
+                escalated.add(self._escalate(paths[0]))
+        
+        # If no paths resolved, return IR as-is
+        if not escalated:
+            return ir
+        
+        # Prune and return
+        return self._prune(ir, escalated)
+

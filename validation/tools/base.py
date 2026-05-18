@@ -62,8 +62,7 @@ class AnalysisTool(ABC):
         self,
         ir: dict,
         false_positive_lines: list[int],
-        false_negative_lines: list[int],
-        file_path: str | None = None,
+        false_negative_lines: list[int]
     ) -> dict:
         """
         Slice the IR to keep only nodes relevant to given line numbers.
@@ -74,7 +73,6 @@ class AnalysisTool(ABC):
             ir: The intermediate representation dict
             false_positive_lines: List of line numbers for false positives
             false_negative_lines: List of line numbers for false negatives
-            file_path: Optional file path (may be used by some tools)
 
         Returns:
             Sliced IR dict with only relevant code (or unchanged IR if not implemented)
