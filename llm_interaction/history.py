@@ -66,7 +66,7 @@ def build_semantic_error_summary(
     Args:
         rego_rule: The Rego rule that was tested
         failures: List of failed tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
-        passed: List of passed tuples (file_name, technology)
+        passed: List of passed tuples (file_name, technology, detected_lines)
     
     Returns:
         Compact summary dict with all files (passed and failed)
@@ -91,13 +91,16 @@ def build_semantic_error_summary(
             file_obj["false_positives"] = false_positives
         files.append(file_obj)
     
-    # Add passed files
-    for file_name, tech in passed:
-        files.append({
+    # Add passed files with detected lines
+    for file_name, tech, detected_lines in passed:
+        file_obj = {
             "file": file_name,
             "status": "passed",
-            "technology": tech
-        })
+            "technology": tech,
+        }
+        if detected_lines:
+            file_obj["detected_lines"] = detected_lines
+        files.append(file_obj)
     
     return {
         "rego_rule": rego_rule,
