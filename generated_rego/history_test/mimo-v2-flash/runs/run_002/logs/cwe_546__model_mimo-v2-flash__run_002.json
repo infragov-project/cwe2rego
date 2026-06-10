@@ -1,0 +1,638 @@
+{
+  "run_id": "run_002",
+  "run_started_at_utc": "2026-05-18T23:02:07.802824+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002",
+  "experiment_name": "history_test",
+  "cwe": "546",
+  "type_name": "sec_susp_comm",
+  "model_used": "xiaomi/mimo-v2-flash",
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego",
+  "cwe_condition": "### Necessary Weaknesses to Detect CWE-546 (Suspicious Comment) in IaC Scripts  \nTo detect suspicious comments (CWE-546) in Infrastructure as Code (IaC) scripts, focus on identifying **comments containing specific keywords or phrases** that indicate unresolved security risks, incomplete functionality, or deferred vulnerabilities. Below are the key weaknesses, keywords, and attributes to monitor:\n\n---\n\n#### 1. **Comment Content Weaknesses**  \n   - **Keywords/Phrases**:  \n     - Explicit indicators: `TODO`, `FIXME`, `HACK`, `BUG`, `LATER`, `LATER2`, `TEMPORARY`, `WORKAROUND`.  \n     - Security red flags: `INSECURE`, `VULNERABLE`, `BYPASS`, `TRUST`, `DANGER`, `CHECK`, `LEAK`.  \n     - Implied negligence: `HARD-CODED`, `DEFAULT`, `IGNORE`, `FAILSAFE`, `OVERRIDE`.  \n   - **Attributes/Fields**:  \n     - **Comments in security-sensitive sections**: E.g., near `firewall rules`, `IAM policies`, `encryption settings`, `access controls`, or `secret management`.  \n     - **Inline comments**: Attached to resource declarations (e.g., network configurations, storage permissions) or authentication/authorization logic.  \n     - **Inline function comments**: In IaC templates (e.g., scripts defining `networks`, `roles`, `keys`, `passwords`).  \n\n   **Example IaC Pattern**:  \n   ```plaintext\n   # FIXME: Temporary public access (will fix later)  \n   resource: public_bucket  \n   OR  \n   /* TODO: Disable insecure protocols in load balancer */  \n   ```  \n   *Why it implies weakness*: Suggests deferred security actions or insecure defaults.  \n\n---\n\n#### 2. **Structural Weaknesses in IaC Scripts**  \n   - **Placeholder configurations**:  \n     - Comments indicating temporary settings (e.g., `# HACK: Hardcoded test credentials`).  \n     - Markers for missing security controls (e.g., `# TODO: Enable encryption`).  \n   - **Risk-context comments**:  \n     - Mentions of `test`, `debug`, `mock`, or `dev` near production resources (e.g., `# DEV: No firewall here`).  \n   - **Placeholder credentials**:  \n     - Comments like `# password: SHOULD_BE_ROTATED` or `# API_KEY: REPLACE_BEFORE_PRODUCTION`.  \n\n---\n\n#### 3. **Detection Approach for IaC**  \n   - **Automated Static Analysis**:  \n     - **Tool Scope**: Scan IaC files (e.g., Terraform, CloudFormation, YAML/JSON templates) for **comments** (lines starting with `#`, `//`, or `/*`).  \n     - **Keyword Matching**: Flag comments containing suspicious phrases. Prioritize comments adjacent to:  \n       - Network configurations (e.g., `cidr_blocks`, `ports`).  \n       - Identity/Access settings (e.g., `roles`, `permissions`, `policies`).  \n       - Sensitive data (e.g., `secrets`, `keys`, `credentials`).  \n     - **False Positive Reduction**: Ignore comments in documentation blocks (e.g., `/** */` with security best practices).  \n   - **Critical Focus Areas**:  \n     - **Infrastructure permissions**: Comments near overly permissive settings (e.g., `0.0.0.0/0`).  \n     - **Secret handling**: Markers for hardcoded or exposed credentials.  \n     - **Temporary bypasses**: e.g., `# BACKDOOR: For emergency access`.  \n\n---\n\n### Key Takeaways for IaC Security  \n- **Why these weaknesses?**: Suspicious comments in IaC often reveal **unaddressed risks** (e.g., deferred encryption, misconfigurations, or test code in production). These can escalate into breaches if ignored.  \n- **Mitigation**: Enforce comment hygiene in pipelines (e.g., block deployments with high-risk keywords). Combine with manual review for context.  \n- **Tool Recommendation**: Integrate SAST tools (e.g., Checkov, Terraform-compliance) to scan for these patterns in IaC pre-deployment.  \n\n> **Note**: Focus on comments linked to **security-critical resources** (e.g., IAM, network, secrets). Generic documentation (e.g., `# VPC Name: Prod`) is lower risk.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    # Retrieve all UnitBlocks in the project\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Access comments directly from the UnitBlock\n    comment := parent.comments[_]\n    \n    # Define suspicious keywords to detect CWE-546\n    suspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n    \n    # Check if the comment content contains any of the suspicious keywords (case-insensitive)\n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i).*\\\\b%s\\\\b\", [keyword]), comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment contains keywords that indicate unresolved security risks or incomplete functionality (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            46,
+            106,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define suspicious keywords for CWE-546 (Suspicious Comment)\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\n# Helper to check if a comment contains suspicious keywords\nis_suspicious_comment(comment) {\n    comment.ir_type == \"Comment\"\n    content := comment.content\n    # Check for suspicious keywords (case-insensitive)\n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i)\\\\b%s\\\\b\", [keyword]), content)\n}\n\n# Main rule to detect suspicious comments in IaC scripts\nGlitch_Analysis[result] {\n    # Gather all unit blocks (scripts, tasks, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check comments within the unit block\n    comment := parent.comments[_]\n    is_suspicious_comment(comment)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment found indicating unresolved security risks or incomplete functionality (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            46,
+            106,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n\n    suspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n    \n    comment_content_upper := upper(comment.content)\n    \n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*\\\\b%s\\\\b\", [keyword]), comment_content_upper)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment contains keywords indicating unresolved security risks or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 4,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comments := {c | walk(parent, [_, c]); c.ir_type == \"Comment\"}\n    comment := comments[_]\n    \n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment indicates deferred security actions or insecure defaults. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 5,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Keywords indicating suspicious comments for CWE-546\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Traverse all comments in the parent unit block\n    comment := parent.comments[_]\n    \n    # Check if comment content contains any suspicious keyword (case-insensitive)\n    contains_suspicious_keyword(comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment indicates unresolved security risks, incomplete functionality, or deferred vulnerabilities. (CWE-546)\"\n    }\n}\n\n# Helper rule to check if a string contains any suspicious keyword\ncontains_suspicious_keyword(content) {\n    # Convert content to lowercase for case-insensitive matching\n    lower_content := lower(content)\n    \n    # Check if any keyword is present\n    some keyword in suspicious_keywords\n    lower_keyword := lower(keyword)\n    regex.match(sprintf(\"(?i).*%s.*\", [lower_keyword]), lower_content)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:32: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 6,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    comment_content := comment.content\n    \n    keyword := suspicious_keywords[_]\n    contains(comment_content, keyword)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment indicates unresolved security risks or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            45,
+            105,
+            168
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 45, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 105, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 168, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 7,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define suspicious keywords for CWE-546 (Suspicious Comment)\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\n# Check if a comment content contains any suspicious keyword (case-insensitive)\ncontains_suspicious_keyword(content) {\n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i).*\\\\b%s\\\\b\", [keyword]), content)\n}\n\nGlitch_Analysis[result] {\n    # Traverse all UnitBlocks in the project\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check comments within the UnitBlock\n    comment := parent.comments[_]\n    \n    # Check if the comment contains any suspicious keyword\n    contains_suspicious_keyword(comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment indicating potential security issue or deferred action (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            46,
+            106,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 8,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    \n    suspicious_pattern := \"(?i)\\\\b(TODO|FIXME|HACK|BUG|LATER|LATER2|TEMPORARY|WORKAROUND|INSECURE|VULNERABLE|BYPASS|TRUST|DANGER|CHECK|LEAK|HARD-CODED|DEFAULT|IGNORE|FAILSAFE|OVERRIDE)\\\\b\"\n    \n    regex.match(suspicious_pattern, comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comments containing TODO, FIXME, HACK, or other security-related markers indicate deferred or insecure configurations. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            46,
+            106,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 9,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define suspicious keywords related to CWE-546\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\n# Helper to check if a comment content contains suspicious keywords\ncontains_suspicious_keyword(comment) {\n    lower_comment := lower(comment.content)\n    keyword := suspicious_keywords[_]\n    contains(lower_comment, lower(keyword))\n}\n\n# Rule to detect suspicious comments in UnitBlocks\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n    contains_suspicious_keyword(comment)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected (CWE-546) - Comment indicates deferred security actions or insecure defaults.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            44,
+            45,
+            46,
+            104,
+            105,
+            106,
+            167,
+            168,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 44, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 45, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 104, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 105, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 167, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 168, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 97.4
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 10,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define suspicious keywords related to CWE-546\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\n# Check if a comment content contains any suspicious keyword\ncontains_suspicious_keyword(comment_content) {\n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i).*\\\\b%s\\\\b.*\", [keyword]), comment_content)\n}\n\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks in the project\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get comments from the UnitBlock\n    comment := parent.comments[_]\n    \n    # Check if the comment contains any suspicious keyword\n    contains_suspicious_keyword(comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected (CWE-546) - Comment contains keywords indicating unresolved security risks or deferred vulnerabilities.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            46,
+            106,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 11,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Keywords indicating suspicious comments\nsuspicious_keywords := {\n    \"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\",\n    \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\",\n    \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\", \"NOTE\"\n}\n\n# Check if comment content contains suspicious keywords (case-insensitive)\ncheck_suspicious_comment(comment) {\n    lower_comment := lower(comment.content)\n    some keyword in suspicious_keywords\n    contains(lower_comment, lower(keyword))\n}\n\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks (scripts, tasks, vars, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Get comments within the UnitBlock\n    comments := parent.comments\n    comment := comments[_]\n\n    # Check if the comment is suspicious\n    check_suspicious_comment(comment)\n\n    # Get the file path for context\n    file_path := parent.path\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": file_path,\n        \"description\": \"Suspicious comment found (CWE-546). Comments like TODO, FIXME, HACK indicate unresolved security risks or deferred actions.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:15: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 12,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    comment_content := comment.content\n    \n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), comment_content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected in IaC script - Comment indicates unresolved security risks, incomplete functionality, or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 13,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comments := parent.comments\n    comment := comments[_]\n    content := comment.content\n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), content)\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment indicating unresolved security risks or deferred vulnerabilities (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:13: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 14,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    content := comment.content\n    \n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment found indicating unresolved security risks or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 15,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comments := parent.comments\n    comment := comments[_]\n    \n    some keyword in suspicious_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), comment.content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment contains deferred security actions or insecure defaults. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:13: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 16,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    content := comment.content\n    \n    suspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n    \n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), content)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected in IaC script - Comments containing security risk indicators should be addressed promptly. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            44,
+            45,
+            46,
+            104,
+            105,
+            106,
+            167,
+            168,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 44, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 45, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 104, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 105, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 167, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 168, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 97.4
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 17,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define keywords that indicate suspicious comments related to security risks\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\n# Helper function to check if a comment content contains any suspicious keyword (case-insensitive)\ncontains_suspicious_keyword(content) {\n    lower_content := lower(content)\n    some keyword\n    suspicious_keywords[keyword]\n    contains(lower_content, lower(keyword))\n}\n\n# Main rule to detect CWE-546 (Suspicious Comment) in IaC scripts\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks (scripts, tasks, vars, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check comments directly within the UnitBlock\n    comment := parent.comments[_]\n    \n    # Ensure the comment is not a false positive (e.g., documentation or safe comments)\n    # We avoid generic documentation by checking if it contains suspicious keywords\n    contains_suspicious_keyword(comment.content)\n    \n    # Construct the result for each suspicious comment found\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Indicates unresolved security risks, incomplete functionality, or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 73.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [
+            44,
+            45,
+            46,
+            104,
+            105,
+            106,
+            167,
+            168,
+            169
+          ],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}, {\"ir_type\": \"Comment\", \"line\": 44, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 45, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 46, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 104, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 105, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 106, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}, {\"ir_type\": \"Comment\", \"line\": 167, \"code\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\\n\", \"content\": \"# Defaults for the <SelectableItemCustomization> in AdminDeployment.xml\"}, {\"ir_type\": \"Comment\", \"line\": 168, \"code\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\\n\", \"content\": \"# These are DEFAULTS. If you wish to change the selectable items installed edit the node attributes\"}, {\"ir_type\": \"Comment\", \"line\": 169, \"code\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\\n\", \"content\": \"# default['visualstudio']['install_items']['<feature>']['selected'] etc. (see README)\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-546/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 97.4
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 18,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check comments within the UnitBlock\n    comment := parent.comments[_]\n    \n    # Define suspicious keywords that indicate CWE-546\n    suspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n    \n    # Check if comment content contains any suspicious keyword (case-insensitive)\n    contains_suspicious := false\n    some keyword in suspicious_keywords\n    contains_suspicious := regex.match(sprintf(\"(?i).*\\\\b%s\\\\b\", [keyword]), comment.content)\n    \n    # Only flag if suspicious keyword is found\n    contains_suspicious == true\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment indicates unresolved security risks or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:17: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 19,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    comment_content := comment.content\n    \n    contains_suspicious := false\n    some keyword in suspicious_keywords\n    contains_suspicious := regex.match(sprintf(\"(?i).*%s.*\", [keyword]), comment_content)\n    \n    contains_suspicious == true\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected in IaC script - Comment contains indicators of unresolved security risks, incomplete functionality, or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:15: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 20,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := {\"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"LATER\", \"LATER2\", \"TEMPORARY\", \"WORKAROUND\", \"INSECURE\", \"VULNERABLE\", \"BYPASS\", \"TRUST\", \"DANGER\", \"CHECK\", \"LEAK\", \"HARD-CODED\", \"DEFAULT\", \"IGNORE\", \"FAILSAFE\", \"OVERRIDE\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    comment := parent.comments[_]\n    content := comment.content\n    \n    some keyword in suspicious_keywords\n    contains(content, keyword)\n    \n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comment indicates unresolved security risks or deferred vulnerabilities. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test/mimo-v2-flash/runs/run_002/cwe_546.rego:14: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in suspicious_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    }
+  ],
+  "result": {
+    "passed": false,
+    "attempts_used": 20,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-05-18T23:34:20.007069+00:00",
+    "elapsed_time": "32m12s"
+  },
+  "llm_usage": {
+    "calls": 21,
+    "input_tokens_total": 131556,
+    "output_tokens_total": 7693,
+    "reasoning_tokens_total": 1592,
+    "cache_read_tokens_total": 119840
+  }
+}
