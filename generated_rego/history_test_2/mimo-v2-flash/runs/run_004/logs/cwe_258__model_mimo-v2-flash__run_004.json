@@ -1,0 +1,764 @@
+{
+  "run_id": "run_004",
+  "run_started_at_utc": "2026-05-19T21:39:27.589428+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004",
+  "experiment_name": "history_test_2",
+  "cwe": "258",
+  "type_name": "sec_empty_pass",
+  "model_used": "xiaomi/mimo-v2-flash",
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego",
+  "cwe_condition": "Based on the provided CWE-258 JSON data, here is a breakdown of the necessary weaknesses to detect in Infrastructure as Code (IaC) scripts without referencing specific programming languages.\n\n### **Core Weakness: Use of Empty String as Password**\n\nThe central issue is assigning or passing an empty string (`\"\"` or equivalent) as a credential value. In IaC, this typically manifests in configuration blocks, environment variables, or secret management attributes.\n\n### **Keywords, Attributes, and Fields to Detect**\n\nTo detect this weakness in IaC scripts, look for the following patterns, keywords, and attributes:\n\n#### **1. Configuration Files & Properties**\n*   **Keywords/Pattern:**\n    *   `password=`\n    *   `pwd=`\n    *   `secret=`\n    *   `key=`\n*   **Detection Logic:** Look for assignments where the value following the `=` sign is empty, null, or consists only of whitespace.\n    *   *Example:* `db_password = \"\"` or `password =`\n    *   *Example:* `connection_string = \"uid=user; pwd=; ...\"`\n\n#### **2. Infrastructure Resource Attributes**\nIn IaC (e.g., Terraform, CloudFormation, ARM templates), look for resource arguments related to authentication that are assigned empty values.\n\n*   **Common Resource Types:**\n    *   Databases (e.g., `aws_db_instance`, `google_sql_database_instance`)\n    *   Virtual Machines / Compute Instances\n    *   Kubernetes Secrets / ConfigMaps\n    *   Load Balancers (with basic auth)\n    *   Storage Accounts / Buckets (with access keys)\n\n*   **Specific Attributes to Monitor:**\n    *   `password`\n    *   `admin_password`\n    *   `db_password`\n    *   `secret_key`\n    *   `authentication`\n    *   `connection_string`\n    *   `environment_variables` (specifically those named `PASSWORD`, `SECRET`, `API_KEY`)\n\n#### **3. Environment Variables**\nIaC often sets environment variables for containers or VMs.\n\n*   **Pattern:** Look for environment variable definitions where the value is explicitly empty.\n    *   *Example:* `ENV PASSWORD=\"\"`\n    *   *Example:* `environment = { \"DB_PASS\" = \"\" }`\n\n#### **4. Secret Management**\nWhile secrets should be encrypted, IaC scripts sometimes define placeholder values or default configurations.\n\n*   **Detection Logic:**\n    *   Check for secret definitions (e.g., in Kubernetes `Secret` objects or AWS Secrets Manager) where the `data` field contains an empty string or a decoded empty value.\n    *   Look for hardcoded default passwords set to empty strings in configuration blocks.\n\n### **Summary of Detection Criteria**\n\n| **Category**              | **What to Look For**                                                                 | **Example in IaC (Generic)**                                  |\n| ------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ |\n| **Attribute Assignment**  | Password/secret attributes assigned an empty string (`\"\"`) or no value.               | `admin_password = \"\"`                                        |\n| **Configuration Files**   | Key-value pairs where the key indicates a password and the value is empty.            | `password=` (in a config file resource)                      |\n| **Connection Strings**    | Connection strings containing `pwd=;` or similar empty password segments.             | `connection_string = \"server=...; uid=user; pwd=; ...\"`      |\n| **Environment Variables** | Environment variables with names like `PASSWORD`, `SECRET`, `API_KEY` set to empty.   | `env = { \"API_KEY\" = \"\" }`                                   |\n| **Secret Data**           | Secret objects where the data field is empty or null.                                 | `data = { \"password\" = \"\" }`                                 |\n\n### **Key Indicators Without Language Specifics**\n\n- **Empty Value Assignments:** Any assignment where a credential-related field has no actual secret material.\n- **Placeholder Artifacts:** Development or test configurations left in production code with empty passwords.\n- **Default Configurations:** Default settings in IaC modules or blueprints that include empty passwords.\n- **String Interpolation Gaps:** In templates, if a password variable is unresolved and results in an empty string.\n\n### **Why This Matters**\nAs per CWE-258, an empty password allows unauthorized access, effectively disabling authentication. In IaC, this can lead to:\n- Publicly accessible databases or VMs with no authentication.\n- Exposure of sensitive services if deployed with default insecure configurations.\n- Privilege escalation if the empty password is for an administrative account.\n\nBy monitoring these generic patterns across IaC scripts, you can detect and remediate instances of CWE-258 regardless of the specific infrastructure language used.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258",
+    "entries_count": 5
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsensitive_keywords = {\"password\", \"pwd\", \"secret\", \"key\", \"authentication\", \"connection_string\", \"api_key\"}\n\nsensitive_name(name) {\n    lower_name := lower(name)\n    some kw in sensitive_keywords\n    contains(lower_name, kw)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    sensitive_name(attr.name)\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty string assigned to a password or secret field. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    sensitive_name(var.name)\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty string assigned to a password or secret field. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:9: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some kw in sensitive_keywords\n\t            ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsensitive_keywords = {\"password\", \"pwd\", \"secret\", \"key\", \"authentication\", \"connection_string\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    kw := sensitive_keywords[_]\n    contains(attr.name, kw)\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a sensitive field. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    kw := sensitive_keywords[_]\n    contains(var.name, kw)\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a sensitive field. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables for empty password-like values\n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    regex.match(\"(?i)(password|pwd|secret|key|auth|credential)\", var.name)\n    (var.value.ir_type == \"String\" and var.value.value == \"\") or var.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - This allows unauthorized access by disabling authentication. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes for empty password-like values\n    attributes := glitch_lib.all_attributes(parent)\n    attr := attributes[_]\n    regex.match(\"(?i)(password|pwd|secret|key|auth|credential)\", attr.name)\n    (attr.value.ir_type == \"String\" and attr.value.value == \"\") or attr.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - This allows unauthorized access by disabling authentication. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:13: rego_parse_error: non-terminated expression\n\t    (var.value.ir_type == \"String\" and var.value.value == \"\") or var.value.ir_type == \"Null\"\n\t                                   ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 4,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\ncheck_empty_password(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    \n    some keyword in password_keywords\n    contains(var.name, keyword)\n    \n    check_empty_password(var.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attributes := glitch_lib.all_attributes(parent)\n    attr := attributes[_]\n    \n    some keyword in password_keywords\n    contains(attr.name, keyword)\n    \n    check_empty_password(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:23: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in password_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 5,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes for empty password assignments\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    # Check if attribute name contains password-related keywords\n    some keyword in password_keywords\n    contains(attr.name, keyword)\n    \n    # Check if the value is an empty string\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables for empty password assignments\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    # Check if variable name contains password-related keywords\n    some keyword in password_keywords\n    contains(var.name, keyword)\n    \n    # Check if the value is an empty string\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check environment variables in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check for environment variable patterns\n    some keyword in password_keywords\n    contains(attr.name, keyword)\n    \n    # Check if the value is an empty string\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:16: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in password_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 6,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\ncheck_empty_password(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all attributes in the parent\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    # Check if attribute name contains password-related keywords\n    keyword := password_keywords[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), attr.name)\n    \n    # Check if value is empty\n    check_empty_password(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - An empty password allows unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all variables in the parent\n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    \n    # Check if variable name contains password-related keywords\n    keyword := password_keywords[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), variable.name)\n    \n    # Check if value is empty\n    check_empty_password(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - An empty password allows unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.5
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 7,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\ncredential_keywords := {\"password\", \"secret\", \"key\", \"token\", \"credential\", \"auth\", \"passwd\", \"pwd\", \"access\", \"secret_key\", \"api_key\", \"db_password\", \"admin_password\"}\n\ncontains_credential_keyword(name) {\n    regex.match(\"(?i)(password|secret|key|token|credential|auth|passwd|pwd|access|secret_key|api_key|db_password|admin_password)\", name)\n}\n\nis_empty_credential(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in the parent and nested blocks\n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    contains_credential_keyword(variable.name)\n    is_empty_credential(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty credential (password, secret, key, etc.) - Avoid using empty strings, null, or undefined for credentials. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in the parent and nested blocks\n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    contains_credential_keyword(attribute.name)\n    is_empty_credential(attribute.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Empty credential (password, secret, key, etc.) - Avoid using empty strings, null, or undefined for credentials. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            53
+          ],
+          "false_positives": [],
+          "file_name": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 19, \"code\": \"class fuel_project::roles::zabbix::server (\\n  $mysql_replication_password = '',\\n  $mysql_replication_user     = 'repl',\\n  $mysql_slave_host           = undef,\\n  $maintenance_cron           = {\\n    'zabbix-maintenance' => {\\n      hour => '*/24',\\n    },\\n  },\\n  $maintenance_script         = '/usr/share/zabbix-server-mysql/maintenance.sh',\\n  $maintenance_script_config  = '/root/.my.cnf',\\n  $server_role                = 'master', # master || slave\\n  $slack_emoji_ok             = ':smile:',\\n  $slack_emoji_problem        = ':frowning:',\\n  $slack_emoji_unknown        = ':ghost:',\\n  $slack_post_username        = '',\\n  $slack_web_hook_url         = '',\\n) {\\n  class { '::fuel_project::common' :}\\n  class { '::zabbix::server' :}\\n\\n  ::zabbix::server::alertscript { 'slack.sh' :\\n    template => 'fuel_project/zabbix/slack.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  ::zabbix::server::alertscript { 'zabbkit.sh' :\\n    template => 'fuel_project/zabbix/zabbkit.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  if ($server_role == 'master' and $mysql_slave_host) {\\n    mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\\n\\n    mysql_grant { \\\"${mysql_replication_user}@${mysql_slave_host}/*.*\\\" :\\n      ensure     => 'present',\\n      options    => ['GRANT'],\\n      privileges => ['REPLICATION SLAVE'],\\n      table      => '*.*',\\n      user       => \\\"${mysql_replication_user}@${mysql_slave_host}\\\",\\n    }\\n\\n    file { $maintenance_script :\\n      ensure  => 'present',\\n      owner   => 'root',\\n      group   => 'root',\\n      mode    => '0755',\\n      content => template('fuel_project/roles/zabbix/server/maintenance.sh.erb'),\\n      require => Class['::zabbix::server'],\\n    }\\n\\n    create_resources('cron', $maintenance_cron, {\\n      ensure  => 'present',\\n      command => \\\"${maintenance_script} 2>&1 | logger -t zabbix-maintenance\\\",\\n    })\\n  }\\n}\", \"statements\": [{\"ir_type\": \"ConditionalStatement\", \"line\": 50, \"code\": \"\", \"statements\": [{\"ir_type\": \"AtomicUnit\", \"line\": 51, \"code\": \"mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\", \"statements\": [], \"name\": null, \"type\": \"mysql_user\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 53, \"code\": \"password_hash => mysql_password($mysql_replication_password)\", \"name\": \"password_hash\", \"value\": {\"ir_type\": \"FunctionCall\", \"line\": 53, \"code\": \"mysql_password($mysql_replication_password)\", \"name\": \"mysql_password\", \"args\": [{\"ir_type\": \"VariableReference\", \"line\": 53, \"code\": \"$mysql_replication_password\", \"value\": \"mysql_replication_password\"}]}}]}], \"condition\": null, \"type\": \"IF\", \"is_default\": false, \"is_top\": true, \"else_statement\": null}], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"fuel_project::roles::zabbix::server\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"definition\", \"lines\": 78}], \"attributes\": [], \"name\": \"github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"script\", \"lines\": 78}",
+          "ir_node_reduction_percentage": 94.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 8,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"key\", \"token\", \"auth\", \"credential\", \"passwd\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in the current UnitBlock\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    # Check if variable name contains password-related keywords\n    contains_name(var.name, password_keywords)\n    \n    # Check if value is an empty string\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty string assigned to password-related variable - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains password-related keywords\n    contains_name(attr.name, password_keywords)\n    \n    # Check if value is an empty string\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty string assigned to password-related attribute - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check function calls that might use empty passwords\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if the attribute value is a function call\n    attr.value.ir_type == \"FunctionCall\"\n    func := attr.value\n    \n    # Check if function name contains password-related keywords\n    contains_name(func.name, password_keywords)\n    \n    # Check if any argument is an empty string\n    some arg\n    arg in func.args\n    arg.ir_type == \"String\"\n    arg.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Function call with empty string password argument - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check for function calls with variable references that are empty strings\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if the attribute value is a function call\n    attr.value.ir_type == \"FunctionCall\"\n    func := attr.value\n    \n    # Check if function name contains password-related keywords\n    contains_name(func.name, password_keywords)\n    \n    # Check if any argument is a variable reference\n    some arg\n    arg in func.args\n    arg.ir_type == \"VariableReference\"\n    var_name := arg.value\n    \n    # Find the variable definition in the current scope\n    vars := glitch_lib.all_variables(parent)\n    some var\n    var in vars\n    var.name == var_name\n    \n    # Check if the variable value is an empty string\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Function call using variable with empty string password - CWE-258\"\n    }\n}\n\n# Helper function to check if a string contains any password-related keyword\ncontains_name(str, keywords) {\n    some keyword\n    keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), str)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:74: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    arg in func.args\n\t        ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 9,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\ncheck_empty_password(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    lower_name := lower(attr.name)\n    some keyword in password_keywords\n    contains(lower_name, keyword)\n\n    check_empty_password(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    node.type == \"environment_variables\"\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    lower_name := lower(attr.name)\n    some keyword in password_keywords\n    contains(lower_name, keyword)\n\n    check_empty_password(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password in environment variable - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:26: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in password_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 10,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    password_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n    keyword := password_keywords[_]\n    contains(attr.name, keyword)\n    \n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    \n    password_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n    keyword := password_keywords[_]\n    contains(var.name, keyword)\n    \n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.5
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 11,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    # Gather all Variable nodes from the IR\n    variable_nodes := glitch_lib.all_variables(input)\n    var := variable_nodes[_]\n    \n    # Check if the variable value is empty (String, Null, or Undef)\n    empty_value(var.value)\n    \n    # Get the parent UnitBlock to obtain the file path\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential - Using an empty string or null value for a password or credential can lead to unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    # Gather all Attribute nodes from the IR\n    attribute_nodes := glitch_lib.all_attributes(input)\n    attr := attribute_nodes[_]\n    \n    # Check if the attribute value is empty (String, Null, or Undef)\n    empty_value(attr.value)\n    \n    # Get the parent UnitBlock to obtain the file path\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential - Using an empty string or null value for a password or credential can lead to unauthorized access. (CWE-258)\"\n    }\n}\n\n# Helper rule to check if a value is empty\nempty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            6
+          ],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 6, \"code\": \"subscription_manager_org: \\\"\\\"\\n\", \"name\": \"subscription_manager_org\", \"value\": {\"ir_type\": \"String\", \"line\": 6, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            198,
+            454,
+            466,
+            473,
+            495,
+            502,
+            526,
+            676,
+            682,
+            688,
+            694,
+            700
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 198, \"code\": \"gitlab_runner__metrics_server: ''\\n\", \"name\": \"gitlab_runner__metrics_server\", \"value\": {\"ir_type\": \"String\", \"line\": 198, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 454, \"code\": \"gitlab_runner__ssh_host: ''\\n\", \"name\": \"gitlab_runner__ssh_host\", \"value\": {\"ir_type\": \"String\", \"line\": 454, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 466, \"code\": \"gitlab_runner__ssh_user: ''\\n\", \"name\": \"gitlab_runner__ssh_user\", \"value\": {\"ir_type\": \"String\", \"line\": 466, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 473, \"code\": \"gitlab_runner__ssh_identity_file: ''\\n\", \"name\": \"gitlab_runner__ssh_identity_file\", \"value\": {\"ir_type\": \"String\", \"line\": 473, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 495, \"code\": \"gitlab_runner__docker_host: ''\\n\", \"name\": \"gitlab_runner__docker_host\", \"value\": {\"ir_type\": \"String\", \"line\": 495, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 502, \"code\": \"gitlab_runner__docker_tls_cert_path: ''\\n\", \"name\": \"gitlab_runner__docker_tls_cert_path\", \"value\": {\"ir_type\": \"String\", \"line\": 502, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 526, \"code\": \"gitlab_runner__docker_cache_dir: ''\\n\", \"name\": \"gitlab_runner__docker_cache_dir\", \"value\": {\"ir_type\": \"String\", \"line\": 526, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 676, \"code\": \"gitlab_runner__cache_server_address: ''\\n\", \"name\": \"gitlab_runner__cache_server_address\", \"value\": {\"ir_type\": \"String\", \"line\": 676, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 694, \"code\": \"gitlab_runner__cache_bucket_name: ''\\n\", \"name\": \"gitlab_runner__cache_bucket_name\", \"value\": {\"ir_type\": \"String\", \"line\": 694, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 700, \"code\": \"gitlab_runner__cache_bucket_location: ''\\n\", \"name\": \"gitlab_runner__cache_bucket_location\", \"value\": {\"ir_type\": \"String\", \"line\": 700, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 97.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            56,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            78,
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            96,
+            97
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 17, \"code\": \"default['yum']['main']['alwaysprompt']\", \"name\": \"default['yum']['main']['alwaysprompt']\", \"value\": {\"ir_type\": \"Null\", \"line\": 17, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 18, \"code\": \"default['yum']['main']['assumeyes']\", \"name\": \"default['yum']['main']['assumeyes']\", \"value\": {\"ir_type\": \"Null\", \"line\": 18, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 19, \"code\": \"default['yum']['main']['bandwidth']\", \"name\": \"default['yum']['main']['bandwidth']\", \"value\": {\"ir_type\": \"Null\", \"line\": 19, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 20, \"code\": \"default['yum']['main']['bugtracker_url']\", \"name\": \"default['yum']['main']['bugtracker_url']\", \"value\": {\"ir_type\": \"Null\", \"line\": 20, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 21, \"code\": \"default['yum']['main']['clean_requirements_on_remove']\", \"name\": \"default['yum']['main']['clean_requirements_on_remove']\", \"value\": {\"ir_type\": \"Null\", \"line\": 21, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 22, \"code\": \"default['yum']['main']['color']\", \"name\": \"default['yum']['main']['color']\", \"value\": {\"ir_type\": \"Null\", \"line\": 22, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 23, \"code\": \"default['yum']['main']['color_list_available_downgrade']\", \"name\": \"default['yum']['main']['color_list_available_downgrade']\", \"value\": {\"ir_type\": \"Null\", \"line\": 23, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 24, \"code\": \"default['yum']['main']['color_list_available_install']\", \"name\": \"default['yum']['main']['color_list_available_install']\", \"value\": {\"ir_type\": \"Null\", \"line\": 24, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 25, \"code\": \"default['yum']['main']['color_list_available_reinstall']\", \"name\": \"default['yum']['main']['color_list_available_reinstall']\", \"value\": {\"ir_type\": \"Null\", \"line\": 25, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 26, \"code\": \"default['yum']['main']['color_list_available_upgrade']\", \"name\": \"default['yum']['main']['color_list_available_upgrade']\", \"value\": {\"ir_type\": \"Null\", \"line\": 26, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"default['yum']['main']['color_list_installed_extra']\", \"name\": \"default['yum']['main']['color_list_installed_extra']\", \"value\": {\"ir_type\": \"Null\", \"line\": 27, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 28, \"code\": \"default['yum']['main']['color_list_installed_newer']\", \"name\": \"default['yum']['main']['color_list_installed_newer']\", \"value\": {\"ir_type\": \"Null\", \"line\": 28, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 29, \"code\": \"default['yum']['main']['color_list_installed_older']\", \"name\": \"default['yum']['main']['color_list_installed_older']\", \"value\": {\"ir_type\": \"Null\", \"line\": 29, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 30, \"code\": \"default['yum']['main']['color_list_installed_reinstall']\", \"name\": \"default['yum']['main']['color_list_installed_reinstall']\", \"value\": {\"ir_type\": \"Null\", \"line\": 30, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 31, \"code\": \"default['yum']['main']['color_search_match']\", \"name\": \"default['yum']['main']['color_search_match']\", \"value\": {\"ir_type\": \"Null\", \"line\": 31, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 32, \"code\": \"default['yum']['main']['color_update_installed']\", \"name\": \"default['yum']['main']['color_update_installed']\", \"value\": {\"ir_type\": \"Null\", \"line\": 32, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 33, \"code\": \"default['yum']['main']['color_update_local']\", \"name\": \"default['yum']['main']['color_update_local']\", \"value\": {\"ir_type\": \"Null\", \"line\": 33, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 34, \"code\": \"default['yum']['main']['color_update_remote']\", \"name\": \"default['yum']['main']['color_update_remote']\", \"value\": {\"ir_type\": \"Null\", \"line\": 34, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 35, \"code\": \"default['yum']['main']['commands']\", \"name\": \"default['yum']['main']['commands']\", \"value\": {\"ir_type\": \"Null\", \"line\": 35, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 36, \"code\": \"default['yum']['main']['deltarpm']\", \"name\": \"default['yum']['main']['deltarpm']\", \"value\": {\"ir_type\": \"Null\", \"line\": 36, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 37, \"code\": \"default['yum']['main']['debuglevel']\", \"name\": \"default['yum']['main']['debuglevel']\", \"value\": {\"ir_type\": \"Null\", \"line\": 37, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 38, \"code\": \"default['yum']['main']['diskspacecheck']\", \"name\": \"default['yum']['main']['diskspacecheck']\", \"value\": {\"ir_type\": \"Null\", \"line\": 38, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 39, \"code\": \"default['yum']['main']['enable_group_conditionals']\", \"name\": \"default['yum']['main']['enable_group_conditionals']\", \"value\": {\"ir_type\": \"Null\", \"line\": 39, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 40, \"code\": \"default['yum']['main']['errorlevel']\", \"name\": \"default['yum']['main']['errorlevel']\", \"value\": {\"ir_type\": \"Null\", \"line\": 40, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 41, \"code\": \"default['yum']['main']['exactarch']\", \"name\": \"default['yum']['main']['exactarch']\", \"value\": {\"ir_type\": \"Null\", \"line\": 41, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 42, \"code\": \"default['yum']['main']['exclude']\", \"name\": \"default['yum']['main']['exclude']\", \"value\": {\"ir_type\": \"Null\", \"line\": 42, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 44, \"code\": \"default['yum']['main']['group_package_types']\", \"name\": \"default['yum']['main']['group_package_types']\", \"value\": {\"ir_type\": \"Null\", \"line\": 44, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 45, \"code\": \"default['yum']['main']['groupremove_leaf_only']\", \"name\": \"default['yum']['main']['groupremove_leaf_only']\", \"value\": {\"ir_type\": \"Null\", \"line\": 45, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 46, \"code\": \"default['yum']['main']['history_list_view']\", \"name\": \"default['yum']['main']['history_list_view']\", \"value\": {\"ir_type\": \"Null\", \"line\": 46, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 47, \"code\": \"default['yum']['main']['history_record']\", \"name\": \"default['yum']['main']['history_record']\", \"value\": {\"ir_type\": \"Null\", \"line\": 47, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 48, \"code\": \"default['yum']['main']['history_record_packages']\", \"name\": \"default['yum']['main']['history_record_packages']\", \"value\": {\"ir_type\": \"Null\", \"line\": 48, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 49, \"code\": \"default['yum']['main']['http_caching']\", \"name\": \"default['yum']['main']['http_caching']\", \"value\": {\"ir_type\": \"Null\", \"line\": 49, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 50, \"code\": \"default['yum']['main']['ip_resolve']\", \"name\": \"default['yum']['main']['ip_resolve']\", \"value\": {\"ir_type\": \"Null\", \"line\": 50, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 51, \"code\": \"default['yum']['main']['installonly_limit']\", \"name\": \"default['yum']['main']['installonly_limit']\", \"value\": {\"ir_type\": \"Null\", \"line\": 51, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 52, \"code\": \"default['yum']['main']['installonlypkgs']\", \"name\": \"default['yum']['main']['installonlypkgs']\", \"value\": {\"ir_type\": \"Null\", \"line\": 52, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 53, \"code\": \"default['yum']['main']['installroot']\", \"name\": \"default['yum']['main']['installroot']\", \"value\": {\"ir_type\": \"Null\", \"line\": 53, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 54, \"code\": \"default['yum']['main']['keepalive']\", \"name\": \"default['yum']['main']['keepalive']\", \"value\": {\"ir_type\": \"Null\", \"line\": 54, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 56, \"code\": \"default['yum']['main']['kernelpkgnames']\", \"name\": \"default['yum']['main']['kernelpkgnames']\", \"value\": {\"ir_type\": \"Null\", \"line\": 56, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 59, \"code\": \"default['yum']['main']['max_retries']\", \"name\": \"default['yum']['main']['max_retries']\", \"value\": {\"ir_type\": \"Null\", \"line\": 59, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 60, \"code\": \"default['yum']['main']['mdpolicy']\", \"name\": \"default['yum']['main']['mdpolicy']\", \"value\": {\"ir_type\": \"Null\", \"line\": 60, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 61, \"code\": \"default['yum']['main']['metadata_expire']\", \"name\": \"default['yum']['main']['metadata_expire']\", \"value\": {\"ir_type\": \"Null\", \"line\": 61, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 62, \"code\": \"default['yum']['main']['mirrorlist_expire']\", \"name\": \"default['yum']['main']['mirrorlist_expire']\", \"value\": {\"ir_type\": \"Null\", \"line\": 62, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 63, \"code\": \"default['yum']['main']['multilib_policy']\", \"name\": \"default['yum']['main']['multilib_policy']\", \"value\": {\"ir_type\": \"Null\", \"line\": 63, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 64, \"code\": \"default['yum']['main']['obsoletes']\", \"name\": \"default['yum']['main']['obsoletes']\", \"value\": {\"ir_type\": \"Null\", \"line\": 64, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 65, \"code\": \"default['yum']['main']['overwrite_groups']\", \"name\": \"default['yum']['main']['overwrite_groups']\", \"value\": {\"ir_type\": \"Null\", \"line\": 65, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 68, \"code\": \"default['yum']['main']['persistdir']\", \"name\": \"default['yum']['main']['persistdir']\", \"value\": {\"ir_type\": \"Null\", \"line\": 68, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 69, \"code\": \"default['yum']['main']['pluginconfpath']\", \"name\": \"default['yum']['main']['pluginconfpath']\", \"value\": {\"ir_type\": \"Null\", \"line\": 69, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 70, \"code\": \"default['yum']['main']['pluginpath']\", \"name\": \"default['yum']['main']['pluginpath']\", \"value\": {\"ir_type\": \"Null\", \"line\": 70, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 71, \"code\": \"default['yum']['main']['plugins']\", \"name\": \"default['yum']['main']['plugins']\", \"value\": {\"ir_type\": \"Null\", \"line\": 71, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 72, \"code\": \"default['yum']['main']['protected_multilib']\", \"name\": \"default['yum']['main']['protected_multilib']\", \"value\": {\"ir_type\": \"Null\", \"line\": 72, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 73, \"code\": \"default['yum']['main']['protected_packages']\", \"name\": \"default['yum']['main']['protected_packages']\", \"value\": {\"ir_type\": \"Null\", \"line\": 73, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 74, \"code\": \"default['yum']['main']['proxy']\", \"name\": \"default['yum']['main']['proxy']\", \"value\": {\"ir_type\": \"Null\", \"line\": 74, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 76, \"code\": \"default['yum']['main']['proxy_username']\", \"name\": \"default['yum']['main']['proxy_username']\", \"value\": {\"ir_type\": \"Null\", \"line\": 76, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 78, \"code\": \"default['yum']['main']['recent']\", \"name\": \"default['yum']['main']['recent']\", \"value\": {\"ir_type\": \"Null\", \"line\": 78, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 79, \"code\": \"default['yum']['main']['repo_gpgcheck']\", \"name\": \"default['yum']['main']['repo_gpgcheck']\", \"value\": {\"ir_type\": \"Null\", \"line\": 79, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 80, \"code\": \"default['yum']['main']['reposdir']\", \"name\": \"default['yum']['main']['reposdir']\", \"value\": {\"ir_type\": \"Null\", \"line\": 80, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 81, \"code\": \"default['yum']['main']['reset_nice']\", \"name\": \"default['yum']['main']['reset_nice']\", \"value\": {\"ir_type\": \"Null\", \"line\": 81, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 82, \"code\": \"default['yum']['main']['rpmverbosity']\", \"name\": \"default['yum']['main']['rpmverbosity']\", \"value\": {\"ir_type\": \"Null\", \"line\": 82, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 83, \"code\": \"default['yum']['main']['showdupesfromrepos']\", \"name\": \"default['yum']['main']['showdupesfromrepos']\", \"value\": {\"ir_type\": \"Null\", \"line\": 83, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 84, \"code\": \"default['yum']['main']['skip_broken']\", \"name\": \"default['yum']['main']['skip_broken']\", \"value\": {\"ir_type\": \"Null\", \"line\": 84, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 85, \"code\": \"default['yum']['main']['ssl_check_cert_permissions']\", \"name\": \"default['yum']['main']['ssl_check_cert_permissions']\", \"value\": {\"ir_type\": \"Null\", \"line\": 85, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 86, \"code\": \"default['yum']['main']['sslcacert']\", \"name\": \"default['yum']['main']['sslcacert']\", \"value\": {\"ir_type\": \"Null\", \"line\": 86, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 87, \"code\": \"default['yum']['main']['sslclientcert']\", \"name\": \"default['yum']['main']['sslclientcert']\", \"value\": {\"ir_type\": \"Null\", \"line\": 87, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 89, \"code\": \"default['yum']['main']['sslverify']\", \"name\": \"default['yum']['main']['sslverify']\", \"value\": {\"ir_type\": \"Null\", \"line\": 89, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 90, \"code\": \"default['yum']['main']['syslog_device']\", \"name\": \"default['yum']['main']['syslog_device']\", \"value\": {\"ir_type\": \"Null\", \"line\": 90, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 91, \"code\": \"default['yum']['main']['syslog_facility']\", \"name\": \"default['yum']['main']['syslog_facility']\", \"value\": {\"ir_type\": \"Null\", \"line\": 91, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 92, \"code\": \"default['yum']['main']['syslog_ident']\", \"name\": \"default['yum']['main']['syslog_ident']\", \"value\": {\"ir_type\": \"Null\", \"line\": 92, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 93, \"code\": \"default['yum']['main']['throttle']\", \"name\": \"default['yum']['main']['throttle']\", \"value\": {\"ir_type\": \"Null\", \"line\": 93, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 94, \"code\": \"default['yum']['main']['timeout']\", \"name\": \"default['yum']['main']['timeout']\", \"value\": {\"ir_type\": \"Null\", \"line\": 94, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 96, \"code\": \"default['yum']['main']['tsflags']\", \"name\": \"default['yum']['main']['tsflags']\", \"value\": {\"ir_type\": \"Null\", \"line\": 96, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 97, \"code\": \"default['yum']['main']['username']\", \"name\": \"default['yum']['main']['username']\", \"value\": {\"ir_type\": \"Null\", \"line\": 97, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 41.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 12,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    name := var.name\n    value := var.value\n    keyword := password_keywords[_]\n    glitch_lib.contains(name, keyword)\n    value.ir_type == \"String\"\n    value.value == \"\"\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Avoid using empty passwords. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    name := attr.name\n    value := attr.value\n    keyword := password_keywords[_]\n    glitch_lib.contains(name, keyword)\n    value.ir_type == \"String\"\n    value.value == \"\"\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Avoid using empty passwords. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.5
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 13,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nauth_keywords := {\"password\", \"secret\", \"key\", \"auth\", \"credential\", \"token\", \"pass\", \"pwd\"}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\ncontains_auth_keyword(name) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), name)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    \n    is_empty_value(variable.value)\n    contains_auth_keyword(variable.name)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password or secret - Using an empty string or null as a password or secret can lead to unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    \n    is_empty_value(attribute.value)\n    contains_auth_keyword(attribute.name)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Empty password or secret - Using an empty string or null as a password or secret can lead to unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            53
+          ],
+          "false_positives": [],
+          "file_name": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 19, \"code\": \"class fuel_project::roles::zabbix::server (\\n  $mysql_replication_password = '',\\n  $mysql_replication_user     = 'repl',\\n  $mysql_slave_host           = undef,\\n  $maintenance_cron           = {\\n    'zabbix-maintenance' => {\\n      hour => '*/24',\\n    },\\n  },\\n  $maintenance_script         = '/usr/share/zabbix-server-mysql/maintenance.sh',\\n  $maintenance_script_config  = '/root/.my.cnf',\\n  $server_role                = 'master', # master || slave\\n  $slack_emoji_ok             = ':smile:',\\n  $slack_emoji_problem        = ':frowning:',\\n  $slack_emoji_unknown        = ':ghost:',\\n  $slack_post_username        = '',\\n  $slack_web_hook_url         = '',\\n) {\\n  class { '::fuel_project::common' :}\\n  class { '::zabbix::server' :}\\n\\n  ::zabbix::server::alertscript { 'slack.sh' :\\n    template => 'fuel_project/zabbix/slack.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  ::zabbix::server::alertscript { 'zabbkit.sh' :\\n    template => 'fuel_project/zabbix/zabbkit.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  if ($server_role == 'master' and $mysql_slave_host) {\\n    mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\\n\\n    mysql_grant { \\\"${mysql_replication_user}@${mysql_slave_host}/*.*\\\" :\\n      ensure     => 'present',\\n      options    => ['GRANT'],\\n      privileges => ['REPLICATION SLAVE'],\\n      table      => '*.*',\\n      user       => \\\"${mysql_replication_user}@${mysql_slave_host}\\\",\\n    }\\n\\n    file { $maintenance_script :\\n      ensure  => 'present',\\n      owner   => 'root',\\n      group   => 'root',\\n      mode    => '0755',\\n      content => template('fuel_project/roles/zabbix/server/maintenance.sh.erb'),\\n      require => Class['::zabbix::server'],\\n    }\\n\\n    create_resources('cron', $maintenance_cron, {\\n      ensure  => 'present',\\n      command => \\\"${maintenance_script} 2>&1 | logger -t zabbix-maintenance\\\",\\n    })\\n  }\\n}\", \"statements\": [{\"ir_type\": \"ConditionalStatement\", \"line\": 50, \"code\": \"\", \"statements\": [{\"ir_type\": \"AtomicUnit\", \"line\": 51, \"code\": \"mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\", \"statements\": [], \"name\": null, \"type\": \"mysql_user\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 53, \"code\": \"password_hash => mysql_password($mysql_replication_password)\", \"name\": \"password_hash\", \"value\": {\"ir_type\": \"FunctionCall\", \"line\": 53, \"code\": \"mysql_password($mysql_replication_password)\", \"name\": \"mysql_password\", \"args\": [{\"ir_type\": \"VariableReference\", \"line\": 53, \"code\": \"$mysql_replication_password\", \"value\": \"mysql_replication_password\"}]}}]}], \"condition\": null, \"type\": \"IF\", \"is_default\": false, \"is_top\": true, \"else_statement\": null}], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"fuel_project::roles::zabbix::server\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"definition\", \"lines\": 78}], \"attributes\": [], \"name\": \"github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"script\", \"lines\": 78}",
+          "ir_node_reduction_percentage": 94.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 14,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords = {\"password\", \"pwd\", \"secret\", \"key\", \"token\", \"auth\", \"credential\", \"passphrase\"}\n\ncheck_empty_password(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nis_password_related(name) {\n    some keyword\n    password_keywords[keyword]\n    glitch_lib.contains(name, keyword)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check Variables\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    is_password_related(var.name)\n    check_empty_password(var.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a password-related variable. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check Attributes in AtomicUnits\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    is_password_related(attr.name)\n    check_empty_password(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a password-related attribute. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check FunctionCall arguments (for cases like mysql_password($variable))\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    # Look for FunctionCall nodes\n    walk(node, [path, n])\n    n.ir_type == \"FunctionCall\"\n    \n    # Check if function name suggests password handling\n    is_password_related(n.name)\n    \n    # Check if any argument is an empty string or null\n    some arg\n    n.args[arg]\n    check_empty_password(arg)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": n,\n        \"path\": parent.path,\n        \"description\": \"Empty password passed to password-related function. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 15,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_patterns = {\"password\", \"secret\", \"key\", \"token\", \"passwd\", \"pwd\", \"credential\"}\n\nis_password_related(name) {\n    regex.match(\"(?i).*\\\\b(password|secret|key|token|passwd|pwd|credential)\\\\b\", name)\n}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    trimmed := trim(value.value, \" \\t\\n\\r\")\n    trimmed == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables (Ansible, Chef)\n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    is_password_related(variable.name)\n    is_empty_value(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential assigned to a password-related field (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes (Puppet, and potentially other IaC)\n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    is_password_related(attribute.name)\n    is_empty_value(attribute.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential assigned to a password-related field (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 16,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"auth\", \"credential\", \"token\", \"passwd\"}\n\nis_empty_password(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Undef\"\n} else {\n    value.ir_type == \"Null\"\n}\n\ncontains_password_keyword(name) {\n    keyword := password_keywords[_]\n    contains(name, keyword)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    contains_password_keyword(variable.name)\n    is_empty_password(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password or undef - This may allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    contains_password_keyword(attribute.name)\n    is_empty_password(attribute.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password or undef - This may allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            53
+          ],
+          "false_positives": [],
+          "file_name": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 19, \"code\": \"class fuel_project::roles::zabbix::server (\\n  $mysql_replication_password = '',\\n  $mysql_replication_user     = 'repl',\\n  $mysql_slave_host           = undef,\\n  $maintenance_cron           = {\\n    'zabbix-maintenance' => {\\n      hour => '*/24',\\n    },\\n  },\\n  $maintenance_script         = '/usr/share/zabbix-server-mysql/maintenance.sh',\\n  $maintenance_script_config  = '/root/.my.cnf',\\n  $server_role                = 'master', # master || slave\\n  $slack_emoji_ok             = ':smile:',\\n  $slack_emoji_problem        = ':frowning:',\\n  $slack_emoji_unknown        = ':ghost:',\\n  $slack_post_username        = '',\\n  $slack_web_hook_url         = '',\\n) {\\n  class { '::fuel_project::common' :}\\n  class { '::zabbix::server' :}\\n\\n  ::zabbix::server::alertscript { 'slack.sh' :\\n    template => 'fuel_project/zabbix/slack.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  ::zabbix::server::alertscript { 'zabbkit.sh' :\\n    template => 'fuel_project/zabbix/zabbkit.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  if ($server_role == 'master' and $mysql_slave_host) {\\n    mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\\n\\n    mysql_grant { \\\"${mysql_replication_user}@${mysql_slave_host}/*.*\\\" :\\n      ensure     => 'present',\\n      options    => ['GRANT'],\\n      privileges => ['REPLICATION SLAVE'],\\n      table      => '*.*',\\n      user       => \\\"${mysql_replication_user}@${mysql_slave_host}\\\",\\n    }\\n\\n    file { $maintenance_script :\\n      ensure  => 'present',\\n      owner   => 'root',\\n      group   => 'root',\\n      mode    => '0755',\\n      content => template('fuel_project/roles/zabbix/server/maintenance.sh.erb'),\\n      require => Class['::zabbix::server'],\\n    }\\n\\n    create_resources('cron', $maintenance_cron, {\\n      ensure  => 'present',\\n      command => \\\"${maintenance_script} 2>&1 | logger -t zabbix-maintenance\\\",\\n    })\\n  }\\n}\", \"statements\": [{\"ir_type\": \"ConditionalStatement\", \"line\": 50, \"code\": \"\", \"statements\": [{\"ir_type\": \"AtomicUnit\", \"line\": 51, \"code\": \"mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\", \"statements\": [], \"name\": null, \"type\": \"mysql_user\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 53, \"code\": \"password_hash => mysql_password($mysql_replication_password)\", \"name\": \"password_hash\", \"value\": {\"ir_type\": \"FunctionCall\", \"line\": 53, \"code\": \"mysql_password($mysql_replication_password)\", \"name\": \"mysql_password\", \"args\": [{\"ir_type\": \"VariableReference\", \"line\": 53, \"code\": \"$mysql_replication_password\", \"value\": \"mysql_replication_password\"}]}}]}], \"condition\": null, \"type\": \"IF\", \"is_default\": false, \"is_top\": true, \"else_statement\": null}], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"fuel_project::roles::zabbix::server\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"definition\", \"lines\": 78}], \"attributes\": [], \"name\": \"github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"script\", \"lines\": 78}",
+          "ir_node_reduction_percentage": 94.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 17,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"key\", \"token\", \"passwd\", \"pwd\", \"credential\", \"auth\", \"api_key\", \"secret_key\", \"access_key\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in any unit block\n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    \n    # Check if the variable name contains any password-related keyword\n    some keyword in password_keywords\n    contains(variable.name, keyword)\n    \n    # Check if the value is an empty string or null\n    (variable.value.ir_type == \"String\" and variable.value.value == \"\") or\n    variable.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password or secret - Using an empty string or null as a password or secret can lead to unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units\n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    \n    # Check if the attribute name contains any password-related keyword\n    some keyword in password_keywords\n    contains(attribute.name, keyword)\n    \n    # Check if the value is an empty string or null\n    (attribute.value.ir_type == \"String\" and attribute.value.value == \"\") or\n    attribute.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Empty password or secret - Using an empty string or null as a password or secret can lead to unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:16: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in password_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 18,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    password_keywords[attr.name]\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(pwd|password)\\\\s*=\\\\s*;\", attr.value.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in connection string - Connection strings with empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    password_keywords[var.name]\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string as password - Empty passwords allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 19,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"auth\", \"credential\", \"token\"}\n\ncontains_keyword(name) {\n    some keyword in password_keywords\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), name)\n}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    trim(value.value) == \"\"\n} else {\n    value.ir_type == \"Null\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    variables := glitch_lib.all_variables(parent)\n    variable := variables[_]\n    contains_keyword(variable.name)\n    is_empty_value(variable.value)\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string or null as password - This can allow unauthorized access. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attributes := glitch_lib.all_attributes(parent)\n    attribute := attributes[_]\n    contains_keyword(attribute.name)\n    is_empty_value(attribute.value)\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attribute,\n        \"path\": parent.path,\n        \"description\": \"Use of empty string or null as password - This can allow unauthorized access. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_004/cwe_258.rego:8: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in password_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 20,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"pwd\", \"secret\", \"key\", \"admin_password\", \"db_password\", \"secret_key\", \"authentication\", \"connection_string\"}\n\nempty_string(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^\\\\s*$\", value.value)\n}\n\ncontains_password_keyword(str) {\n    some keyword\n    password_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), str)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    some attr\n    attrs[attr]\n    contains_password_keyword(attr.name)\n    empty_string(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a password-related attribute. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    vars := glitch_lib.all_variables(node)\n    some var\n    vars[var]\n    contains_password_keyword(var.name)\n    empty_string(var.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password assigned to a password-related variable. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    }
+  ],
+  "result": {
+    "passed": false,
+    "attempts_used": 20,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-05-19T21:50:38.136868+00:00",
+    "elapsed_time": "11m10s"
+  },
+  "llm_usage": {
+    "calls": 21,
+    "input_tokens_total": 140216,
+    "output_tokens_total": 67804,
+    "reasoning_tokens_total": 58816,
+    "cache_read_tokens_total": 110002
+  }
+}

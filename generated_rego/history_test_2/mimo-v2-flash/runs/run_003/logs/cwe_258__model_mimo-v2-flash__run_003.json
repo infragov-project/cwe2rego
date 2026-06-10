@@ -1,0 +1,615 @@
+{
+  "run_id": "run_003",
+  "run_started_at_utc": "2026-05-19T21:33:36.637064+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003",
+  "experiment_name": "history_test_2",
+  "cwe": "258",
+  "type_name": "sec_empty_pass",
+  "model_used": "xiaomi/mimo-v2-flash",
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego",
+  "cwe_condition": "To detect **CWE-258: Empty Password in Configuration File** within Infrastructure as Code (IaC) scripts (e.g., Terraform, CloudFormation, ARM templates, Kubernetes manifests), you must look for the explicit assignment of an empty string or a null value to password, authentication key, or credential fields.\n\nHere are the necessary weaknesses, keywords, attributes, and patterns to detect this vulnerability without referencing specific programming languages.\n\n### 1. Explicit Empty String Assignment\nThe most direct indicator is assigning an empty string (`\"\"`) to a password field.\n\n*   **Keywords/Attributes:**\n    *   `password`\n    *   `secret`\n    *   `passphrase`\n    *   `auth_key`\n    *   `token`\n*   **Detection Pattern:**\n    *   Look for key-value pairs where the key contains authentication-related keywords and the value is an empty string literal (`\"\"`, `''`, or just whitespace).\n    *   **Example Pattern:** `attribute_name = \"\"`\n\n### 2. Null or Empty Default Values\nIaC often uses variables or parameters. If a variable is defined with a default value of an empty string or null, and that variable is used for authentication, it creates the vulnerability.\n\n*   **Keywords/Attributes:**\n    *   `default`\n    *   `nullable`\n    *   `optional`\n*   **Detection Pattern:**\n    *   Variable definitions with a `default` set to an empty string.\n    *   Resource arguments that accept a string but are explicitly set to a null-like state or omitted when a value is strictly required (though omission usually defaults to null/empty in many parsers).\n\n### 3. Hardcoded Credentials with Missing Values\nConfiguration files (like `.properties`, `.ini`, or environment files) embedded within or referenced by IaC may contain key-value pairs with empty values.\n\n*   **Keywords/Attributes:**\n    *   `pwd`\n    *   `db_password`\n    *   `connection_string`\n*   **Detection Pattern:**\n    *   Look for properties file syntax where a key is followed immediately by a delimiter (like `=` or `:`) and an empty string or nothing.\n    *   **Example Pattern:** `db.password=` or `password=` (trailing equals sign with no value).\n\n### 4. Connection String Injection\nIn database or service connection strings, the password parameter is often explicitly named.\n\n*   **Keywords/Attributes:**\n    *   `connectionString`\n    *   `Data Source`\n    *   `User ID`\n    *   `Pwd`\n*   **Detection Pattern:**\n    *   Inspect connection strings for the `Pwd` or `password` parameter followed by an empty value.\n    *   **Example Pattern:** `...Pwd=;...` or `...password=;...`\n\n### 5. Resource-Specific Attributes (Generic Cloud Resources)\nWhile specific providers have unique syntax, the concept remains consistent across IaC: looking for arguments that configure authentication.\n\n*   **Keywords/Attributes:**\n    *   `admin_password` (Virtual Machines, Databases)\n    *   `master_user_password` (RDS, Managed Databases)\n    *   `ssh_key` or `public_key` (Instances, Containers)\n    *   `initial_admin_password` (Managed Services)\n*   **Detection Pattern:**\n    *   Any resource block defining administrative access where the password argument is assigned an empty literal.\n\n### Summary of Detection Logic\nTo detect this weakness in an IaC script, a security tool should scan for **Argument-Value pairs** where:\n\n1.  **Argument Name** matches a semantic pattern for secrets (e.g., contains `password`, `secret`, `key`, `auth`, `credential`, `pwd`).\n2.  **Value** is an empty string (`\"\"`), an empty list `[]` (if treated as a string), or a null value.\n\n**Abstracted Logic:**\n> If `resource.attribute_name` contains authentication keywords AND `resource.attribute_value` is empty (`\"\"` or `null`), THEN **CWE-258 is detected**.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 2
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258",
+    "entries_count": 5
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define authentication keywords to search for in attribute names\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\n# Check if a string matches any of the authentication keywords (case-insensitive)\nis_auth_keyword(name) {\n    lower_name := lower(name)\n    contains(lower_name, auth_keywords[_])\n}\n\n# Check if a value is considered empty (empty string, null, or undefined)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^\\s*$\", value.value)\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\n# Check attributes for empty authentication values\ncheck_attribute(attr) {\n    attr.ir_type == \"Attribute\"\n    is_auth_keyword(attr.name)\n    is_empty_value(attr.value)\n}\n\n# Check variables for empty authentication values\ncheck_variable(var) {\n    var.ir_type == \"Variable\"\n    is_auth_keyword(var.name)\n    is_empty_value(var.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    check_attribute(attr)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Authentication fields should not be set to empty values. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in unit blocks\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    check_variable(var)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Authentication fields should not be set to empty values. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "2 errors occurred during loading:\n/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:17: rego_parse_error: illegal escape sequence\n\t    regex.match(\"^\\s*$\", value.value)\n\t                ^\n/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:17: rego_parse_error: illegal token\n\t    regex.match(\"^\\s*$\", value.value)\n\t                ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\ncheck_empty_password(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^[[:space:]]*$\", value.value)\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    lower_name := lower(attr.name)\n    contains_password_keyword := false\n    some kw in password_keywords\n    contains_password_keyword = contains_password_keyword | contains(lower_name, kw)\n    \n    contains_password_keyword == true\n    \n    check_empty_password(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Passwords or authentication keys must not be empty or null. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:27: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some kw in password_keywords\n\t            ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"connection_string\", \"connectionString\", \"user_id\", \"user\", \"credential\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all attributes in the parent block\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    # Check if attribute name contains any password keyword\n    name_lower := lower(attr.name)\n    some kw in password_keywords\n    contains(name_lower, kw)\n    \n    # Check if value is empty string or null\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all variables in the parent block\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    # Check if variable name contains any password keyword\n    name_lower := lower(var.name)\n    some kw in password_keywords\n    contains(name_lower, kw)\n    \n    # Check if value is empty string or null\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all attributes in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains any password keyword\n    name_lower := lower(attr.name)\n    some kw in password_keywords\n    contains(name_lower, kw)\n    \n    # Check if value is empty string or null\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check all variables in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    vars := glitch_lib.all_variables(node)\n    var := vars[_]\n    \n    # Check if variable name contains any password keyword\n    name_lower := lower(var.name)\n    some kw in password_keywords\n    contains(name_lower, kw)\n    \n    # Check if value is empty string or null\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:17: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some kw in password_keywords\n\t            ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 4,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    attr_name_lower := lower(attr.name)\n    some kw in password_keywords\n    contains(attr_name_lower, kw)\n    \n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    attr_name_lower := lower(attr.name)\n    some kw in password_keywords\n    contains(attr_name_lower, kw)\n    \n    attr.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Null password in configuration file - Password fields should not be null. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n    \n    var_name_lower := lower(var.name)\n    some kw in password_keywords\n    contains(var_name_lower, kw)\n    \n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password variable - Password variables should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:15: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some kw in password_keywords\n\t            ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 5,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"credential\", \"key\", \"auth\"}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\ncheck_attribute_name(name) {\n    contains(name, password_keywords[_])\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    check_attribute_name(attr.name)\n    is_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Avoid assigning empty passwords to authentication fields. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 6,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Keywords related to authentication, credentials, and secrets\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\", \"db_password\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"activationkey\"}\n\n# Check if a string contains any authentication keyword\ncontains_auth_keyword(str) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), str)\n}\n\n# Detect empty password in configuration file (CWE-258)\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks from the input\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all variables from the UnitBlock\n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    \n    # Check if the variable name contains an authentication keyword\n    contains_auth_keyword(var.name)\n    \n    # Check if the variable value is an empty string or null\n    var.value.ir_type == \"String\"\n    var.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password, secret, or credential field is set to an empty string. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks from the input\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all variables from the UnitBlock\n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n    \n    # Check if the variable name contains an authentication keyword\n    contains_auth_keyword(var.name)\n    \n    # Check if the variable value is null\n    var.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password, secret, or credential field is set to null. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 7,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in the unit block\n    var := parent.variables[_]\n    \n    # Check if variable name contains authentication keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\"}\n    name_lower := lower(var.name)\n    contains_auth_keyword := false\n    some kw in auth_keywords\n    contains_auth_keyword = contains_auth_keyword | regex.match(sprintf(\".*%s.*\", [kw]), name_lower)\n    \n    # Check if value is empty string or null/undef\n    value_is_empty := var.value.ir_type == \"String\" and var.value.value == \"\"\n    value_is_null := var.value.ir_type == \"Null\" or var.value.ir_type == \"Undef\"\n    \n    # Only flag if both conditions are met\n    contains_auth_keyword and (value_is_empty or value_is_null)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password or authentication key is set to empty or null value. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains authentication keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\"}\n    name_lower := lower(attr.name)\n    contains_auth_keyword := false\n    some kw in auth_keywords\n    contains_auth_keyword = contains_auth_keyword | regex.match(sprintf(\".*%s.*\", [kw]), name_lower)\n    \n    # Check if value is empty string or null/undef\n    value_is_empty := attr.value.ir_type == \"String\" and attr.value.value == \"\"\n    value_is_null := attr.value.ir_type == \"Null\" or attr.value.ir_type == \"Undef\"\n    \n    # Only flag if both conditions are met\n    contains_auth_keyword and (value_is_empty or value_is_null)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password or authentication key is set to empty or null value. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:16: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some kw in auth_keywords\n\t            ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 8,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"credential\"}\n\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    contains(attr.name, auth_keywords[_])\n\n    is_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty Password in Configuration File - A password or credential field is set to an empty value. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    variables := glitch_lib.all_variables(parent)\n    var := variables[_]\n\n    contains(var.name, auth_keywords[_])\n\n    is_empty_value(var.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty Password in Configuration File - A password or credential variable is set to an empty value. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.5
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 9,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in vars/script blocks (Ansible, Chef, Puppet)\n    variable := parent.variables[_]\n    \n    # Check if variable name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\", \"db_password\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"activationkey\", \"api_token\", \"cache_secret_key\", \"proxy_password\"}\n    \n    # Use contains function from glitch_lib to match case-insensitive\n    contains_auth_keyword := false\n    contains_auth_keyword := true {\n        glitch_lib.contains(variable.name, auth_keywords[_])\n    }\n    \n    # Check if value is empty string or null\n    is_empty_value := false\n    is_empty_value := true {\n        variable.value.ir_type == \"String\"\n        variable.value.value == \"\"\n    }\n    is_empty_value := true {\n        variable.value.ir_type == \"Null\"\n    }\n    \n    # Only detect if both conditions are met\n    contains_auth_keyword & is_empty_value\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty Password in Configuration File - Password/authentication fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check atomic units (resources/tasks) for empty password attributes\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\", \"db_password\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"activationkey\", \"api_token\", \"cache_secret_key\", \"proxy_password\"}\n    \n    contains_auth_keyword := false\n    contains_auth_keyword := true {\n        glitch_lib.contains(attr.name, auth_keywords[_])\n    }\n    \n    # Check if value is empty string or null\n    is_empty_value := false\n    is_empty_value := true {\n        attr.value.ir_type == \"String\"\n        attr.value.value == \"\"\n    }\n    is_empty_value := true {\n        attr.value.ir_type == \"Null\"\n    }\n    \n    # Only detect if both conditions are met\n    contains_auth_keyword & is_empty_value\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty Password in Configuration File - Password/authentication fields should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:17: rego_parse_error: unexpected { token: expected \\n or ; or }\n\t    contains_auth_keyword := true {\n\t                                  ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 10,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    attr.name != \"\"\n    name_lower := lower(attr.name)\n    \n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n    contains_auth_keyword := false\n    \n    some keyword\n    auth_keywords[keyword]\n    contains(name_lower, keyword)\n    contains_auth_keyword := true\n    \n    contains_auth_keyword\n    \n    value_type := attr.value.ir_type\n    (value_type == \"String\" && attr.value.value == \"\") \n    (value_type == \"Null\") \n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password or authentication key is set to an empty value. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "2 errors occurred during loading:\n/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:26: rego_parse_error: unexpected and token\n\t    (value_type == \"String\" && attr.value.value == \"\") \n\t                             ^\n/home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:26: rego_parse_error: non-terminated expression\n\t    (value_type == \"String\" && attr.value.value == \"\") \n\t                             ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 11,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Common authentication-related keywords to detect potential password fields\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\n# Check if an attribute name contains any authentication keyword\nis_auth_attribute(name) {\n    contains_lower(name, auth_keywords[_])\n}\n\ncontains_lower(s, substring) {\n    regex.match(sprintf(\"(?i).*%s.*\", [substring]), s)\n}\n\n# Check if a value is considered empty (empty string, null, or undefined)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\n# Main rule to detect CWE-258: Empty Password in Configuration File\nGlitch_Analysis[result] {\n    # Gather all unit blocks (scripts, tasks, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all atomic units (resources, tasks)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    # Get all attributes within the atomic unit\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if the attribute name contains authentication keywords\n    is_auth_attribute(attr.name)\n    \n    # Check if the attribute value is empty\n    is_empty_value(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password detected in configuration file - CWE-258: Empty Password in Configuration File\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 12,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define authentication-related keywords\nauth_keywords := {\n    \"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \n    \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \n    \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"\n}\n\n# Check if a string contains any authentication keyword\ncontains_auth_keyword(str) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), str)\n}\n\n# Check if value is empty string or null\nis_empty_or_null(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n}\n\n# Detect empty passwords in variables (Ansible, Chef, Puppet)\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in UnitBlock\n    variable := parent.variables[_]\n    contains_auth_keyword(variable.name)\n    is_empty_or_null(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Passwords should not be empty. (CWE-258)\"\n    }\n}\n\n# Detect empty passwords in atomic unit attributes\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    contains_auth_keyword(attr.name)\n    is_empty_or_null(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Passwords should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.5
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 13,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Set of authentication-related keywords to detect potential credential fields\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\", \"activationkey\", \"api_token\", \"cache_secret_key\", \"proxy_password\"}\n\n# Helper function to check if a variable or attribute name contains authentication keywords\nis_auth_field(name) {\n    contains_lower(name, auth_keywords[_])\n}\n\n# Case-insensitive contains check\ncontains_lower(str, substr) {\n    regex.match(sprintf(\"(?i).*%s.*\", [substr]), str)\n}\n\n# Check if the value is empty (empty string or null)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    # Gather all unit blocks (scripts, vars, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check variables within the unit block\n    variable := parent.variables[_]\n\n    # Filter for authentication-related variable names\n    is_auth_field(variable.name)\n\n    # Check if the variable's value is empty\n    is_empty_value(variable.value)\n\n    # Only report if the variable is not within a conditional statement or function call that might assign a default but could be overridden\n    # (This is a simple heuristic to reduce false positives; more complex analysis could be added if needed)\n    # For now, we report all empty auth fields as potential vulnerabilities\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration file (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    # Gather all unit blocks\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Get all atomic units (resources, tasks, etc.)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    # Get all attributes within the atomic unit\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    # Filter for authentication-related attribute names\n    is_auth_field(attr.name)\n\n    # Check if the attribute's value is empty\n    is_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration file (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 14,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define keywords that indicate authentication or credential fields\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"key\", \"credential\", \"access_key\", \"secret_key\"}\n\n# Check if a variable or attribute name contains any authentication keyword\nis_auth_field(name) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), name)\n}\n\n# Check if a value is empty (empty string, null, or undefined)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\n# Detect CWE-258: Empty Password in Configuration File\nGlitch_Analysis[result] {\n    # Get all unit blocks (scripts, vars, definitions, etc.)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in the unit block (e.g., Ansible vars, Chef attributes)\n    var := parent.variables[_]\n    is_auth_field(var.name)\n    is_empty_value(var.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    # Get all unit blocks\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in the unit block (e.g., Puppet class parameters)\n    attr := parent.attributes[_]\n    is_auth_field(attr.name)\n    is_empty_value(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration - CWE-258\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            53
+          ],
+          "false_positives": [],
+          "file_name": "github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 19, \"code\": \"class fuel_project::roles::zabbix::server (\\n  $mysql_replication_password = '',\\n  $mysql_replication_user     = 'repl',\\n  $mysql_slave_host           = undef,\\n  $maintenance_cron           = {\\n    'zabbix-maintenance' => {\\n      hour => '*/24',\\n    },\\n  },\\n  $maintenance_script         = '/usr/share/zabbix-server-mysql/maintenance.sh',\\n  $maintenance_script_config  = '/root/.my.cnf',\\n  $server_role                = 'master', # master || slave\\n  $slack_emoji_ok             = ':smile:',\\n  $slack_emoji_problem        = ':frowning:',\\n  $slack_emoji_unknown        = ':ghost:',\\n  $slack_post_username        = '',\\n  $slack_web_hook_url         = '',\\n) {\\n  class { '::fuel_project::common' :}\\n  class { '::zabbix::server' :}\\n\\n  ::zabbix::server::alertscript { 'slack.sh' :\\n    template => 'fuel_project/zabbix/slack.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  ::zabbix::server::alertscript { 'zabbkit.sh' :\\n    template => 'fuel_project/zabbix/zabbkit.sh.erb',\\n    require  => Class['::zabbix::server'],\\n  }\\n\\n  if ($server_role == 'master' and $mysql_slave_host) {\\n    mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\\n\\n    mysql_grant { \\\"${mysql_replication_user}@${mysql_slave_host}/*.*\\\" :\\n      ensure     => 'present',\\n      options    => ['GRANT'],\\n      privileges => ['REPLICATION SLAVE'],\\n      table      => '*.*',\\n      user       => \\\"${mysql_replication_user}@${mysql_slave_host}\\\",\\n    }\\n\\n    file { $maintenance_script :\\n      ensure  => 'present',\\n      owner   => 'root',\\n      group   => 'root',\\n      mode    => '0755',\\n      content => template('fuel_project/roles/zabbix/server/maintenance.sh.erb'),\\n      require => Class['::zabbix::server'],\\n    }\\n\\n    create_resources('cron', $maintenance_cron, {\\n      ensure  => 'present',\\n      command => \\\"${maintenance_script} 2>&1 | logger -t zabbix-maintenance\\\",\\n    })\\n  }\\n}\", \"statements\": [{\"ir_type\": \"ConditionalStatement\", \"line\": 50, \"code\": \"\", \"statements\": [{\"ir_type\": \"AtomicUnit\", \"line\": 51, \"code\": \"mysql_user { \\\"${mysql_replication_user}@${mysql_slave_host}\\\" :\\n      ensure        => 'present',\\n      password_hash => mysql_password($mysql_replication_password),\\n    }\", \"statements\": [], \"name\": null, \"type\": \"mysql_user\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 53, \"code\": \"password_hash => mysql_password($mysql_replication_password)\", \"name\": \"password_hash\", \"value\": {\"ir_type\": \"FunctionCall\", \"line\": 53, \"code\": \"mysql_password($mysql_replication_password)\", \"name\": \"mysql_password\", \"args\": [{\"ir_type\": \"VariableReference\", \"line\": 53, \"code\": \"$mysql_replication_password\", \"value\": \"mysql_replication_password\"}]}}]}], \"condition\": null, \"type\": \"IF\", \"is_default\": false, \"is_top\": true, \"else_statement\": null}], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"fuel_project::roles::zabbix::server\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"definition\", \"lines\": 78}], \"attributes\": [], \"name\": \"github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-fuel-infra@puppet-manifests-modules-fuel_project-manifests-roles-zabbix-server.pp\", \"type\": \"script\", \"lines\": 78}",
+          "ir_node_reduction_percentage": 94.8
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 15,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Define keywords related to authentication and credentials\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"key\", \"credential\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\", \"api_token\", \"access_key\", \"secret_key\", \"clientkey\", \"replication_password\"}\n\n# Check if a string contains any authentication keyword\ncontains_auth_keyword(str) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), str)\n}\n\n# Check if a value is empty (empty string or null)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n}\n\n# Check if a variable definition has an empty value\ncheck_variable_empty(var) {\n    var.ir_type == \"Variable\"\n    contains_auth_keyword(var.name)\n    is_empty_value(var.value)\n}\n\n# Check if an attribute has an empty value\ncheck_attribute_empty(attr) {\n    attr.ir_type == \"Attribute\"\n    contains_auth_keyword(attr.name)\n    is_empty_value(attr.value)\n}\n\n# Check if a function call argument is empty (for Puppet)\ncheck_function_call_empty(func) {\n    func.ir_type == \"FunctionCall\"\n    func.name == \"mysql_password\"\n    count(func.args) > 0\n    arg := func.args[_]\n    arg.ir_type == \"VariableReference\"\n    # We need to find the variable definition and check if it's empty\n    # Since we don't have direct access to variable definitions here,\n    # we rely on the variable reference being used in an empty context\n    # This is a simplification; in practice, we would need to resolve the variable\n    # For this rule, we'll check if the variable name suggests it might be empty\n    contains_auth_keyword(arg.value)\n}\n\n# Main rule for detecting CWE-258\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check variables in the parent unit block\n    var := parent.variables[_]\n    check_variable_empty(var)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration file - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check attributes in atomic units\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    check_attribute_empty(attr)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration file - CWE-258\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check function calls (e.g., in Puppet)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    walk(node, [_, n])\n    n.ir_type == \"FunctionCall\"\n    check_function_call_empty(n)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": n,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration file - CWE-258\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178,
+            682,
+            688
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 178, \"code\": \"gitlab_runner__api_token: ''\\n\", \"name\": \"gitlab_runner__api_token\", \"value\": {\"ir_type\": \"String\", \"line\": 178, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 682, \"code\": \"gitlab_runner__cache_access_key: ''\\n\", \"name\": \"gitlab_runner__cache_access_key\", \"value\": {\"ir_type\": \"String\", \"line\": 682, \"code\": \"''\", \"value\": \"\"}}, {\"ir_type\": \"Variable\", \"line\": 688, \"code\": \"gitlab_runner__cache_secret_key: ''\\n\", \"name\": \"gitlab_runner__cache_secret_key\", \"value\": {\"ir_type\": \"String\", \"line\": 688, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [],
+          "false_positives": [
+            75,
+            88
+          ],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 75, \"code\": \"default['yum']['main']['proxy_password']\", \"name\": \"default['yum']['main']['proxy_password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 75, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 88, \"code\": \"default['yum']['main']['sslclientkey']\", \"name\": \"default['yum']['main']['sslclientkey']\", \"value\": {\"ir_type\": \"Null\", \"line\": 88, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 5, \"code\": \"class govuk_jenkins::jobs::copy_data_from_production_to_aws (\\n  $mysql_src_root_pw = hiera('mysql_root'),\\n  $mysql_dst_root_pw = undef,\\n  $pg_src_env_sync_pw = undef,\\n  $pg_dst_env_sync_pw = undef,\\n  $pg_tr_dst_env_sync_pw = undef,\\n  $pg_tr_src_env_sync_pw = undef,\\n  $whitehall_mysql_password = undef,\\n  $app_domain = hiera('app_domain'),\\n) {\\n  $check_name = 'copy_data_from_production_to_aws'\\n  $service_description = 'Copy Data from Production to Aws'\\n\\n  file { '/etc/jenkins_jobs/jobs/copy_data_from_production_to_aws.yaml':\\n    ensure  => present,\\n    content => template('govuk_jenkins/jobs/copy_data_from_production_to_aws.yaml.erb'),\\n    notify  => Exec['jenkins_jobs_update'],\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"$whitehall_mysql_password = undef\", \"name\": \"whitehall_mysql_password\", \"value\": {\"ir_type\": \"Undef\", \"line\": 12, \"code\": \"undef\", \"value\": null}}], \"name\": \"govuk_jenkins::jobs::copy_data_from_production_to_aws\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"definition\", \"lines\": 23}], \"attributes\": [], \"name\": \"github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/github-alphagov@govuk-puppet-modules-govuk_jenkins-manifests-jobs-copy_data_from_production_to_aws.pp\", \"type\": \"script\", \"lines\": 23}",
+          "ir_node_reduction_percentage": 89.2
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 16,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check for variables with empty string or null values that might be credentials\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n\n    # Check variable name for authentication keywords\n    auth_keywords := {\"password\", \"secret\", \"token\", \"key\", \"auth\", \"credential\", \"pwd\", \"passphrase\", \"api_token\", \"access_key\", \"secret_key\", \"clientkey\"}\n    contains_auth_keyword := contains_any_lower(var.name, auth_keywords)\n\n    # Check if value is empty string or null/undef\n    is_empty_value := var.value.ir_type == \"String\" and var.value.value == \"\"\n    is_null_value := var.value.ir_type == \"Null\" or var.value.ir_type == \"Undef\"\n\n    contains_auth_keyword and (is_empty_value or is_null_value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration - CWE-258: Empty Password in Configuration File\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    # Check for attributes with empty string or null values that might be credentials\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    # Check attribute name for authentication keywords\n    auth_keywords := {\"password\", \"secret\", \"token\", \"key\", \"auth\", \"credential\", \"pwd\", \"passphrase\", \"api_token\", \"access_key\", \"secret_key\", \"clientkey\"}\n    contains_auth_keyword := contains_any_lower(attr.name, auth_keywords)\n\n    # Check if value is empty string or null/undef\n    is_empty_value := attr.value.ir_type == \"String\" and attr.value.value == \"\"\n    is_null_value := attr.value.ir_type == \"Null\" or attr.value.ir_type == \"Undef\"\n\n    contains_auth_keyword and (is_empty_value or is_null_value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password or credential in configuration - CWE-258: Empty Password in Configuration File\"\n    }\n}\n\n# Helper function to check if a string contains any of the given keywords (case-insensitive)\ncontains_any_lower(str, keywords) {\n    lower_str := lower(str)\n    some keyword\n    keyword := keywords[_]\n    contains(lower_str, keyword)\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:18: rego_parse_error: unexpected identifier token: expected \\n or ; or }\n\t    is_empty_value := var.value.ir_type == \"String\" and var.value.value == \"\"\n\t                                                    ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 17,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Set of keywords to identify authentication-related attributes\nauth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\n# Helper to check if an attribute name contains authentication keywords\nis_auth_attribute(name) {\n    some keyword\n    auth_keywords[keyword]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), name)\n}\n\n# Helper to check if a value is considered empty (empty string, null, or undefined)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    # Get all attributes from the atomic unit\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    # Check if attribute name contains authentication keywords\n    is_auth_attribute(attr.name)\n\n    # Check if the attribute value is empty\n    is_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password or authentication fields should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 18,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in the unit block (covers Ansible and Chef cases)\n    variable := parent.variables[_]\n    \n    # Check if variable name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"activationkey\"}\n    contains_auth_keyword(variable.name, auth_keywords)\n    \n    # Check if the value is an empty string or null\n    is_empty_value(variable.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Passwords or authentication keys should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units (covers resource attributes)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"activationkey\"}\n    contains_auth_keyword(attr.name, auth_keywords)\n    \n    # Check if the value is an empty string or null\n    is_empty_value(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Passwords or authentication keys should not be empty. (CWE-258)\"\n    }\n}\n\n# Helper function to check if a string contains any authentication keyword\ncontains_auth_keyword(name, keywords) {\n    is_string(name)\n    some keyword\n    keyword := keywords[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), name)\n} else {\n    # Handle cases where name might be a complex expression\n    # For now, we'll skip non-string names to avoid false positives\n    false\n}\n\n# Helper function to check if a value is empty (empty string or null)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:57: rego_compile_error: var keyword declared above\n"
+        }
+      ],
+      "status": "syntactic_error"
+    },
+    {
+      "attempt": 19,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Set of keywords indicating authentication-related fields\nauthentication_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"pwd\", \"db_password\", \"connection_string\", \"admin_password\", \"master_user_password\", \"ssh_key\", \"public_key\", \"initial_admin_password\"}\n\n# Check if a value is empty (empty string, null, or undefined)\nis_empty_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"\"\n} else {\n    value.ir_type == \"Null\"\n} else {\n    value.ir_type == \"Undef\"\n}\n\n# Check if an attribute name contains any authentication keyword\ncontains_auth_keyword(name) {\n    lower_name := lower(name)\n    keyword := authentication_keywords[_]\n    contains(lower_name, keyword)\n}\n\nGlitch_Analysis[result] {\n    # Gather all UnitBlocks (parent containers)\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Get all attributes from the parent\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    \n    # Check if the attribute name contains an authentication keyword\n    contains_auth_keyword(attr.name)\n    \n    # Check if the attribute value is empty\n    is_empty_value(attr.value)\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password or authentication key fields must not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 5, \"code\": \"subscription_manager_activationkey: \\\"\\\"\\n\", \"name\": \"subscription_manager_activationkey\", \"value\": {\"ir_type\": \"String\", \"line\": 5, \"code\": \"\\\"\\\"\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"type\": \"vars\", \"lines\": 42}",
+          "ir_node_reduction_percentage": 96.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 481, \"code\": \"gitlab_runner__ssh_password: ''\\n\", \"name\": \"gitlab_runner__ssh_password\", \"value\": {\"ir_type\": \"String\", \"line\": 481, \"code\": \"''\", \"value\": \"\"}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml\", \"type\": \"vars\", \"lines\": 733}",
+          "ir_node_reduction_percentage": 99.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            66,
+            77
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_yum-attributes-main.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 66, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 66, \"code\": \"nil\", \"value\": null}}, {\"ir_type\": \"Variable\", \"line\": 77, \"code\": \"default['yum']['main']['password']\", \"name\": \"default['yum']['main']['password']\", \"value\": {\"ir_type\": \"Null\", \"line\": 77, \"code\": \"nil\", \"value\": null}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_yum-attributes-main.rb\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/CWE-258/sous-chefs_yum-attributes-main.rb\", \"type\": \"script\", \"lines\": 97}",
+          "ir_node_reduction_percentage": 98.0
+        }
+      ],
+      "status": "semantic_error"
+    },
+    {
+      "attempt": 20,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in UnitBlock (for Ansible, Chef, Puppet)\n    variable := parent.variables[_]\n    \n    # Check if variable name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"pwd\", \"db_password\"}\n    name_lower := lower(variable.name)\n    some keyword in auth_keywords\n    contains(name_lower, keyword)\n    \n    # Check if value is empty string or null\n    variable.value.ir_type == \"String\"\n    variable.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check variables in UnitBlock (for Chef with Null values)\n    variable := parent.variables[_]\n    \n    # Check if variable name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"pwd\", \"db_password\"}\n    name_lower := lower(variable.name)\n    some keyword in auth_keywords\n    contains(name_lower, keyword)\n    \n    # Check if value is null\n    variable.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units (for resources with password attributes)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"pwd\", \"db_password\"}\n    name_lower := lower(attr.name)\n    some keyword in auth_keywords\n    contains(name_lower, keyword)\n    \n    # Check if value is empty string\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    # Check attributes in atomic units (for resources with password attributes and Null values)\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    \n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    \n    # Check if attribute name contains authentication-related keywords\n    auth_keywords := {\"password\", \"secret\", \"passphrase\", \"auth_key\", \"token\", \"ssh_password\", \"pwd\", \"db_password\"}\n    name_lower := lower(attr.name)\n    some keyword in auth_keywords\n    contains(name_lower, keyword)\n    \n    # Check if value is null\n    attr.value.ir_type == \"Null\"\n    \n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Password fields should not be empty. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/history_test_2/mimo-v2-flash/runs/run_003/cwe_258.rego:15: rego_parse_error: unexpected identifier token: expected \\n or ; or } (hint: `import future.keywords.in` for `some x in xs` expressions)\n\t    some keyword in auth_keywords\n\t                 ^\n"
+        }
+      ],
+      "status": "syntactic_error"
+    }
+  ],
+  "result": {
+    "passed": false,
+    "attempts_used": 20,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-05-19T21:39:00.685930+00:00",
+    "elapsed_time": "5m24s"
+  },
+  "llm_usage": {
+    "calls": 21,
+    "input_tokens_total": 127921,
+    "output_tokens_total": 13792,
+    "reasoning_tokens_total": 3190,
+    "cache_read_tokens_total": 107449
+  }
+}
