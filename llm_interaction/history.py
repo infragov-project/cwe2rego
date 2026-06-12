@@ -1,6 +1,5 @@
 """Utilities for managing conversation history during iterative generation."""
 
-import json
 from collections.abc import MutableSequence
 from typing import Any
 
@@ -39,87 +38,12 @@ def trim_validation_history(
     del history[trim_start:trim_end]
 
 
-def build_syntactic_error_summary(rego_rule: str, error_message: str) -> dict:
-    """Build a compact JSON summary for a syntactic validation failure.
-    
-    Args:
-        rego_rule: The Rego rule that failed
-        error_message: The error message from OPA validation
-    
-    Returns:
-        Compact summary dict
-    """
-    return {
-        "rego_rule": rego_rule,
-        "problem": "syntactic",
-        "error": error_message
-    }
-
-
-def build_semantic_error_summary(
-    rego_rule: str,
-    failures: list,
-    passed: list,
-) -> dict:
-    """Build a compact JSON summary for a semantic validation failure.
-    
-    Args:
-        rego_rule: The Rego rule that was tested
-        failures: List of failed tuples (ir_file, iac_language, missing_lines, false_positives, file_name)
-        passed: List of passed tuples (file_name, technology, detected_lines)
-    
-    Returns:
-        Compact summary dict with all files (passed and failed)
-    """
-    files = []
-    
-    # Add failed files with details
-    for f in failures:
-        ir_file = f[0]
-        iac_language = f[1]
-        missing_lines = f[2]
-        false_positives = f[3]
-        file_name = f[4]
-        
-        file_obj = {
-            "file": file_name,
-            "status": "failed",
-        }
-        if missing_lines:
-            file_obj["false_negatives"] = missing_lines
-        if false_positives:
-            file_obj["false_positives"] = false_positives
-        files.append(file_obj)
-    
-    # Add passed files with detected lines
-    for file_name, tech, detected_lines in passed:
-        file_obj = {
-            "file": file_name,
-            "status": "passed",
-            "technology": tech,
-        }
-        if detected_lines:
-            file_obj["detected_lines"] = detected_lines
-        files.append(file_obj)
-    
-    return {
-        "rego_rule": rego_rule,
-        "problem": "semantic",
-        "files": files
-    }
-
-
 def append_iteration_summary_to_history(
     conversation_history: list,
-    summary: dict,
+    summary: str,
 ) -> None:
-    """Append a compact iteration summary to conversation history.
-    
-    Args:
-        conversation_history: List of message dicts to append to
-        summary: Summary dict (from build_syntactic_error_summary or build_semantic_error_summary)
-    """
+    """Append a natural language iteration summary to conversation history."""
     conversation_history.append({
         "role": "assistant",
-        "content": json.dumps(summary, indent=2)
+        "content": summary,
     })

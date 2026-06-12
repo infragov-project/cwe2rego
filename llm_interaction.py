@@ -13,8 +13,6 @@ from llm_interaction.conversation_templated import (
 )
 from llm_interaction.history import (
     trim_validation_history,
-    build_syntactic_error_summary,
-    build_semantic_error_summary,
     append_iteration_summary_to_history,
 )
 from llm_interaction.generation_logging import (
@@ -55,35 +53,37 @@ def get_rego_generation_kics(cwe: str, cwe_condition: str, ir: str, rego_lib: st
     ...
 
 @ask_model_prompt("prompts/syntaxerrorgeneration_norag.md")
-def get_syntax_error_generation_norag(error_message: str, chat_history=None) -> str:
+def get_syntax_error_generation_norag(rego_rule: str, error_message: str, chat_history=None) -> str:
     """Get a syntax error regeneration without RAG assistance."""
     ...
 
 @ask_model_prompt("prompts/syntaxerrorgeneration.md")
-def get_syntax_error_generation(error_message: str, rag_context: str, chat_history=None) -> str:
+def get_syntax_error_generation(rego_rule: str, error_message: str, rag_context: str, chat_history=None) -> str:
     """Get a syntax error regeneration with RAG assistance."""
     ...
 
 @ask_model_prompt("prompts/syntaxerrorgeneration_kics_norag.md")
-def get_syntax_error_generation_kics_norag(error_message: str, chat_history=None) -> str:
+def get_syntax_error_generation_kics_norag(rego_rule: str, error_message: str, chat_history=None) -> str:
     """Get a KICS-specific syntax error regeneration without RAG assistance."""
     ...
 
 @ask_model_prompt("prompts/syntaxerrorgeneration_kics.md")
-def get_syntax_error_generation_kics(error_message: str, rag_context: str, chat_history=None) -> str:
+def get_syntax_error_generation_kics(rego_rule: str, error_message: str, rag_context: str, chat_history=None) -> str:
     """Get a KICS-specific syntax error regeneration with RAG assistance."""
     ...
     
 @ask_model_prompt("prompts/semanticerrorgeneration.md")
 def get_semantic_error_generation(
+    rego_rule: str,
     failures: list,
     target_technologies: list[str],
     target_technologies_text: str,
     chat_history=None,
 ) -> str:
     """Get a semantic error regeneration of the rule from the LLM.
-    
+
     Args:
+        rego_rule: The current Rego rule to fix
         failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives'
         target_technologies: Technologies the rule should target
         target_technologies_text: Human-readable technologies list for the prompt
@@ -93,19 +93,31 @@ def get_semantic_error_generation(
 
 @ask_model_prompt("prompts/semanticerrorgeneration_kics.md")
 def get_semantic_error_generation_kics(
+    rego_rule: str,
     failures: list,
     target_technologies: list[str],
     target_technologies_text: str,
     chat_history=None,
 ) -> str:
     """Get a KICS-specific semantic error regeneration of the rule from the LLM.
-    
+
     Args:
+        rego_rule: The current Rego rule to fix
         failures: List of dicts with keys 'ir_file', 'iac_language', 'missing_lines', 'false_positives', 'original_file_numbered'
         target_technologies: Technologies the rule should target
         target_technologies_text: Human-readable technologies list for the prompt
         chat_history: Conversation history
     """
+    ...
+
+@ask_model_prompt("prompts/summarize_syntactic_error.md")
+def summarize_syntactic_error(rego_rule: str, error_message: str, chat_history=None) -> str:
+    """Summarize a syntactic validation failure in natural language."""
+    ...
+
+@ask_model_prompt("prompts/summarize_semantic_error.md")
+def summarize_semantic_error(rego_rule: str, failures: list, chat_history=None) -> str:
+    """Summarize a semantic validation failure in natural language."""
     ...
 
 def replace_type_name(rego_code: str, desired_type: str) -> str:
@@ -477,15 +489,17 @@ if __name__ == "__main__":
                 }
             )
             iteration_log["status"] = "syntactic_error"
-            append_iteration_and_persist(iteration_log)
-
-            # Add summary of this tested rule
-            summary = build_syntactic_error_summary(rego_rule, error)
-            append_iteration_summary_to_history(conversation_history, summary)
 
             # If at max attempts, don't regenerate - just exit
             if attempt >= MAX_VALIDATION_ATTEMPTS:
+                append_iteration_and_persist(iteration_log)
                 break
+
+            # Summarize this failure in natural language, log it, and add to history
+            nl_summary = summarize_syntactic_error(rego_rule=rego_rule, error_message=error)
+            iteration_log["nl_error_summary"] = nl_summary
+            append_iteration_and_persist(iteration_log)
+            append_iteration_summary_to_history(conversation_history, nl_summary)
 
             # Use appropriate syntax error generation based on RAG flag and analysis tool
             if args.use_rag and rego_index is not None:
@@ -493,12 +507,14 @@ if __name__ == "__main__":
                 rag_context = format_chunks(rag_chunks)
                 if args.analysis_tool == "kics":
                     rego_rule = get_syntax_error_generation_kics(
+                        rego_rule=rego_rule,
                         error_message=error,
                         rag_context=rag_context,
                         chat_history=conversation_history
                     )
                 else:
                     rego_rule = get_syntax_error_generation(
+                        rego_rule=rego_rule,
                         error_message=error,
                         rag_context=rag_context,
                         chat_history=conversation_history
@@ -506,15 +522,17 @@ if __name__ == "__main__":
             else:
                 if args.analysis_tool == "kics":
                     rego_rule = get_syntax_error_generation_kics_norag(
+                        rego_rule=rego_rule,
                         error_message=error,
                         chat_history=conversation_history
                     )
                 else:
                     rego_rule = get_syntax_error_generation_norag(
+                        rego_rule=rego_rule,
                         error_message=error,
                         chat_history=conversation_history
                     )
-            
+
             # Pop the auto-appended user prompt and model response
             if len(conversation_history) >= 2:
                 conversation_history.pop()  # Remove model response
@@ -545,17 +563,13 @@ if __name__ == "__main__":
         if failures:
             iteration_log["errors"] = serialize_semantic_failures(failures)
             iteration_log["status"] = "semantic_error"
-            append_iteration_and_persist(iteration_log)
-
-            # Add summary of this tested rule
-            summary = build_semantic_error_summary(rego_rule, failures, passed)
-            append_iteration_summary_to_history(conversation_history, summary)
 
             # If at max attempts, don't regenerate - just exit
             if attempt >= MAX_VALIDATION_ATTEMPTS:
+                append_iteration_and_persist(iteration_log)
                 break
 
-            # Format failures for the prompt
+            # Format failures for the summarizer and repair prompt
             formatted_failures = []
             for f in failures:
                 # f is a tuple: (ir_file, iac_language, missing_lines, false_positives, file_name, ir_reduction_percentage)
@@ -565,14 +579,14 @@ if __name__ == "__main__":
                 false_positives = f[3]
                 file_name = f[4]
                 ir_reduction_percentage = f[5]
-                
+
                 # Load original file content with line numbers
                 original_file_path = Path(examples_folder) / file_name
                 original_file_numbered = ""
                 if original_file_path.exists():
                     original_content = original_file_path.read_text(encoding="utf-8")
                     original_file_numbered = add_line_numbers(original_content)
-                
+
                 formatted_failures.append({
                     "iac_language": iac_language,
                     "missing_lines": missing_lines,
@@ -581,10 +595,17 @@ if __name__ == "__main__":
                     "original_file_numbered": original_file_numbered,
                     "ir_reduction_percentage": ir_reduction_percentage,
                 })
-            
+
+            # Summarize this failure in natural language, log it, and add to history
+            nl_summary = summarize_semantic_error(rego_rule=rego_rule, failures=formatted_failures)
+            iteration_log["nl_error_summary"] = nl_summary
+            append_iteration_and_persist(iteration_log)
+            append_iteration_summary_to_history(conversation_history, nl_summary)
+
             # Call appropriate semantic error generation function based on analysis tool
             if args.analysis_tool == "kics":
                 rego_rule = get_semantic_error_generation_kics(
+                    rego_rule=rego_rule,
                     failures=formatted_failures,
                     target_technologies=target_technologies,
                     target_technologies_text=target_technologies_text,
@@ -592,12 +613,13 @@ if __name__ == "__main__":
                 )
             else:
                 rego_rule = get_semantic_error_generation(
+                    rego_rule=rego_rule,
                     failures=formatted_failures,
                     target_technologies=target_technologies,
                     target_technologies_text=target_technologies_text,
                     chat_history=conversation_history,
                 )
-            
+
             # Pop the auto-appended user prompt and model response
             if len(conversation_history) >= 2:
                 conversation_history.pop()  # Remove model response
