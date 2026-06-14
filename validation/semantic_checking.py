@@ -8,8 +8,8 @@ from click.testing import CliRunner
 from validation.tools.base import AnalysisTool
 
 
-def _load_examples(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
-    manifest_path = folder / f"cwe-{cwe_number}.json"
+def _load_examples(folder: Path, type_name: str) -> List[Dict[str, Any]]:
+    manifest_path = folder / f"{type_name}.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"JSON manifest not found: {manifest_path}")
 
@@ -23,7 +23,7 @@ def _load_examples(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
     raise ValueError("Unsupported manifest format; expected list or dict with 'examples'")
 
 
-def _write_generated_examples(folder: Path, cwe_number: str, examples: List[Dict[str, Any]]) -> None:
+def _write_generated_examples(folder: Path, type_name: str, examples: List[Dict[str, Any]]) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     manifest: List[Dict[str, Any]] = []
 
@@ -35,27 +35,24 @@ def _write_generated_examples(folder: Path, cwe_number: str, examples: List[Dict
         manifest_entry: Dict[str, Any] = {"file": ex["file"], "lines": ex["lines"]}
         manifest.append(manifest_entry)
 
-    manifest_path = folder / f"cwe-{cwe_number}.json"
+    manifest_path = folder / f"{type_name}.json"
     manifest_path.write_text(json.dumps({"examples": manifest}, indent=2), encoding="utf-8")
 
 
-def _resolve_static_examples_folder(examples_dir: Path, cwe_number: str) -> Path:
-    """Resolve a static examples directory to the concrete CWE folder.
+def _resolve_static_examples_folder(examples_dir: Path, type_name: str) -> Path:
+    """Resolve a static examples directory to the concrete type folder.
 
     Supported inputs:
-    - Base directory containing CWE-<id>/ subfolders
-    - Direct CWE folder containing cwe-<id>.json
+    - Base directory containing <type_name>/ subfolders
+    - Direct folder containing <type_name>.json
     """
-    manifest_name = f"cwe-{cwe_number}.json"
-    cwe_subdir = examples_dir / f"CWE-{cwe_number}"
-
-    if (examples_dir / manifest_name).exists():
+    if (examples_dir / f"{type_name}.json").exists():
         return examples_dir
-    if (cwe_subdir / manifest_name).exists():
-        return cwe_subdir
 
-    if cwe_subdir.exists():
-        return cwe_subdir
+    subdir = examples_dir / type_name
+    if subdir.exists():
+        return subdir
+
     return examples_dir
 
 
@@ -155,10 +152,10 @@ def _verify_example(
 
 def prepare_semantic_examples(
     type_name: str,
-    cwe_number: str,
     tool: Optional[AnalysisTool] = None,
     use_llm_examples: bool = False,
-    cwe_text: Optional[str] = None,
+    condition_text: Optional[str] = None,
+    cwe_number: Optional[str] = None,
     api_key: Optional[str] = None,
     examples_model: Optional[str] = None,
     model_directory: Optional[Path] = None,
@@ -168,18 +165,18 @@ def prepare_semantic_examples(
 ) -> Tuple[Path, List[Dict[str, Any]]]:
     """Prepare semantic-check examples once and return the folder and manifest entries."""
     if use_llm_examples:
-        if not cwe_text:
-            raise ValueError("cwe_text required when use_llm_examples is True")
+        if not condition_text:
+            raise ValueError("condition_text required when use_llm_examples is True")
         if tool is None:
             raise ValueError("tool required when use_llm_examples is True")
 
         from llm_interaction.example_generation import get_llm_examples
 
         examples = get_llm_examples(
-            cwe_text=cwe_text,
+            cwe_text=condition_text,
             type_name=type_name,
-            cwe_number=cwe_number,
             tool=tool,
+            cwe_number=cwe_number,
             model_override=examples_model,
             api_key=api_key,
             target_technologies=target_technologies,
@@ -187,22 +184,22 @@ def prepare_semantic_examples(
         if generated_examples_dir is not None:
             folder = Path(generated_examples_dir)
         elif model_directory is not None:
-            folder = Path(model_directory) / "generated_examples" / f"CWE-{cwe_number}"
+            folder = Path(model_directory) / "generated_examples" / type_name
         else:
             raise ValueError(
                 "generated_examples_dir or model_directory required when use_llm_examples is True"
             )
 
-        _write_generated_examples(folder, cwe_number, examples)
+        _write_generated_examples(folder, type_name, examples)
         print(f"  Generated {len(examples)} example(s) via LLM, saved to {folder}")
         return folder, examples
 
     if static_examples_dir is not None:
-        folder = _resolve_static_examples_folder(Path(static_examples_dir), cwe_number)
+        folder = _resolve_static_examples_folder(Path(static_examples_dir), type_name)
     else:
-        folder = Path(__file__).parent / "examples" / f"CWE-{cwe_number}"
+        folder = Path(__file__).parent / "examples" / type_name
 
-    examples = _load_examples(folder, cwe_number)
+    examples = _load_examples(folder, type_name)
     print(f"  Loaded {len(examples)} example(s) from {folder}")
     return folder, examples
 
@@ -227,19 +224,17 @@ def semantic_check(
     tool: AnalysisTool,
     rego_rule: str,
     type_name: str,
-    cwe_number: str,
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
 ) -> Tuple[List[Tuple[str, str, List[int], List[int], str]], List[Tuple[str, str]], List[str]]:
     """
-    Verify all examples for a CWE using a preloaded examples manifest.
+    Verify all examples for a rule using a preloaded examples manifest.
 
     Args:
         tool: The analysis tool (e.g. GlitchTool) used to run lint and extract IR.
         rego_rule: The generated Rego rule content
         type_name: The smell code name (e.g., 'sec_hardcoded_secret')
-        cwe_number: CWE number (e.g., "1327")
         examples_folder: Root folder where referenced example files live
         examples: Preloaded example manifest entries
         technologies: If set, only run semantic check for these techs (e.g. ["ansible"]). None = all.
@@ -251,7 +246,7 @@ def semantic_check(
                 - List of tuples (file_name, iac_language) for passed files.
                 - List of files skipped due to empty KICS IR.
     """
-    print(f"Semantic check starting for type: {type_name}, CWE: {cwe_number} 🔍")
+    print(f"Semantic check starting for type: {type_name} 🔍")
 
     tool.write_rule(type_name, rego_rule)
 

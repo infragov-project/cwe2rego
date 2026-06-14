@@ -70,8 +70,8 @@ def _normalize_annotation(raw: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _load_examples_manifest(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
-    manifest_path = folder / f"cwe-{cwe_number}.json"
+def _load_examples_manifest(folder: Path, type_name: str) -> List[Dict[str, Any]]:
+    manifest_path = folder / f"{type_name}.json"
     if not manifest_path.exists():
         raise FileNotFoundError(f"JSON manifest not found: {manifest_path}")
 
@@ -85,8 +85,8 @@ def _load_examples_manifest(folder: Path, cwe_number: str) -> List[Dict[str, Any
     raise ValueError("Unsupported manifest format; expected list or dict with 'examples'")
 
 
-def _load_examples_with_content(folder: Path, cwe_number: str) -> List[Dict[str, Any]]:
-    examples = _load_examples_manifest(folder, cwe_number)
+def _load_examples_with_content(folder: Path, type_name: str) -> List[Dict[str, Any]]:
+    examples = _load_examples_manifest(folder, type_name)
     hydrated_examples: List[Dict[str, Any]] = []
 
     for example in examples:
@@ -105,39 +105,34 @@ def _load_examples_with_content(folder: Path, cwe_number: str) -> List[Dict[str,
     return hydrated_examples
 
 
-def _normalize_cwe_number(cwe_number: str) -> str:
-    match = re.search(r"(\d+)", str(cwe_number))
-    if match is None:
-        raise ValueError(f"Invalid CWE number: {cwe_number}")
-    return match.group(1)
+def _get_annotation_reference(type_name: str) -> tuple[str, str]:
+    """Return (ref_type_name, ref_cwe_number) for annotation reference examples.
+
+    Always resolves to sec_invalid_bind/284 or sec_no_int_check/353, choosing the
+    one that differs from the current type being generated.
+    """
+    if type_name == "sec_no_int_check":
+        return "sec_invalid_bind", "284"
+    return "sec_no_int_check", "353"
 
 
-def _get_annotation_reference_cwe(cwe_number: str) -> str:
-    normalized_cwe = _normalize_cwe_number(cwe_number)
-    return "284" if normalized_cwe == "353" else "353"
-
-
-def _load_annotation_reference_examples(cwe_number: str) -> tuple[str, List[Dict[str, Any]]]:
-    reference_cwe = _get_annotation_reference_cwe(cwe_number)
+def _load_annotation_reference_examples(ref_type_name: str) -> List[Dict[str, Any]]:
     examples_folder = (
         Path(__file__).resolve().parent.parent
         / "validation"
         / "examples"
-        / f"CWE-{reference_cwe}"
+        / ref_type_name
     )
-    examples = _load_examples_with_content(examples_folder, reference_cwe)
+    examples = _load_examples_with_content(examples_folder, ref_type_name)
 
-    reference_examples: List[Dict[str, Any]] = []
-    for item in examples:
-        reference_examples.append(
-            {
-                "file": item["file"],
-                "numbered_content": add_line_numbers(item["content"]),
-                "annotated_lines": _normalize_lines(item.get("lines") or item.get("line")),
-            }
-        )
-
-    return reference_cwe, reference_examples
+    return [
+        {
+            "file": item["file"],
+            "numbered_content": add_line_numbers(item["content"]),
+            "annotated_lines": _normalize_lines(item.get("lines") or item.get("line")),
+        }
+        for item in examples
+    ]
 
 
 def _resolve_examples_model(model_override: Optional[str], api_key: Optional[str]):
@@ -246,8 +241,8 @@ def _merge_examples_with_annotations(
 def get_llm_examples(
     cwe_text: str,
     type_name: str,
-    cwe_number: str,
     tool: AnalysisTool,
+    cwe_number: Optional[str] = None,
     model_override: Optional[str] = None,
     api_key: Optional[str] = None,
     target_technologies: Optional[List[str]] = None,
@@ -264,17 +259,28 @@ def get_llm_examples(
     resolved_extensions = tool.get_extensions_for_technologies(resolved_technologies)
     target_technologies_text = tool.format_technologies(resolved_technologies)
     supported_extensions_text = ", ".join(resolved_extensions)
-    
-    print(f"🤖 Generating examples for {type_name} (CWE-{cwe_number})...")
-    data = _run_llm_prompt(
-        agent,
-        "prompts/examplegeneration.md",
-        cwe_text=cwe_text,
-        type_name=type_name,
-        cwe_number=cwe_number,
-        target_technologies_text=target_technologies_text,
-        supported_extensions_text=supported_extensions_text,
-    )
+
+    if cwe_number is not None:
+        print(f"🤖 Generating examples for {type_name} (CWE-{cwe_number})...")
+        data = _run_llm_prompt(
+            agent,
+            "prompts/examplegeneration.md",
+            cwe_text=cwe_text,
+            type_name=type_name,
+            cwe_number=cwe_number,
+            target_technologies_text=target_technologies_text,
+            supported_extensions_text=supported_extensions_text,
+        )
+    else:
+        print(f"🤖 Generating examples for {type_name}...")
+        data = _run_llm_prompt(
+            agent,
+            "prompts/examplegeneration_description.md",
+            condition_text=cwe_text,
+            type_name=type_name,
+            target_technologies_text=target_technologies_text,
+            supported_extensions_text=supported_extensions_text,
+        )
 
     normalized = [_normalize_generated_example(item) for item in data]
     seen_files: set[str] = set()
@@ -293,8 +299,8 @@ def get_llm_examples(
         agent=agent,
         cwe_text=cwe_text,
         type_name=type_name,
-        cwe_number=cwe_number,
         numbered_files=numbered_files,
+        cwe_number=cwe_number,
     )
 
     return _merge_examples_with_annotations(normalized, annotations)
@@ -304,25 +310,37 @@ def get_llm_example_annotations(
     agent: InfraAgent,
     cwe_text: str,
     type_name: str,
-    cwe_number: str,
     numbered_files: List[Dict[str, str]],
+    cwe_number: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     if not numbered_files:
         raise ValueError("numbered_files must not be empty")
 
-    reference_cwe, reference_examples = _load_annotation_reference_examples(cwe_number)
+    ref_type_name, ref_cwe_number = _get_annotation_reference(type_name)
+    reference_examples = _load_annotation_reference_examples(ref_type_name)
 
-    print(f"🤖 Annotating smelly lines for {type_name} (CWE-{cwe_number})...")
-    data = _run_llm_prompt(
-        agent,
-        "prompts/exampleannotation.md",
-        cwe_text=cwe_text,
-        type_name=type_name,
-        cwe_number=cwe_number,
-        reference_cwe_number=reference_cwe,
-        reference_examples=reference_examples,
-        files=numbered_files,
-    )
+    if cwe_number is not None:
+        print(f"🤖 Annotating smelly lines for {type_name} (CWE-{cwe_number})...")
+        data = _run_llm_prompt(
+            agent,
+            "prompts/exampleannotation.md",
+            cwe_text=cwe_text,
+            type_name=type_name,
+            cwe_number=cwe_number,
+            reference_cwe_number=ref_cwe_number,
+            reference_examples=reference_examples,
+            files=numbered_files,
+        )
+    else:
+        print(f"🤖 Annotating smelly lines for {type_name}...")
+        data = _run_llm_prompt(
+            agent,
+            "prompts/exampleannotation_description.md",
+            condition_text=cwe_text,
+            type_name=type_name,
+            reference_examples=reference_examples,
+            files=numbered_files,
+        )
 
     annotations = [_normalize_annotation(item) for item in data]
     expected_files = {item["file"] for item in numbered_files}
