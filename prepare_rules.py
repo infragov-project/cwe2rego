@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 
+from llm_interaction.generation_logging import _extract_run_index, _list_run_indices
 from validation.tools import GlitchTool, KICSTool
 
 
@@ -74,62 +75,30 @@ def _filter_rows(
     return filtered
 
 
+def _find_passing_rego(runs_dir: Path, rule_id: str) -> Path | None:
+    """Return the rego path from the first run where result.passed is true, or None."""
+    for run_index in _list_run_indices(runs_dir):
+        run_dir = runs_dir / f"run_{run_index:03d}"
+        rego_path = run_dir / f"{rule_id}.rego"
+        if not rego_path.exists():
+            continue
+        log_dir = run_dir / "logs"
+        if not log_dir.exists():
+            continue
+        log_files = list(log_dir.glob(f"{rule_id}__*.json"))
+        if not log_files:
+            continue
+        log_data = json.loads(log_files[0].read_text(encoding="utf-8"))
+        if log_data.get("result", {}).get("passed", False):
+            return rego_path
+    return None
+
+
 def _clean_managed_type_names(tool: GlitchTool | KICSTool, rows: list[tuple[str, str]]) -> None:
     """Remove previously deployed rules for all type names managed by this mapping."""
     for type_name in sorted({type_name for type_name, _ in rows}):
         tool.remove_rule(type_name)
 
-
-def _candidate_file_names(rego_file: str) -> list[str]:
-    """Build candidate filenames (supports cwe-<id>.rego and cwe_<id>.rego)."""
-    name = Path(rego_file).name
-    candidates = [name]
-    match = re.fullmatch(r"cwe-(\d+)\.rego", name.lower())
-    if match:
-        candidates.append(f"cwe_{match.group(1)}.rego")
-    return list(dict.fromkeys(candidates))
-
-
-def _resolve_rego_path(rules_dir: Path, rego_file: str) -> Path:
-    """Resolve a mapping rego path relative to rules_dir with robust fallback."""
-    rego_path = Path(rego_file)
-    if rego_path.is_absolute():
-        if rego_path.exists() and rego_path.is_file():
-            return rego_path
-        raise FileNotFoundError(f"Mapped absolute rego file not found: {rego_path}")
-
-    # Try direct relative path first.
-    direct = (rules_dir / rego_path).resolve()
-    if direct.exists() and direct.is_file():
-        return direct
-
-    # Try alternative filename variants in rules_dir (e.g., cwe-250.rego -> cwe_250.rego).
-    for candidate_name in _candidate_file_names(rego_file):
-        candidate = (rules_dir / candidate_name).resolve()
-        if candidate.exists() and candidate.is_file():
-            return candidate
-
-    # Recursive lookup under rules_dir for candidate file names.
-    recursive_matches: list[Path] = []
-    for candidate_name in _candidate_file_names(rego_file):
-        recursive_matches.extend(p.resolve() for p in rules_dir.rglob(candidate_name) if p.is_file())
-    recursive_matches = list(dict.fromkeys(recursive_matches))
-
-    if len(recursive_matches) == 1:
-        return recursive_matches[0]
-    if len(recursive_matches) > 1:
-        preview = "\n".join(f"  - {p}" for p in recursive_matches[:10])
-        raise FileNotFoundError(
-            "Ambiguous mapped rego file lookup for "
-            f"'{rego_file}' under {rules_dir}. Found {len(recursive_matches)} matches:\n"
-            f"{preview}\n"
-            "Use a more specific --rules-dir (for example a single run folder) or set an explicit path in mapping."
-        )
-
-    raise FileNotFoundError(
-        f"Mapped rego file not found for '{rego_file}' under {rules_dir}. "
-        "Tried direct path, alternate cwe naming, and recursive lookup."
-    )
 
 
 def build_argument_parser(
@@ -147,9 +116,13 @@ def build_argument_parser(
         help="Analysis tool to prepare.",
     )
     parser.add_argument(
-        "--rules-dir",
+        "--experiment-dir",
         required=True,
-        help="Directory containing .rego files referenced by the mapping file.",
+        help=(
+            "Path to generated_rego/<experiment>/<model>. "
+            "Scans its runs/ directory and deploys the rego from the first passing run per rule. "
+            "Rules with no passing run are skipped."
+        ),
     )
     parser.add_argument(
         "--mapping",
@@ -162,10 +135,7 @@ def build_argument_parser(
     parser.add_argument(
         "--base-dir",
         default=None,
-        help=(
-            "Project base directory for cwe2rego. "
-            "Defaults to the folder containing this script."
-        ),
+        help="Project base directory. Defaults to the folder containing this script.",
     )
     parser.add_argument(
         "--only-cwe",
@@ -192,11 +162,14 @@ def main(default_analysis_tool: str | None = None) -> int:
     base_dir = (
         Path(args.base_dir).expanduser().resolve() if args.base_dir else script_dir
     )
-    rules_dir = Path(args.rules_dir).expanduser().resolve()
+    experiment_dir = Path(args.experiment_dir).expanduser().resolve()
     mapping_path = Path(args.mapping).expanduser().resolve()
 
-    if not rules_dir.exists() or not rules_dir.is_dir():
-        parser.error(f"--rules-dir does not exist or is not a directory: {rules_dir}")
+    if not experiment_dir.exists() or not experiment_dir.is_dir():
+        parser.error(f"--experiment-dir does not exist or is not a directory: {experiment_dir}")
+    runs_dir = experiment_dir / "runs"
+    if not runs_dir.exists():
+        parser.error(f"No runs/ directory found under --experiment-dir: {experiment_dir}")
     if not mapping_path.exists() or not mapping_path.is_file():
         parser.error(f"--mapping does not exist or is not a file: {mapping_path}")
 
@@ -221,8 +194,16 @@ def main(default_analysis_tool: str | None = None) -> int:
     _clean_managed_type_names(tool, all_rows)
 
     written = 0
+    skipped = 0
     for type_name, rego_file in rows:
-        rego_path = _resolve_rego_path(rules_dir, rego_file)
+        rule_id = Path(rego_file).stem
+        rego_path = _find_passing_rego(runs_dir, rule_id)
+        if rego_path is None and rule_id != type_name:
+            rego_path = _find_passing_rego(runs_dir, type_name)
+        if rego_path is None:
+            print(f"Skipped '{type_name}' ({rule_id}): no passing run found.")
+            skipped += 1
+            continue
 
         rego_content = rego_path.read_text(encoding="utf-8")
         tool.write_rule(type_name, rego_content)

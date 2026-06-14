@@ -124,13 +124,13 @@ Both scripts retry failed runs up to `--max-runs` times (default: 1, overridable
 
 ## Deploying rules: `prepare_rules.py`
 
-Bulk-deploys generated `.rego` files to GLITCH or KICS from a JSON mapping.
+Scans an experiment's runs and deploys the first passing rule per entry in the mapping. Rules with no passing run are skipped.
 
 ```bash
-python prepare_rules.py --analysis-tool <glitch|kics> --rules-dir generated_rego --mapping mapping.json
+python prepare_rules.py --analysis-tool <glitch|kics> --experiment-dir generated_rego/<experiment>/<model> --mapping mapping.json
 ```
 
-The mapping can be a list or an object:
+The mapping is a list of `type_name` → `rego_file` entries, where `rego_file` gives the rule ID (e.g. `cwe_259.rego` for CWE mode, `sec_hard_pass.rego` for description mode):
 
 ```json
 [
@@ -142,7 +142,7 @@ The mapping can be a list or an object:
 Use `--only-cwe` to deploy only selected CWEs:
 
 ```bash
-python prepare_rules.py --analysis-tool glitch --rules-dir generated_rego --mapping glitch_rego_mapping.json --only-cwe 259 319
+python prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/my_experiment/mimo-v2-flash --mapping glitch_rego_mapping.json --only-cwe 259 319
 ```
 
 Before writing, the script removes any previously deployed rules for the mapped type names.
