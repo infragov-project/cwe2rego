@@ -1,0 +1,3 @@
+Detect IaC configurations that embed secrets directly in source code,
+such as API keys, authentication tokens, SSH keys, or certificates,
+in attributes or variables with names like "secret", "token", "api_key", "ssh_key", or "certificate".

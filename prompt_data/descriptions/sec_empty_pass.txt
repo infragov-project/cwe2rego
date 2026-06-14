@@ -1,0 +1,2 @@
+Detect IaC configurations that assign empty, null, or undefined values
+to attributes or variables with password-related names such as "password", "pwd", "pass", "secret", "token", or "credential".

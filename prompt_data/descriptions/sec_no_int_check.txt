@@ -1,0 +1,3 @@
+Detect IaC configurations that download files from the internet
+without verifying their integrity via checksum or cryptographic signature,
+leaving deployments vulnerable to tampering or supply chain attacks.
