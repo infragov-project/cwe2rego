@@ -1,3 +1,3 @@
-Detect IaC configurations that use switch/case statements
-without a default, leaving unhandled input combinations
-that could lead to unexpected behavior or security gaps.
+Switch/case or if-elsif chains in IaC scripts with no default or else branch,
+leaving unhandled input combinations that could result in
+unexpected behavior or exploitable logic gaps.

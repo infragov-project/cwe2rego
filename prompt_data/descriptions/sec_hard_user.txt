@@ -1,3 +1,3 @@
-Detect IaC configurations that hard-code usernames or user identifiers directly in source code,
-in attributes or variables with names like "user", "username", "login", or "owner",
-instead of referencing them through variables or secrets management.
+Usernames or user identifiers hard-coded directly in IaC source code,
+in attributes with names like user, username, login, or owner,
+rather than being sourced from variables or a secrets manager.

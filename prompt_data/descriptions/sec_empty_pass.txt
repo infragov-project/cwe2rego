@@ -1,2 +1,3 @@
-Detect IaC configurations that assign empty, null, or undefined values
-to attributes or variables with password-related names such as "password", "pwd", "pass", "secret", "token", or "credential".
+IaC configurations with empty, null, or undefined values
+in password-related attributes such as password, pwd, pass, secret, token, or credential,
+meaning no authentication is enforced.
