@@ -1,3 +1,3 @@
-Detect IaC configurations that use weak or broken cryptographic algorithms
-such as DES, 3DES, RC4, MD5, SHA1, or weak modes like ECB, SSLv2, SSLv3, TLS 1.0, TLS 1.1,
-in attributes or variables with cryptography-related names.
+Use of weak or broken cryptographic algorithms such as DES, 3DES, RC4, MD5, or SHA1,
+or insecure modes like ECB, SSLv2, SSLv3, TLS 1.0, or TLS 1.1,
+in cryptography-related configuration attributes or fields.
