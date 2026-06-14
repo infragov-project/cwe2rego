@@ -1,0 +1,2 @@
+Detect IaC configurations that grant excessive or administrative privileges,
+such as wildcard permissions, privileged container mode, running as root, or publicly exposed storage.

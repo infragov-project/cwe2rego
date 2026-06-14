@@ -7,7 +7,7 @@ from typing import Any
 def trim_validation_history(
     history: MutableSequence[Any],
     max_iterations: int,
-    pinned_messages: int = 2,
+    pinned_messages: int = 1,
 ) -> None:
     """Keep the first pinned messages and only the last N validation-fix iterations.
 

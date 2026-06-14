@@ -40,7 +40,22 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 def get_cwe_condition(cwe: str, chat_history=None) -> str:
     """Get a CWE condition explanation from the LLM."""
     ...
-    
+
+@ask_model_prompt("prompts/descriptioncondition.md")
+def get_description_condition(description: str, chat_history=None) -> str:
+    """Elaborate a natural language weakness description into a precise IaC condition."""
+    ...
+
+@ask_model_prompt("prompts/regogeneration_description.md")
+def get_rego_generation_description(condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2: str, chat_history=None) -> str:
+    """Get a GLITCH Rego rule from a natural language description condition."""
+    ...
+
+@ask_model_prompt("prompts/regogeneration_kics_description.md")
+def get_rego_generation_kics_description(condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2: str, chat_history=None) -> str:
+    """Get a KICS Rego rule from a natural language description condition."""
+    ...
+
 @ask_model_prompt("prompts/regogeneration.md")
 def get_rego_generation(cwe: str, cwe_condition: str, ir: str, rego_lib: str, example_rule_1: str, example_rule_2:str,  chat_history=None) -> str:
     """Get a Rego generation from the LLM."""
@@ -190,13 +205,20 @@ def build_argument_parser() -> ArgumentParser:
     """Build and configure the CLI argument parser."""
     parser = ArgumentParser(description="LLM Interaction Client")
     parser.add_argument("model", help="Model to use (e.g., xiaomi/mimo-v2-flash)")
-    parser.add_argument("--cwe", help="Choose CWE to use")
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument("--cwe", help="CWE number to use for rule generation")
+    source_group.add_argument("--description", action="store_true", help="Use description mode: load weakness description from prompt_data/descriptions/<type_name>.txt")
     parser.add_argument("--type-name", help="Desired type name for the Rego rule", required=False)
-    parser.add_argument("--cwe-condition-only", action="store_true", help="Only generate and save the CWE condition, then exit")
+    parser.add_argument("--condition-only", action="store_true", help="Only generate and save the condition, then exit")
     parser.add_argument(
         "--use-cwe-text",
         action="store_true",
         help="Use raw CWE text directly instead of generating a distilled CWE condition via LLM.",
+    )
+    parser.add_argument(
+        "--use-description-text",
+        action="store_true",
+        help="Use the description as-is instead of elaborating it via LLM.",
     )
     parser.add_argument("--use-rag", action="store_true", help="Enable RAG for syntax error assistance")
     parser.add_argument("--use-llm-examples", action="store_true", help="Use LLM-generated examples for semantic checking instead of static manifest")
@@ -220,24 +242,24 @@ def build_argument_parser() -> ArgumentParser:
     parser.add_argument(
         "--validation-history-pinned-messages",
         type=int,
-        default=2,
+        default=1,
         help=(
             "Number of earliest conversation-history messages to keep whenever validation-history "
-            "truncation is enabled. Default: 2, which preserves the initial generation prompt/response pair."
+            "truncation is enabled. Default: 1, which preserves the initial generation prompt."
         ),
     )
     parser.add_argument(
         "--semantic-examples-dir",
         help=(
             "Directory for static semantic examples when --use-llm-examples is disabled. "
-            "Accepts either a base folder with CWE-<id>/ subfolders or a direct CWE folder. "
+            "Accepts either a base folder with <type_name>/ subfolders or a direct type folder. "
             "Default: validation/examples"
         ),
     )
     parser.add_argument(
         "--experiment-name",
         required=False,
-        help="Experiment label used in generated file and directory paths (e.g., false_positives). Required unless --cwe-condition-only is set.",
+        help="Experiment label used in generated file and directory paths (e.g., false_positives). Required unless --condition-only is set.",
     )
     parser.add_argument(
         "--analysis-tool",
@@ -317,8 +339,24 @@ if __name__ == "__main__":
             name="rego_syntax"
         )
     
-    with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
-        cwe_text = f.read()
+    use_cwe = bool(args.cwe)
+    if not use_cwe and not args.description:
+        parser.error("Either --cwe or --description is required")
+
+    # For description mode, type_name must be known before loading the description file
+    if not use_cwe and not args.type_name and not args.condition_only:
+        parser.error("--type-name is required when using --description")
+
+    # Load input text (CWE JSON or type description file)
+    if use_cwe:
+        with open(base_dir / f"prompt_data/cwes/CWE-{args.cwe}.json", "r") as f:
+            cwe_text = f.read()
+    else:
+        description_file = base_dir / "prompt_data" / "descriptions" / f"{args.type_name}.txt"
+        if not description_file.exists():
+            parser.error(f"Description file not found: {description_file}")
+        with open(description_file, "r") as f:
+            description_text = f.read()
 
     rego_lib = "\n\n".join(
         path.read_text() for path in tool.get_rego_lib_paths()
@@ -330,50 +368,80 @@ if __name__ == "__main__":
         example_rule_1 = f.read()
     with open(example_paths[1], "r") as f:
         example_rule_2 = f.read()
-    
-    if args.use_cwe_text:
-        cwe_condition = cwe_text
-    else:
-        cwe_condition = get_cwe_condition(cwe=cwe_text)
 
-    if args.cwe_condition_only:
+    # Generate or pass through the condition
+    if use_cwe:
+        condition = cwe_text if args.use_cwe_text else get_cwe_condition(cwe=cwe_text)
+    else:
+        condition = description_text if args.use_description_text else get_description_condition(description=description_text)
+
+    if args.condition_only:
         from llm_interaction.generation_logging import model_to_directory_name
-        condition_dir = base_dir / "cwe_condition" / model_to_directory_name(args.model)
+        if use_cwe:
+            condition_dir = base_dir / "cwe_condition" / model_to_directory_name(args.model)
+            condition_file = condition_dir / f"CWE-{args.cwe}.txt"
+        else:
+            if not args.type_name:
+                parser.error("--type-name is required with --condition-only when using --description")
+            condition_dir = base_dir / "rule_condition" / model_to_directory_name(args.model)
+            condition_file = condition_dir / f"{args.type_name}.txt"
         condition_dir.mkdir(parents=True, exist_ok=True)
-        condition_file = condition_dir / f"CWE-{args.cwe}.txt"
-        condition_file.write_text(cwe_condition)
-        print(f"CWE condition saved to {condition_file}")
+        condition_file.write_text(condition)
+        print(f"Condition saved to {condition_file}")
         exit(0)
 
     if not args.type_name:
-        parser.error("--type-name is required unless --cwe-condition-only is set")
+        parser.error("--type-name is required unless --condition-only is set")
     if not args.experiment_name:
-        parser.error("--experiment-name is required unless --cwe-condition-only is set")
+        parser.error("--experiment-name is required unless --condition-only is set")
+
+    # rule_id drives all output file naming
+    rule_id = f"cwe_{args.cwe}" if use_cwe else args.type_name
 
     # Shared history starts at first rule generation; this pinned pair is preserved by trimming.
     conversation_history = []
 
     if args.analysis_tool == "kics":
-        rego_rule = get_rego_generation_kics(
-            cwe=args.cwe,
-            cwe_condition=cwe_condition,
-            ir=ir,
-            rego_lib=rego_lib,
-            example_rule_1=example_rule_1,
-            example_rule_2=example_rule_2,
-            chat_history=conversation_history,
-        )
+        if use_cwe:
+            rego_rule = get_rego_generation_kics(
+                cwe=args.cwe,
+                cwe_condition=condition,
+                ir=ir,
+                rego_lib=rego_lib,
+                example_rule_1=example_rule_1,
+                example_rule_2=example_rule_2,
+                chat_history=conversation_history,
+            )
+        else:
+            rego_rule = get_rego_generation_kics_description(
+                condition=condition,
+                ir=ir,
+                rego_lib=rego_lib,
+                example_rule_1=example_rule_1,
+                example_rule_2=example_rule_2,
+                chat_history=conversation_history,
+            )
     else:
-        rego_rule = get_rego_generation(
-            cwe=args.cwe,
-            cwe_condition=cwe_condition,
-            ir=ir,
-            rego_lib=rego_lib,
-            example_rule_1=example_rule_1,
-            example_rule_2=example_rule_2,
-            chat_history=conversation_history,
-        )
-    
+        if use_cwe:
+            rego_rule = get_rego_generation(
+                cwe=args.cwe,
+                cwe_condition=condition,
+                ir=ir,
+                rego_lib=rego_lib,
+                example_rule_1=example_rule_1,
+                example_rule_2=example_rule_2,
+                chat_history=conversation_history,
+            )
+        else:
+            rego_rule = get_rego_generation_description(
+                condition=condition,
+                ir=ir,
+                rego_lib=rego_lib,
+                example_rule_1=example_rule_1,
+                example_rule_2=example_rule_2,
+                chat_history=conversation_history,
+            )
+
     # Pop the initial response, keeping only the user prompt
     if len(conversation_history) >= 2:
         conversation_history.pop()
@@ -381,7 +449,7 @@ if __name__ == "__main__":
     run_paths = build_run_paths(
         base_dir=base_dir,
         model=args.model,
-        cwe=str(args.cwe),
+        rule_id=rule_id,
         experiment_name=args.experiment_name,
     )
     model_directory = run_paths["model_directory"]
@@ -397,12 +465,12 @@ if __name__ == "__main__":
     generation_log = create_generation_log(
         run_id=run_id,
         run_directory=run_directory,
-        cwe=str(args.cwe),
+        rule_id=rule_id,
         type_name=args.type_name,
         model_used=args.model,
         use_rag=bool(args.use_rag),
         output_rego_path=output_path,
-        cwe_condition=cwe_condition,
+        condition=condition,
         use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
         examples_model=examples_model_used,
         generated_examples_dir=generated_examples_dir,
@@ -423,10 +491,10 @@ if __name__ == "__main__":
     else:
         examples_folder, semantic_examples = prepare_semantic_examples(
             type_name=args.type_name,
-            cwe_number=str(args.cwe),
             tool=tool,
             use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
-            cwe_text=cwe_condition if getattr(args, "use_llm_examples", False) else None,
+            condition_text=condition if getattr(args, "use_llm_examples", False) else None,
+            cwe_number=str(args.cwe) if use_cwe else None,
             api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
             examples_model=getattr(args, "examples_model", None),
             model_directory=model_directory,
@@ -550,7 +618,6 @@ if __name__ == "__main__":
             tool,
             rego_rule,
             args.type_name,
-            str(args.cwe),
             examples_folder=examples_folder,
             examples=semantic_examples,
             technologies=target_technologies,

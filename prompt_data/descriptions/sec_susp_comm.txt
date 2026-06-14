@@ -1,0 +1,2 @@
+Detect IaC files that contain comments with keywords indicating unresolved security issues or temporary workarounds,
+such as TODO, FIXME, HACK, BUG, INSECURE, HARDCODED, BYPASS, or VULNERABLE.
