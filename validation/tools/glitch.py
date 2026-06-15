@@ -290,8 +290,11 @@ class GlitchTool(AnalysisTool):
                         
                         existing_depths = [d for _, _, d in matches_by_id[target]]
                         if not existing_depths or depth > max(existing_depths):
-                            # Deeper match found, replace all existing
-                            matches_by_id[target] = [(node, ancestry, depth)]
+                            # Deeper match found, replace all existing — but always keep Comment nodes
+                            # since they live in UnitBlock.comments and are coincidentally covered by
+                            # variable/array spans that share the same line numbers in raw code.
+                            kept_comments = [(n, a, d) for n, a, d in matches_by_id[target] if n.get("ir_type") == "Comment"]
+                            matches_by_id[target] = kept_comments + [(node, ancestry, depth)]
                         elif depth == max(existing_depths):
                             # Same depth, add to list of matches
                             matches_by_id[target].append((node, ancestry, depth))
