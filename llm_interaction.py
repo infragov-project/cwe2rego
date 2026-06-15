@@ -560,7 +560,7 @@ if __name__ == "__main__":
                 append_iteration_and_persist(iteration_log)
                 break
 
-            if args.validation_history_iterations is None or args.validation_history_iterations > 0:
+            if args.validation_history_iterations != 0:
                 nl_summary = summarize_syntactic_error(rego_rule=rego_rule, error_message=error)
                 iteration_log["nl_error_summary"] = nl_summary
                 append_iteration_summary_to_history(conversation_history, nl_summary)
@@ -660,7 +660,7 @@ if __name__ == "__main__":
                     "ir_reduction_percentage": ir_reduction_percentage,
                 })
 
-            if args.validation_history_iterations is None or args.validation_history_iterations > 0:
+            if args.validation_history_iterations != 0:
                 nl_summary = summarize_semantic_error(rego_rule=rego_rule, failures=formatted_failures)
                 iteration_log["nl_error_summary"] = nl_summary
                 append_iteration_summary_to_history(conversation_history, nl_summary)
