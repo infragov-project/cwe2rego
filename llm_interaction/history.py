@@ -3,6 +3,8 @@
 from collections.abc import MutableSequence
 from typing import Any
 
+from pydantic_ai.messages import ModelResponse, TextPart
+
 
 def trim_validation_history(
     history: MutableSequence[Any],
@@ -28,7 +30,7 @@ def trim_validation_history(
         del history[pinned_messages:]
         return
 
-    max_tail_messages = max_iterations * 2
+    max_tail_messages = max_iterations
     tail_length = len(history) - pinned_messages
     if tail_length <= max_tail_messages:
         return
@@ -43,7 +45,6 @@ def append_iteration_summary_to_history(
     summary: str,
 ) -> None:
     """Append a natural language iteration summary to conversation history."""
-    conversation_history.append({
-        "role": "assistant",
-        "content": summary,
-    })
+    conversation_history.append(
+        ModelResponse(parts=[TextPart(content=summary)])
+    )
