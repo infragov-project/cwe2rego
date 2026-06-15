@@ -1,3 +1,3 @@
-Comments in IaC files containing suspicious keywords such as TODO, HACK, FIXME, BUG, or INSECURE,
-suggesting the presence of unresolved security issues or temporary workarounds
-that may indicate weaknesses possibly exploitable.
+Comments in IaC files that point to unresolved or worked-around 
+problems, often marked with keywords like TODO, HACK, FIXME, BUG, or INSECURE. 
+These can signal security issues or temporary fixes that may be exploitable.
