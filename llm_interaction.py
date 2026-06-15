@@ -154,25 +154,22 @@ def replace_type_name(rego_code: str, desired_type: str) -> str:
 
 def clean_rego_code(rego_code: str) -> str:
     """
-    Remove markdown code fence markers from Rego code.
-    
-    Strips: ```rego, ```, ` from start and end of the code.
-    
-    Args:
-        rego_code: The Rego code that may contain markdown markers
-    
-    Returns:
-        Cleaned Rego code without markdown markers
+    Extract Rego code from a model response that may contain markdown fences or prose.
+
+    Handles:
+    - Fenced blocks: ```rego, ```package, ``` (any label or none)
+    - Prose preamble before the code block
+    - Bare code with no fences
     """
     code = rego_code.strip()
-    
-    # Remove opening fence: ```rego or ```
-    code = re.sub(r'^```+\s*rego?\s*\n?', '', code)
-    
-    # Remove closing fence: ```
-    code = re.sub(r'\n?```+\s*$', '', code)
-    
-    return code.strip()
+
+    # If a fenced code block exists anywhere in the response, extract its content.
+    match = re.search(r'```[^\n]*\n(.*?)```', code, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    # No fences found — return as-is (already plain Rego).
+    return code
 
 
 def add_line_numbers(content: str) -> str:
