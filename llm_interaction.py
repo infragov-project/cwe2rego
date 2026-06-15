@@ -560,11 +560,11 @@ if __name__ == "__main__":
                 append_iteration_and_persist(iteration_log)
                 break
 
-            # Summarize this failure in natural language, log it, and add to history
-            nl_summary = summarize_syntactic_error(rego_rule=rego_rule, error_message=error)
-            iteration_log["nl_error_summary"] = nl_summary
+            if args.validation_history_iterations is None or args.validation_history_iterations > 0:
+                nl_summary = summarize_syntactic_error(rego_rule=rego_rule, error_message=error)
+                iteration_log["nl_error_summary"] = nl_summary
+                append_iteration_summary_to_history(conversation_history, nl_summary)
             append_iteration_and_persist(iteration_log)
-            append_iteration_summary_to_history(conversation_history, nl_summary)
 
             # Use appropriate syntax error generation based on RAG flag and analysis tool
             if args.use_rag and rego_index is not None:
@@ -660,11 +660,11 @@ if __name__ == "__main__":
                     "ir_reduction_percentage": ir_reduction_percentage,
                 })
 
-            # Summarize this failure in natural language, log it, and add to history
-            nl_summary = summarize_semantic_error(rego_rule=rego_rule, failures=formatted_failures)
-            iteration_log["nl_error_summary"] = nl_summary
+            if args.validation_history_iterations is None or args.validation_history_iterations > 0:
+                nl_summary = summarize_semantic_error(rego_rule=rego_rule, failures=formatted_failures)
+                iteration_log["nl_error_summary"] = nl_summary
+                append_iteration_summary_to_history(conversation_history, nl_summary)
             append_iteration_and_persist(iteration_log)
-            append_iteration_summary_to_history(conversation_history, nl_summary)
 
             # Call appropriate semantic error generation function based on analysis tool
             if args.analysis_tool == "kics":
