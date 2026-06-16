@@ -45,6 +45,6 @@ def append_iteration_summary_to_history(
     summary: str,
 ) -> None:
     """Append a natural language iteration summary to conversation history."""
-    conversation_history.append(
-        ModelResponse(parts=[TextPart(content=summary)])
-    )
+    attempt = sum(1 for m in conversation_history if isinstance(m, ModelResponse)) + 1
+    tagged = f"Attempt {attempt} failure summary:\n{summary}"
+    conversation_history.append(ModelResponse(parts=[TextPart(content=tagged)]))
