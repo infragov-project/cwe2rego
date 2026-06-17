@@ -1,0 +1,34 @@
+{
+    "examples": [
+        {
+            "file": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+            "lines": [
+                19
+            ]
+        },
+        {
+            "file": "group_vars/redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "lines": [
+                12
+            ]
+        },
+        {
+            "file": "EdsonGermano_socrata-platform-sensu-chef-attributes-default.rb",
+            "lines": [
+                31
+            ]
+        },
+        {
+            "file": "ostk-fuel-library-deployment-puppet-osnailyfacter-manifests-ceph_nova_compute.pp",
+            "lines": [
+                4
+            ]
+        },
+        {
+            "file": "ostk-puppet-mistral-manifests-keystone-authtoken.pp",
+            "lines": [
+                188
+            ]
+        }
+    ]
+}
