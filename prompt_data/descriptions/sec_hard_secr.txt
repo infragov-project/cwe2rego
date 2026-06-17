@@ -1,3 +1,3 @@
-Secrets such as API keys, authentication tokens, SSH keys, or certificates
-embedded directly in IaC source code,
-in attributes with names like secret, token, api_key, ssh_key, or certificate.
+Sensitive information such as passwords, usernames, API keys, tokens, SSH keys, or private keys
+found hardcoded directly in IaC source code.
+Credentials should never be in plain text but sourced through variables, environment references, or a secrets manager instead.
