@@ -7,9 +7,9 @@
             ]
         },
         {
-            "file": "group_vars/redhat-openstack_infrared-plugins-tripleo-overcloud-vars-overcloud-templates-keystone-ldap-ipa.yml",
+            "file": "group_vars/redhat-cop_agnosticd-ansible-roles-ocp-workload-3scale-lifecycle-defaults-main.yml",
             "lines": [
-                12
+                35
             ]
         },
         {
