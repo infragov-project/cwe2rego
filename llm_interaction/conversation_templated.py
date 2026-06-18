@@ -78,9 +78,12 @@ def initialize_model_settings(model: str | None = None):
     # Force Anthropic models to route through Amazon Bedrock on OpenRouter.
     if model and model.lower().startswith("anthropic/"):
         settings['openrouter_provider'] = {
-            'order': ['amazon-bedrock'],
-            'allow_fallbacks': False,
+            'only': ['amazon-bedrock']
         }
+        
+        settings['openrouter_cache_instructions'] = '1h'
+        settings['openrouter_cache_messages'] = '1h'
+        settings['openrouter_cache_tool_definitions'] = '1h'
 
     global model_settings
     model_settings = OpenRouterModelSettings(**settings)
