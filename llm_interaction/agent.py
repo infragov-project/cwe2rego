@@ -1,7 +1,7 @@
 from pydantic_ai import Agent
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from pydantic_ai.exceptions import UsageLimitExceeded, UnexpectedModelBehavior
-from pydantic_ai.models.openrouter import OpenRouterModelSettings
+from pydantic_ai.settings import ModelSettings
 import asyncio
 from typing import Callable, List, Any
 from pydantic_ai.messages import ModelMessage
@@ -15,7 +15,7 @@ def _usage_get(obj: Any, key: str, default=None):
     return getattr(obj, key, default)
 
 class InfraAgent:
-    def __init__(self, model, model_settings: OpenRouterModelSettings={}, output_type: type = None):
+    def __init__(self, model, model_settings: ModelSettings | dict = {}, output_type: type = None):
         """Initialize the agent with optional custom instructions and output type."""
         self.model = model
         self.agent = Agent(

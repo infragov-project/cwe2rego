@@ -259,6 +259,12 @@ def build_argument_parser() -> ArgumentParser:
         help="Experiment label used in generated file and directory paths (e.g., false_positives). Required unless --condition-only is set.",
     )
     parser.add_argument(
+        "--provider",
+        choices=["openrouter", "bedrock"],
+        default="openrouter",
+        help="LLM provider to use (default: openrouter). Bedrock reads AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION from the environment.",
+    )
+    parser.add_argument(
         "--analysis-tool",
         choices=["glitch", "kics"],
         default="glitch",
@@ -279,18 +285,25 @@ if __name__ == "__main__":
 
     load_dotenv()
 
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-    if not OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY environment variable not set")
+    provider = args.provider
+    api_key = None
+    if provider == "openrouter":
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY environment variable not set")
 
-    initialize_model_settings(args.model)
     if not args.model:
         raise ValueError("Model argument is required")
     if args.validation_history_pinned_messages < 0:
         parser.error("--validation-history-pinned-messages must be >= 0")
-    initialize_model(OPENROUTER_API_KEY, args.model)
+    initialize_model_settings(args.model, provider=provider)
+    initialize_model(args.model, provider=provider, api_key=api_key)
     if getattr(args, "use_llm_examples", False):
-        initialize_examples_model(OPENROUTER_API_KEY, getattr(args, "examples_model", None) or args.model)
+        initialize_examples_model(
+            getattr(args, "examples_model", None) or args.model,
+            provider=provider,
+            api_key=api_key,
+        )
 
     llm_usage_totals = _init_llm_usage_totals()
     set_usage_callback(lambda usage: _accumulate_llm_usage(llm_usage_totals, usage))
@@ -332,7 +345,7 @@ if __name__ == "__main__":
         print("Building Rego RAG index...")
         rego_index = build_rag_index(
             source_dir=base_dir / "rag/rego",
-            api_key=OPENROUTER_API_KEY,
+            api_key=api_key,
             name="rego_syntax"
         )
     
@@ -492,7 +505,7 @@ if __name__ == "__main__":
             use_llm_examples=bool(getattr(args, "use_llm_examples", False)),
             condition_text=condition if getattr(args, "use_llm_examples", False) else None,
             cwe_number=str(args.cwe) if use_cwe else None,
-            api_key=OPENROUTER_API_KEY if getattr(args, "use_llm_examples", False) else None,
+            api_key=api_key if getattr(args, "use_llm_examples", False) else None,
             examples_model=getattr(args, "examples_model", None),
             model_directory=model_directory,
             generated_examples_dir=generated_examples_dir,

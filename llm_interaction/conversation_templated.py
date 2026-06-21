@@ -3,7 +3,10 @@ Decorator for model interactions using prompt templates.
 """
 
 from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, TextPart
+from pydantic_ai.models import Model
+from pydantic_ai.models.bedrock import BedrockConverseModel, BedrockModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterProvider
+from pydantic_ai.settings import ModelSettings
 from .agent import InfraAgent
 from typing import Any, Callable, TypeVar, get_type_hints
 import inspect
@@ -11,9 +14,9 @@ from .prompt_loader import get_prompt_loader
 
 T = TypeVar('T')
 
-model_instance: OpenRouterModel = None
-examples_model_instance: OpenRouterModel = None
-model_settings: OpenRouterModelSettings = None
+model_instance: Model | None = None
+examples_model_instance: Model | None = None
+model_settings: ModelSettings | None = None
 _usage_callback: Callable[[dict[str, Any]], None] | None = None
 
 
@@ -50,40 +53,68 @@ def _extract_usage_summary(usage: Any) -> dict[str, Any]:
         "cache_read_tokens": cache_read_tokens,
     }
 
-def initialize_model(api_key: str, model: str):
-    """Initialize the global model instance and settings."""
-    provider=OpenRouterProvider(
-        api_key=api_key
-    )
+def _make_openrouter_model(api_key: str, model: str) -> OpenRouterModel:
+    return OpenRouterModel(model, provider=OpenRouterProvider(api_key=api_key))
+
+def _make_bedrock_model(model: str) -> BedrockConverseModel:
+    return BedrockConverseModel(model)
+
+def initialize_model(model: str, provider: str = 'openrouter', api_key: str | None = None):
+    """Initialize the global model instance."""
     global model_instance
-    model_instance = OpenRouterModel(model, provider=provider)
+    if provider == 'bedrock':
+        model_instance = _make_bedrock_model(model)
+    else:
+        model_instance = _make_openrouter_model(api_key, model)
 
-def initialize_examples_model(api_key: str, model: str):
+def initialize_examples_model(model: str, provider: str = 'openrouter', api_key: str | None = None):
     """Initialize the model used for generating semantic-check examples."""
-    provider = OpenRouterProvider(api_key=api_key)
     global examples_model_instance
-    examples_model_instance = OpenRouterModel(model, provider=provider)
+    if provider == 'bedrock':
+        examples_model_instance = _make_bedrock_model(model)
+    else:
+        examples_model_instance = _make_openrouter_model(api_key, model)
 
-def initialize_model_settings(model: str | None = None):
+def _bedrock_reasoning_fields(model: str) -> dict:
+    if not model:
+        return {}
+    if model.startswith('zai.glm'):
+        return {'reasoning_config': 'high'}
+    if 'anthropic' in model:
+        return {'thinking': {'type': 'enabled', 'budget_tokens': 16384}}
+    if model.startswith('openai.'):
+        return {'reasoning_effort': 'high'}
+    return {}
+
+
+def initialize_model_settings(model: str | None = None, provider: str = 'openrouter'):
     """Initialize model settings."""
-    settings: OpenRouterModelSettings = {
-        'openrouter_reasoning': {
-            'effort': 'high',
-        },
-        'openrouter_usage': {
-            'include': True,
-        },
-    }
-
-    # Force Anthropic models to route through Amazon Bedrock on OpenRouter.
-    if model and model.lower().startswith("anthropic/"):
-        settings['openrouter_provider'] = {
-            'order': ['amazon-bedrock'],
-            'allow_fallbacks': False,
-        }
-
     global model_settings
-    model_settings = OpenRouterModelSettings(**settings)
+    if provider == 'bedrock':
+        reasoning = _bedrock_reasoning_fields(model or '')
+        settings = BedrockModelSettings(
+            bedrock_cache_instructions=True,
+            bedrock_cache_messages=True,
+        )
+        if reasoning:
+            settings['bedrock_additional_model_requests_fields'] = reasoning
+        model_settings = settings
+    else:
+        settings: OpenRouterModelSettings = {
+            'openrouter_reasoning': {
+                'effort': 'high',
+            },
+            'openrouter_usage': {
+                'include': True,
+            },
+        }
+        # Force Anthropic models to route through Amazon Bedrock on OpenRouter.
+        if model and model.lower().startswith("anthropic/"):
+            settings['openrouter_provider'] = {
+                'order': ['amazon-bedrock'],
+                'allow_fallbacks': False,
+            }
+        model_settings = OpenRouterModelSettings(**settings)
 
 def ask_model_prompt(template_path: str):
     """Decorator for model interactions using prompt templates.
