@@ -310,6 +310,12 @@ if __name__ == "__main__":
             api_key=api_key,
         )
 
+    if provider == "bedrock":
+        _bedrock_region = os.getenv("AWS_DEFAULT_REGION") or "unknown"
+        print(f"Provider: bedrock (region: {_bedrock_region})")
+    else:
+        print(f"Provider: {provider}")
+
     llm_usage_totals = _init_llm_usage_totals()
     set_usage_callback(lambda usage: _accumulate_llm_usage(llm_usage_totals, usage))
 
@@ -477,12 +483,16 @@ if __name__ == "__main__":
     run_id = run_paths["run_id"]
     examples_model_used = getattr(args, "examples_model", None) or args.model
 
+    bedrock_region = os.getenv("AWS_DEFAULT_REGION") if provider == "bedrock" else None
+
     generation_log = create_generation_log(
         run_id=run_id,
         run_directory=run_directory,
         rule_id=rule_id,
         type_name=args.type_name,
         model_used=args.model,
+        provider=provider,
+        bedrock_region=bedrock_region,
         use_rag=bool(args.use_rag),
         output_rego_path=output_path,
         condition=condition,
