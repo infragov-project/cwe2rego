@@ -78,11 +78,11 @@ def initialize_examples_model(model: str, provider: str = 'openrouter', api_key:
 def _bedrock_reasoning_fields(model: str) -> dict:
     if not model:
         return {}
-    if model.startswith('zai.glm'):
+    if 'zai.glm' in model:
         return {'reasoning_config': 'high'}
     if 'anthropic' in model:
         return {'thinking': {'type': 'enabled', 'budget_tokens': 16384}}
-    if model.startswith('openai.'):
+    if 'openai' in model:
         return {'reasoning_effort': 'high'}
     return {}
 
