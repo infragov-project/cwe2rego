@@ -163,6 +163,8 @@ def create_generation_log(
     rule_id: str,
     type_name: str,
     model_used: str,
+    provider: str,
+    bedrock_region: str | None = None,
     use_rag: bool,
     output_rego_path: Path,
     condition: str,
@@ -175,6 +177,9 @@ def create_generation_log(
     static_examples_dir: Path | None,
 ) -> dict[str, Any]:
     """Create the initial generation log payload."""
+    provider_info: dict[str, Any] = {"name": provider}
+    if provider == "bedrock" and bedrock_region:
+        provider_info["region"] = bedrock_region
     return {
         "run_id": run_id,
         "run_started_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -183,6 +188,7 @@ def create_generation_log(
         "rule_id": rule_id,
         "type_name": type_name,
         "model_used": model_used,
+        "provider": provider_info,
         "use_rag": use_rag,
         "output_rego_path": str(output_rego_path.resolve()),
         "condition": condition,
