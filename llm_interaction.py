@@ -166,9 +166,14 @@ def clean_rego_code(rego_code: str) -> str:
     # If a fenced code block exists anywhere in the response, extract its content.
     match = re.search(r'```[^\n]*\n(.*?)```', code, re.DOTALL)
     if match:
-        return match.group(1).strip()
+        code = match.group(1).strip()
 
-    # No fences found — return as-is (already plain Rego).
+    # Restore missing `package` keyword when the model drops it from the first line
+    # (e.g. outputs "glitch\n..." instead of "package glitch\n...").
+    first_line = code.lstrip().split('\n')[0].strip()
+    if first_line in ('glitch', 'Cx') and not code.lstrip().startswith('package '):
+        code = 'package ' + code.lstrip()
+
     return code
 
 
