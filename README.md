@@ -13,6 +13,21 @@ Rules can be generated from a CWE description or from a plain natural language d
 python -m pip install -r requirements.txt
 ```
 
+### Environment variables
+
+Create a `.env` file in the project root. Which variables are required depends on the provider:
+
+**OpenRouter** (default):
+```
+OPENROUTER_API_KEY=your-openrouter-key
+```
+
+**Amazon Bedrock**:
+```
+AWS_BEARER_TOKEN_BEDROCK=your-bedrock-api-key
+AWS_DEFAULT_REGION=your-region
+```
+
 ### GLITCH
 
 The pipeline installs GLITCH automatically on first run (`validation/GLITCH/`). To install manually:
@@ -69,6 +84,7 @@ To add a new type, create `prompt_data/descriptions/<type_name>.txt` with a shor
 
 | Flag | Description |
 |---|---|
+| `--provider openrouter\|bedrock` | LLM provider to use (default: `openrouter`) |
 | `--analysis-tool glitch\|kics` | Analysis tool to use (default: `glitch`) |
 | `--semantic-examples-dir <dir>` | Override the default static examples directory |
 | `--use-llm-examples` | Generate semantic examples via LLM instead of loading from disk |
@@ -76,6 +92,8 @@ To add a new type, create `prompt_data/descriptions/<type_name>.txt` with a shor
 | `--condition-only` | Only generate and save the distilled condition, then exit |
 | `--validation-history-iterations N` | Keep only the N most recent validation iterations in context |
 | `--skip-semantic-check` | Run syntax validation only |
+
+When using `--provider bedrock`, pass the full Bedrock inference profile ID as the model argument (e.g. `us.anthropic.claude-sonnet-4-6-20250514-v1:0`). On-demand model IDs without a regional prefix (`anthropic.*`) are not supported for newer models.
 
 ---
 
@@ -97,28 +115,30 @@ Static semantic examples live in `validation/examples/<type_name>/`.
 ### `run_all_cwes.sh` — CWE mode
 
 ```bash
-./run_all_cwes.sh <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] <cwe1> [cwe2 ...]
+./run_all_cwes.sh <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] [--provider openrouter|bedrock] <cwe1> [cwe2 ...]
 ```
 
 Example:
 
 ```bash
 ./run_all_cwes.sh openai/gpt-5.2-codex my_experiment validation/examples_extension glitch 1 --max-runs 5 259 319 546
+./run_all_cwes.sh us.anthropic.claude-sonnet-4-6-20250514-v1:0 my_experiment validation/examples_extension glitch 1 --provider bedrock 259 319 546
 ```
 
 ### `run_all_descriptions.sh` — Description mode
 
 ```bash
-./run_all_descriptions.sh <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] <type_name1> [type_name2 ...]
+./run_all_descriptions.sh <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] [--provider openrouter|bedrock] <type_name1> [type_name2 ...]
 ```
 
 Example:
 
 ```bash
 ./run_all_descriptions.sh openai/gpt-5.2-codex my_experiment validation/examples glitch 1 --max-runs 5 sec_hard_pass sec_https
+./run_all_descriptions.sh us.anthropic.claude-sonnet-4-6-20250514-v1:0 my_experiment validation/examples glitch 1 --provider bedrock sec_hard_pass sec_https
 ```
 
-Both scripts retry failed runs up to `--max-runs` times (default: 1, overridable via `MAX_RUNS` env var) and report failures at the end.
+Both scripts retry failed runs up to `--max-runs` times (default: 1, overridable via `MAX_RUNS` env var) and report failures at the end. The provider defaults to `openrouter` and can also be set via the `PROVIDER` environment variable.
 
 ---
 
