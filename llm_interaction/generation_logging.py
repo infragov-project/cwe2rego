@@ -37,9 +37,23 @@ def sanitize_file_token(value: str | None, fallback: str = "default") -> str:
     raise ValueError("Unable to build a safe filename token from input")
 
 
+_BEDROCK_GEO_PREFIXES = {"us", "eu", "apac", "jp", "au", "ca", "global", "us-gov"}
+
+
 def model_to_directory_name(model: str) -> str:
     """Convert a model identifier to a filesystem-safe directory name."""
-    model_tail = model.split("/")[-1] if model else ""
+    if not model:
+        return sanitize_file_token("", fallback="model")
+    if "/" in model:
+        # OpenRouter format: provider/model-name → model-name
+        model_tail = model.split("/")[-1]
+    else:
+        # Bedrock format: [geo.]provider.model-name → model-name
+        parts = model.split(".", 2)
+        if len(parts) >= 2 and parts[0] in _BEDROCK_GEO_PREFIXES:
+            parts = parts[1:]
+        # drop provider prefix, keep the model name portion
+        model_tail = parts[-1] if len(parts) >= 2 else parts[0]
     return sanitize_file_token(model_tail, fallback="model")
 
 

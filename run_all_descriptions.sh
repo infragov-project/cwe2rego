@@ -3,8 +3,8 @@
 set -euo pipefail
 
 if [[ $# -lt 5 ]]; then
-    echo "Usage: $0 <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] <type_name1> [type_name2 ...]"
-    echo "Example: $0 openai/gpt-5.2-codex my_experiment validation/examples glitch 1 --max-runs 5 sec_hard_pass sec_https"
+    echo "Usage: $0 <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] [--provider openrouter|bedrock] <type_name1> [type_name2 ...]"
+    echo "Example: $0 openai/gpt-5.2-codex my_experiment validation/examples glitch 1 --max-runs 5 --provider openrouter sec_hard_pass sec_https"
     exit 1
 fi
 
@@ -16,6 +16,7 @@ VALIDATION_HISTORY_ITERATIONS="$5"
 shift 5
 
 MAX_RUNS="${MAX_RUNS:-1}"
+PROVIDER="${PROVIDER:-openrouter}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -29,6 +30,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         --max-runs=*)
             MAX_RUNS="${1#*=}"
+            shift 1
+            ;;
+        --provider)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --provider requires a value" >&2
+                exit 1
+            fi
+            PROVIDER="$2"
+            shift 2
+            ;;
+        --provider=*)
+            PROVIDER="${1#*=}"
             shift 1
             ;;
         *)
@@ -70,7 +83,8 @@ for type_name in "$@"; do
             --experiment-name "$EXPERIMENT_NAME" \
             --semantic-examples-dir "$SEMANTIC_EXAMPLES_DIR" \
             --analysis-tool "$ANALYSIS_TOOL" \
-            --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS"; then
+            --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS" \
+            --provider "$PROVIDER"; then
             echo "$type_name completed successfully."
             success=1
             break

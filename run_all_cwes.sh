@@ -3,8 +3,8 @@
 set -euo pipefail
 
 if [[ $# -lt 6 ]]; then
-    echo "Usage: $0 <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] <cwe1> [cwe2 ...]"
-    echo "Example: $0 openai/gpt-5.2-codex extension_examples_test validation/examples_extension glitch 1 --max-runs 5 284 250 319"
+    echo "Usage: $0 <model> <experiment_name> <examples_dir> <analysis_tool> <validation_history_iterations> [--max-runs N] [--provider openrouter|bedrock] <cwe1> [cwe2 ...]"
+    echo "Example: $0 openai/gpt-5.2-codex extension_examples_test validation/examples_extension glitch 1 --max-runs 5 --provider openrouter 284 250 319"
     exit 1
 fi
 
@@ -16,6 +16,7 @@ VALIDATION_HISTORY_ITERATIONS="$5"
 shift 5
 
 MAX_RUNS="${MAX_RUNS:-1}"
+PROVIDER="${PROVIDER:-openrouter}"
 
 # Optional flags before CWE numbers (CWE numbers must be numeric, so this is unambiguous).
 while [[ $# -gt 0 ]]; do
@@ -30,6 +31,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         --max-runs=*)
             MAX_RUNS="${1#*=}"
+            shift 1
+            ;;
+        --provider)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --provider requires a value" >&2
+                exit 1
+            fi
+            PROVIDER="$2"
+            shift 2
+            ;;
+        --provider=*)
+            PROVIDER="${1#*=}"
             shift 1
             ;;
         *)
@@ -97,7 +110,8 @@ for cwe in "$@"; do
             --experiment-name "$EXPERIMENT_NAME" \
             --semantic-examples-dir "$SEMANTIC_EXAMPLES_DIR" \
             --analysis-tool "$ANALYSIS_TOOL" \
-            --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS"; then
+            --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS" \
+            --provider "$PROVIDER"; then
             echo "CWE-$cwe completed successfully."
             success=1
             break
