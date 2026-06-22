@@ -1,0 +1,59 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T21:42:21.343388+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "no_semantic_check_test",
+  "rule_id": "cwe_326",
+  "type_name": "sec_weak_crypt",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001/cwe_326.rego",
+  "condition": "# CWE-326: Inadequate Encryption Strength \u2014 Detection in IaC Scripts\n\n## Core Weaknesses to Detect\n\n### 1. **Weak Symmetric Encryption Algorithms**\nDetection of deprecated or cryptographically broken ciphers explicitly configured.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `algorithm`, `encryption_algorithm`, `cipher`, `cipher_suite` | Values: `DES`, `3DES`, `RC2`, `RC4`, `Blowfish`, `AES-ECB` |\n| `encryption_type`, `server_side_encryption` | Values using non-AES-256 or non-GCM modes |\n| `block_cipher_mode` | Values like `ECB` (no IV, deterministic output) |\n\n---\n\n### 2. **Insufficient Key Length / Key Size**\nDetection of cryptographic key sizes below industry-accepted minimums.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `key_size`, `key_length`, `key_bits`, `rsa_bits`, `modulus_length` | Values `< 2048` (asymmetric), `< 128` (symmetric), `< 256` (elliptic curve) |\n| `bit_length`, `key_spec` | Values: `1024`, `512`, `768` |\n| `key_type` combined with `key_size` | e.g., `RSA` with `1024` |\n\n---\n\n### 3. **Weak or Deprecated TLS/SSL Protocol Versions**\nEnforcement of outdated protocol versions susceptible to known attacks.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `ssl_policy`, `tls_policy`, `minimum_tls_version`, `min_tls_version` | Values: `SSLv2`, `SSLv3`, `TLSv1.0`, `TLSv1.1`, `TLS1_0`, `TLS1_1` |\n| `security_policy`, `ssl_protocol` | Permitting deprecated protocol versions |\n| `https_only`, `enforce_https` | Set to `false` or absent |\n\n---\n\n### 4. **Weak Hash Algorithms**\nUse of collision-prone or broken hashing algorithms for data integrity or key derivation.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `hash_algorithm`, `digest_algorithm`, `signing_algorithm` | Values: `MD5`, `SHA1`, `SHA-1`, `MD4`, `MD2` |\n| `certificate_algorithm`, `signature_algorithm` | Signing with `MD5withRSA`, `SHA1withRSA` |\n| `kms_key_algorithm` | Non-FIPS or weak hash-based identifiers |\n\n---\n\n### 5. **Weak Cipher Suites in Network/Load Balancer Configuration**\nExplicit allowance of cipher suites offering insufficient protection.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `cipher_suite`, `allowed_ciphers`, `cipher_list` | Presence of `RC4`, `NULL`, `EXPORT`, `DES`, `anon`, `3DES` |\n| `predefined_security_policy`, `security_policy` | Policies mapped to legacy/weak cipher sets |\n| `forward_secrecy` | Disabled or absent (no PFS guarantee) |\n\n---\n\n### 6. **Encryption Key Management Weaknesses**\nUnder-specified or weak key configurations in managed key services.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `key_algorithm`, `key_usage` | Weak algorithm selected (e.g., `RSA_1024`) |\n| `rotation_enabled`, `enable_key_rotation` | `false` or absent (stale keys weaken effective strength) |\n| `key_material_origin` | Externally provided weak material without validation |\n\n---\n\n### 7. **Weak VPN / IPSec Configuration**\nIKE and IPSec phase configurations using weak cryptographic parameters.\n\n| Keywords / Attributes / Fields | Weakness Signal |\n|---|---|\n| `ike_version`, `phase1_encryption`, `phase2_encryption` | Values: `DES`, `3DES`, `MD5` |\n| `dh_group`, `diffie_hellman_group` | Groups `1`, `2`, `5` (weak key exchange) |\n| `ipsec_policy`, `vpn_encryption` | Non-AES-256-GCM / non-SHA-256 configurations |\n\n---\n\n## Summary of High-Risk Keyword Patterns\n\n```\nAlgorithms  : DES, 3DES, RC4, RC2, MD5, SHA1, ECB, Blowfish, EXPORT\nKey Sizes   : 512, 768, 1024 (RSA/DSA), <128 (AES), <256 (ECC)\nTLS/SSL     : SSLv2, SSLv3, TLSv1.0, TLS1_0, TLSv1.1, TLS1_1\nCipher flags: NULL, EXPORT, anon, LOW, MEDIUM (openssl-style weak groups)\nDH Groups   : group1, group2, group5, modp768, modp1024\nFields      : key_size, key_bits, rsa_bits, cipher_suite, ssl_policy,\n              hash_algorithm, signing_algorithm, encryption_algorithm,\n              minimum_tls_version, dh_group, ike_version\n```",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nweak_algo_attr_names := {\"algorithm\", \"encryption_algorithm\", \"cipher\", \"cipher_suite\", \"hash_algorithm\", \"digest_algorithm\", \"signing_algorithm\", \"key_algorithm\", \"encryption_type\", \"server_side_encryption\", \"block_cipher_mode\", \"certificate_algorithm\", \"signature_algorithm\", \"phase1_encryption\", \"phase2_encryption\"}\n\nweak_tls_attr_names := {\"ssl_policy\", \"tls_policy\", \"minimum_tls_version\", \"min_tls_version\", \"security_policy\", \"ssl_protocol\"}\n\nkey_size_attr_names := {\"key_size\", \"key_length\", \"key_bits\", \"rsa_bits\", \"modulus_length\", \"bit_length\"}\n\nhttps_attr_names := {\"https_only\", \"enforce_https\"}\n\nrotation_attr_names := {\"rotation_enabled\", \"enable_key_rotation\"}\n\ndh_group_attr_names := {\"dh_group\", \"diffie_hellman_group\"}\n\nweak_key_sizes := {512, 768, 1024}\n\nweak_dh_groups := {1, 2, 5}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == weak_algo_attr_names[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(\\\\bDES\\\\b|\\\\b3DES\\\\b|\\\\bRC2\\\\b|\\\\bRC4\\\\b|\\\\bBlowfish\\\\b|\\\\bECB\\\\b|\\\\bMD5\\\\b|\\\\bMD4\\\\b|\\\\bMD2\\\\b|\\\\bSHA-?1\\\\b|\\\\bNULL\\\\b|\\\\bEXPORT\\\\b|\\\\banon\\\\b)\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak or deprecated encryption/hash algorithm detected - Use strong algorithms such as AES-256-GCM or SHA-256. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == weak_tls_attr_names[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(SSLv2|SSLv3|TLSv?1[._]?0|TLSv?1[._]?1|TLS1_0|TLS1_1)\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak or deprecated TLS/SSL protocol version detected - Use TLS 1.2 or higher. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == key_size_attr_names[_]\n    attr.value.ir_type == \"Integer\"\n    attr.value.value == weak_key_sizes[_]\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Insufficient cryptographic key size detected - Use at least 2048 bits for RSA/DSA keys. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == key_size_attr_names[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"^(512|768|1024)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Insufficient cryptographic key size detected - Use at least 2048 bits for RSA/DSA keys. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == https_attr_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"HTTPS enforcement is disabled - Enable HTTPS to ensure encrypted communication. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == rotation_attr_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cryptographic key rotation is disabled - Enable key rotation to maintain encryption strength over time. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == dh_group_attr_names[_]\n    attr.value.ir_type == \"Integer\"\n    attr.value.value == weak_dh_groups[_]\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak Diffie-Hellman group detected - Use DH group 14 or higher for sufficient key exchange strength. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.name == dh_group_attr_names[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(\\\\bgroup[125]\\\\b|modp768|modp1024|\\\\bgroup1\\\\b|\\\\bgroup2\\\\b|\\\\bgroup5\\\\b)\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak Diffie-Hellman group detected - Use DH group 14 or higher for sufficient key exchange strength. (CWE-326)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T21:42:21.495917+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 10997,
+    "output_tokens_total": 11071,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}

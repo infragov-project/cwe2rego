@@ -1,0 +1,59 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T21:40:22.623602+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "no_semantic_check_test",
+  "rule_id": "cwe_319",
+  "type_name": "sec_https",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001/cwe_319.rego",
+  "condition": "# CWE-319: Cleartext Transmission of Sensitive Information \u2014 IaC Detection Guide\n\n---\n\n## Core Weaknesses to Detect\n\n### 1. **Insecure Protocol Usage**\nConfigurations that explicitly define or allow unencrypted communication protocols instead of their secure counterparts.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| Unencrypted protocol endpoints | `http://`, `ftp://`, `telnet://`, `protocol = \"HTTP\"`, `scheme = \"http\"`, `listener_protocol`, `endpoint_protocol` |\n| Insecure port bindings | `port = 80`, `port = 21`, `port = 23`, `port = 8080`, `port = 11211`, `allowed_ports` |\n| Protocol downgrade allowed | `minimum_tls_version`, `ssl_policy`, `tls_version = \"TLS1.0\"`, `tls_version = \"TLS1.1\"` |\n\n---\n\n### 2. **Encryption-in-Transit Not Enforced**\nSettings that disable or omit the requirement for encrypted data transfer.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| HTTPS-only traffic not required | `enable_https_traffic_only = false`, `https_only = false`, `require_secure_transfer = false`, `enforce_https` |\n| SSL/TLS termination missing | `ssl_certificate`, `tls_certificate`, `certificate_arn`, `ssl_policy = \"none\"` |\n| Plaintext allowed alongside encrypted | `allow_http = true`, `redirect_http_to_https = false`, `force_ssl = false` |\n\n---\n\n### 3. **Load Balancer / Ingress Misconfiguration**\nFront-end communication layers that forward or accept unencrypted traffic.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| HTTP listener without redirect | `listener_protocol = \"HTTP\"`, `routing_rule`, `action_type = \"forward\"` (without HTTP\u2192HTTPS redirect), `frontend_protocol` |\n| Missing HTTPS listener | Absence of `HTTPS` or `SSL` in `listener` blocks |\n| Weak cipher suites | `ssl_cipher_suite`, `cipher_policy`, `predefined_policy`, `security_policy` containing weak values |\n\n---\n\n### 4. **Storage / Data Transfer Encryption Disabled**\nCloud storage or data pipeline resources configured to allow unencrypted access.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| Insecure storage transfer | `secure_transfer_required = false`, `enable_https_traffic_only`, `require_encryption_in_transit` |\n| SMB/NFS without encryption | `smb_security_mode`, `nfs_version`, `in_flight_encryption = false` |\n| Data pipeline cleartext | `encryption_in_transit`, `enable_encryption`, `transit_encryption_mode = \"DISABLED\"` |\n\n---\n\n### 5. **Database / Cache Cleartext Connections**\nDatabase and caching services that allow non-SSL connections.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| SSL not required on DB connections | `require_ssl = false`, `ssl_enforcement = \"Disabled\"`, `ssl_mode = \"DISABLED\"` |\n| Unencrypted cache connections | `transit_encryption_enabled = false`, `auth_token` absent with no TLS, `in_transit_encryption` |\n| Connection string with no TLS flag | `connection_string` lacking `sslmode=require`, `Encrypt=True`, `ssl=true` |\n\n---\n\n### 6. **API Gateway / Service Endpoint Without TLS**\nAPI-facing services exposing endpoints over unencrypted channels.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| Insecure API endpoint type | `endpoint_type`, `security_policy`, absence of `minimum_tls_version` |\n| gRPC/REST without TLS | `insecure = true`, `tls_config` block absent, `plaintext_credentials` |\n| Backend service over HTTP | `backend_protocol = \"HTTP\"`, `origin_protocol_policy = \"http-only\"` |\n\n---\n\n### 7. **Certificate / TLS Configuration Weaknesses**\nMissing or weak certificate settings that result in cleartext fallback.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| Self-signed or absent certificates | `ssl_certificate` absent in resource, `certificate_source = \"No_Managed_Certificate\"` |\n| TLS not configured on resource | Missing `tls_config`, `ssl_config`, `https_config` blocks entirely |\n| Weak TLS policy | `ssl_policy = \"ELBSecurityPolicy-2015-05\"`, `tls_version` set below `TLS1.2` |\n\n---\n\n### 8. **Monitoring / Logging Over Cleartext**\nDiagnostic or logging channels transmitting sensitive data without encryption.\n\n| Weakness | Keywords / Attributes / Fields |\n|---|---|\n| Log shipping over unencrypted channel | `log_destination`, `syslog_transport = \"UDP\"`, `audit_log_destination` using `http://` |\n| Metrics endpoint unencrypted | `metrics_endpoint`, `monitoring_protocol = \"HTTP\"` |\n\n---\n\n## Summary of High-Signal Keywords for IaC Scanning\n\n```\nhttp://           ftp://             telnet://\nport = 80         port = 21          port = 23\nhttps_only        enable_https       require_ssl\nforce_ssl         ssl_enforcement    transit_encryption\ntls_version       minimum_tls        ssl_policy\nsecure_transfer   in_transit         encrypt_in_transit\nallow_http        redirect_http      plaintext\ninsecure = true   certificate        ssl_certificate\ncipher_suite      security_policy    origin_protocol_policy\nbackend_protocol  listener_protocol  frontend_protocol\n```\n\n---\n\n## Detection Logic Summary\n\n| Check | Expected Secure Value | Risky Value |\n|---|---|---|\n| Protocol scheme | `https`, `sftp`, `ftps`, `tls` | `http`, `ftp`, `telnet` |\n| HTTPS enforcement flag | `true` / `Enabled` | `false` / `Disabled` |\n| TLS minimum version | `TLS1.2` or `TLS1.3` | `TLS1.0`, `TLS1.1`, or absent |\n| SSL required on DB | `true` / `Enabled` | `false` / `Disabled` |\n| Transit encryption | `Enabled` / `true` | `Disabled` / `false` / absent |\n| HTTP redirect rule | Present and active | Absent or bypassed |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\n# Rule 1: Detect insecure protocol URLs in attribute values (http://, ftp://, telnet://)\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(http|ftp|telnet)://\", attr.value.value)\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Insecure protocol URL detected. Use HTTPS or encrypted alternatives. (CWE-319)\"\n    }\n}\n\n# Rule 2: Security enforcement boolean attributes set to false\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(https_only|enable_https|require_ssl|force_ssl|transit_encryption_enabled|secure_transfer_required|enable_https_traffic_only|require_secure_transfer|in_flight_encryption|enforce_https|require_secure_transport|redirect_http_to_https)\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Encryption-in-transit is disabled. Ensure encrypted communication is enforced. (CWE-319)\"\n    }\n}\n\n# Rule 3: SSL/TLS/encryption explicitly disabled via string value\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(ssl_enforcement|ssl_mode|transit_encryption_mode|tls_enforcement|encryption_in_transit|transit_encryption|ssl_policy)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(disabled|disable|false|no|none|off)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - SSL/TLS or encryption is explicitly disabled. (CWE-319)\"\n    }\n}\n\n# Rule 4: Weak TLS versions configured\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(tls_version|minimum_tls|ssl_protocol)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(TLS1\\\\.0|TLS1\\\\.1|TLSv1\\\\.0|TLSv1\\\\.1|TLS10|TLS11)\", attr.value.value)\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Weak TLS version configured. Use TLS 1.2 or higher. (CWE-319)\"\n    }\n}\n\n# Rule 5: Insecure protocol in protocol-type attributes\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(listener_protocol|frontend_protocol|backend_protocol|endpoint_protocol|origin_protocol_policy)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(HTTP|FTP|TELNET|http-only|http_only)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Insecure protocol configured for communication endpoint. (CWE-319)\"\n    }\n}\n\n# Rule 6: Insecure or allow_http flags explicitly set to true\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)(^insecure$|allow_http$)\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == true\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Insecure or plaintext communication explicitly enabled. (CWE-319)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T21:40:22.767865+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 15926,
+    "output_tokens_total": 8889,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}

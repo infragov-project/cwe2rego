@@ -1,0 +1,59 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T21:44:15.282381+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "no_semantic_check_test",
+  "rule_id": "cwe_327",
+  "type_name": "sec_weak_crypt",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001/cwe_327.rego",
+  "condition": "# CWE-327: Use of a Broken or Risky Cryptographic Algorithm \u2014 IaC Detection Guide\n\n## Core Weaknesses to Detect in IaC Scripts\n\n---\n\n### 1. **Deprecated or Weak Encryption Algorithm Specification**\nDirectly naming known-broken algorithms in configuration blocks.\n\n**Keywords / Attributes / Fields:**\n- `algorithm`, `encryption_algorithm`, `cipher`, `cipher_suite`\n- Values: `DES`, `3DES`, `RC2`, `RC4`, `RC5`, `MD5`, `SHA1`, `SHA-1`, `IDEA`, `Blowfish`, `TEA`\n- `ssl_policy`, `security_policy`, `tls_policy`\n- Values containing: `TLSv1`, `TLSv1.0`, `TLSv1.1`, `SSLv2`, `SSLv3`\n\n---\n\n### 2. **Weak or Obsolete Hashing Configuration**\nUsing hashing algorithms that are cryptographically broken.\n\n**Keywords / Attributes / Fields:**\n- `hash_algorithm`, `digest_algorithm`, `checksum_algorithm`\n- `signing_algorithm`, `signature_algorithm`\n- Values: `MD4`, `MD5`, `SHA1`, `SHA-1`, `RIPEMD`, `HMAC-MD5`, `HMAC-SHA1`\n- `integrity_check`, `verification_algorithm`\n\n---\n\n### 3. **Insecure TLS/SSL Protocol Version Enablement**\nAllowing legacy protocol versions that have known vulnerabilities.\n\n**Keywords / Attributes / Fields:**\n- `min_protocol_version`, `minimum_protocol_version`, `ssl_protocol`\n- `protocol_version`, `tls_version`, `ssl_version`\n- `enabled_protocols`, `allowed_protocols`, `supported_protocols`\n- Values: `SSLv2`, `SSLv3`, `TLSv1.0`, `TLSv1.1`, `1.0`, `1.1`\n- `insecure_ssl`, `disable_tls_validation`, `legacy_endpoint`\n\n---\n\n### 4. **Weak Cipher Suite Enablement**\nPermitting cipher suites that offer insufficient protection.\n\n**Keywords / Attributes / Fields:**\n- `cipher_suites`, `allowed_ciphers`, `enabled_ciphers`, `cipher_list`\n- Values containing: `NULL`, `EXPORT`, `ANON`, `RC4`, `DES`, `3DES`, `MD5`, `aNULL`, `eNULL`\n- `custom_cipher_policy`, `cipher_preference`\n- `predefined_cipher_policy` set to non-modern values\n\n---\n\n### 5. **Insufficient Key Length Configuration**\nSpecifying key sizes below currently acceptable security thresholds.\n\n**Keywords / Attributes / Fields:**\n- `key_size`, `key_length`, `key_bits`, `rsa_bits`, `modulus_length`\n- `dh_param_bits`, `ecdh_bits`, `key_algorithm`\n- Values: RSA < `2048`, DSA < `2048`, ECC < `224`, DH < `2048`\n- `generate_key_pair`, `key_spec`, `key_strength`\n\n---\n\n### 6. **Storage Encryption Using Weak Algorithms**\nCloud storage or disk encryption configured with non-standard algorithms.\n\n**Keywords / Attributes / Fields:**\n- `encryption_type`, `server_side_encryption`, `sse_algorithm`\n- `kms_key_algorithm`, `volume_encryption`, `disk_encryption`\n- Values: `AES128` (where AES256 is expected), `DES`, `3DES`\n- `default_encryption`, `encryption_at_rest`\n- `storage_class` combined with weak or absent encryption settings\n\n---\n\n### 7. **Insecure VPN or Tunnel Cryptographic Settings**\nVPN configurations referencing deprecated IKE, ESP, or AH proposals.\n\n**Keywords / Attributes / Fields:**\n- `ike_version`, `ike_policy`, `ipsec_policy`, `phase1_config`, `phase2_config`\n- `encryption_algorithms`, `integrity_algorithms`, `dh_group`\n- Values: `DES`, `3DES`, `MD5`, `SHA1`, `group1`, `group2`, `group5`\n- `pfs_group`, `transform_set`, `security_association`\n- `tunnel_options`, `vpn_connection_type`\n\n---\n\n### 8. **Certificate and PKI Configuration Using Weak Algorithms**\nCertificates issued or validated using outdated signature schemes.\n\n**Keywords / Attributes / Fields:**\n- `signature_algorithm`, `certificate_algorithm`, `cert_type`\n- `ssl_certificate`, `tls_certificate`, `acm_certificate`\n- Values: `sha1WithRSAEncryption`, `md5WithRSAEncryption`\n- `key_algorithm` set to `RSA` with `key_size` below threshold\n- `self_signed`, `certificate_transparency`\n\n---\n\n### 9. **Database Encryption Algorithm Weakness**\nManaged database services configured with legacy or substandard encryption.\n\n**Keywords / Attributes / Fields:**\n- `storage_encrypted`, `encryption_at_rest_enabled`\n- `parameter_group`, `ssl_mode`, `require_ssl`\n- `tde_credential`, `transparent_data_encryption`\n- Values referencing outdated algorithm families\n\n---\n\n### 10. **Absence of Encryption Enforcement (Implicit Weak Posture)**\nWhen no encryption or algorithm is specified, defaults may be insecure.\n\n**Keywords / Attributes / Fields:**\n- `encrypt` or `encryption_enabled` set to `false`, `no`, `0`, `disabled`\n- Missing `kms_key_id`, `key_arn`, or `encryption_key` in sensitive resource blocks\n- `plaintext`, `unencrypted`, `http` (non-HTTPS) endpoints\n- `insecure_transport` set to `true`\n- `skip_final_snapshot` combined with no encryption settings\n\n---\n\n## Summary Table\n\n| Weakness Category | Key Indicator Patterns |\n|---|---|\n| Broken Hash Algorithm | `MD5`, `SHA1`, `SHA-1` in algorithm fields |\n| Deprecated Cipher | `RC4`, `DES`, `3DES`, `NULL`, `EXPORT` in cipher fields |\n| Legacy TLS/SSL | `SSLv2/3`, `TLSv1.0/1.1` in protocol version fields |\n| Short Key Length | `key_bits` or `key_size` below 2048 (RSA/DSA) or 256 (AES) |\n| Weak VPN Proposal | `MD5`, `SHA1`, `group1/2/5`, `DES/3DES` in IKE/IPSec settings |\n| No Encryption Enforced | `encrypted = false`, absent `kms_key_id` on sensitive resources |\n| Weak PKI Signature | `sha1WithRSAEncryption`, `md5WithRSAEncryption` in cert configs |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(algorithm|cipher|sse_algorithm|kms_key_algorithm|hash_algorithm|digest_algorithm|signing_algorithm|signature_algorithm|certificate_algorithm|encryption_type|integrity_algorithm|dh_group|pfs_group)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(DES|3DES|RC2|RC4|RC5|MD5|SHA-?1|IDEA|Blowfish|TEA|MD4|RIPEMD|HMAC-MD5|HMAC-SHA1|sha1WithRSAEncryption|md5WithRSAEncryption|AES128|group1|group2|group5)$\", attr.value.value)\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of a broken or risky cryptographic algorithm - Avoid using deprecated or weak cryptographic algorithms. (CWE-327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(min_protocol_version|minimum_protocol_version|ssl_protocol|protocol_version|tls_version|ssl_version|enabled_protocols|allowed_protocols|supported_protocols|ssl_policy|security_policy|tls_policy)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(SSLv2|SSLv3|TLSv1\\\\.0|TLSv1\\\\.1|^TLSv1$|^1\\\\.0$|^1\\\\.1$)\", attr.value.value)\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of insecure TLS/SSL protocol version - Avoid enabling deprecated TLS/SSL protocol versions. (CWE-327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(cipher_suites|allowed_ciphers|enabled_ciphers|cipher_list|cipher_preference|custom_cipher_policy)\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)(NULL|EXPORT|ANON|RC4|\\\\bDES\\\\b|3DES|\\\\bMD5\\\\b|aNULL|eNULL)\", attr.value.value)\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of weak cipher suite - Avoid enabling cipher suites with known weaknesses such as NULL, EXPORT, RC4, DES or MD5. (CWE-327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(key_size|key_length|key_bits|rsa_bits|modulus_length|dh_param_bits)\", attr.name)\n    attr.value.ir_type == \"Integer\"\n    attr.value.value < 2048\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Insufficient cryptographic key length - Key sizes below 2048 bits are considered insecure for RSA and DSA. (CWE-327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(^encrypt$|encryption_enabled|storage_encrypted|encryption_at_rest_enabled)\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Encryption is explicitly disabled - Sensitive resources must always have encryption enabled. (CWE-327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(\"(?i)(insecure_ssl|disable_tls_validation|insecure_transport)\", attr.name)\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == true\n\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Insecure transport or TLS validation bypass is enabled - This undermines cryptographic protections in transit. (CWE-327)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T21:44:15.430449+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 18510,
+    "output_tokens_total": 9688,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}
