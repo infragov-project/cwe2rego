@@ -1,0 +1,114 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-21T16:54:06.229575+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/summary_history_test/glm-5/runs/run_001",
+  "experiment_name": "summary_history_test",
+  "rule_id": "cwe_250",
+  "type_name": "sec_def_admin",
+  "model_used": "zai.glm-5",
+   "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/summary_history_test/glm-5/runs/run_001/cwe_250.rego",
+  "condition": "Based on the provided JSON for CWE-250 (\"Execution with Unnecessary Privileges\"), here is the analysis for detecting this weakness in Infrastructure as Code (IaC) scripts.\n\n### Necessary Weakness to Detect\n\nIn the context of Infrastructure as Code, the necessary weakness to detect is the **Explicit Configuration of Elevated Privileges** (often categorized under the broader principle of **Least Privilege Violation**).\n\nWhile CWE-250 is a base weakness, in IaC it typically manifests as a misconfiguration where a resource is granted permissions or execution contexts that exceed the functional requirements of the workload. The detection focuses on identifying instances where the \"default\" or \"configured\" state is overly permissive (e.g., running as a superuser or being granted administrative policies) when a more restrictive state should have been defined.\n\n### Keywords, Attributes, and Fields Implying the Weakness\n\nThe following indicators imply CWE-250 in IaC scripts across various technologies. These suggest that a resource, container, or service is operating with unnecessary privileges.\n\n#### 1. Execution Context Identifiers\nThese fields define the user or system identity under which a process runs.\n*   **Keywords:** `run_as`, `user`, `run_as_user`, `uid`, `gid`, `effective_user`, `service_account`.\n*   **Implication Values:**\n    *   `root` or `0` (Numeric ID for superuser).\n    *   `administrator` or `system`.\n    *   `all_users` or `*` (Implying execution by any high-privilege entity).\n\n#### 2. Privilege Escalation Flags\nThese attributes control whether a process can gain more privileges than it initially started with.\n*   **Keywords:** `allow_privilege_escalation`, `no_new_privs`, `escalate`.\n*   **Implication Values:**\n    *   `true` (specifically when not strictly required).\n    *   `false` (for mitigation attributes like `no_new_privs` being disabled).\n\n#### 3. Administrative Capabilities\nThese fields grant specific system-level powers usually reserved for the host operating system administrator.\n*   **Keywords:** `capabilities`, `add_capabilities`, `sysctls`, `privileged`.\n*   **Implication Values:**\n    *   `SYS_ADMIN`, `NET_ADMIN`, `ALL` (Indicating full system control).\n    *   `true` (for boolean `privileged` flags).\n\n#### 4. Permission Policy Scopes\nThese define the scope of actions an identity can perform, often within cloud providers.\n*   **Keywords:** `policy`, `actions`, `permissions`, `effect`, `resources`, `role_definition`.\n*   **Implication Values:**\n    *   `*` (Wildcard indicating \"all actions\" or \"all resources\").\n    *   `AdministratorAccess` or similar high-level built-in roles assigned to low-level compute resources.\n\n#### 5. Security Context Controls\nThese are generic fields used to define the security posture of a workload.\n*   **Keywords:** `security_context`, `run_as_group`, `fs_group`.\n*   **Implication Values:** Values indicating ownership by privileged groups (e.g., `root` group ID `0`).",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nuser_context_attrs := {\"run_as_user\", \"user\", \"run_as\", \"uid\", \"gid\", \"effective_user\", \"service_account\"}\nprivilege_flag_attrs := {\"privileged\", \"allow_privilege_escalation\"}\ncapability_attrs := {\"capabilities\", \"add_capabilities\", \"sysctls\"}\npolicy_attrs := {\"actions\", \"permissions\", \"policy\", \"role_definition\"}\n\nroot_ids := {\"root\", \"0\"}\ndangerous_perms := {\"*\", \"all\", \"sys_admin\", \"net_admin\", \"administratoraccess\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    node := glitch_lib.all_atomic_units(parent)[_]\n    attr := glitch_lib.all_attributes(node)[_]\n\n    check_unnecessary_privilege(attr)\n\n    result := {{\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": sprintf(\"Execution with Unnecessary Privileges - Attribute '%s' grants excessive permissions. (CWE-250)\", [attr.name])\n    }}\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == user_context_attrs[_]\n    is_root(attr.value)\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == privilege_flag_attrs[_]\n    is_true(attr.value)\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == capability_attrs[_]",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "1 error occurred during loading: /home/daniel/InfraGov/cwe2rego/generated_rego/summary_history_test/glm-5/runs/run_001/cwe_250.rego:41: rego_parse_error: unexpected eof token: expected \\n or ; or }\n\t    attr.name == capability_attrs[_]\n\t                                   ^\n"
+        }
+      ],
+      "status": "syntactic_error",
+      "nl_error_summary": "Summary**\n\nThe rule attempts to identify infrastructure misconfigurations related to unnecessary privileges (CWE-250) by checking if specific attributes exist within configuration blocks. The OPA parser raised a `rego_parse_error: unexpected eof token` because the final rule definition, `check_unnecessary_privilege(attr)`, is syntactically incomplete. To fix this, a closing curly brace `}` must be added to the end of the file to properly terminate the rule body."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nuser_context_attrs := {\"run_as_user\", \"user\", \"run_as\", \"uid\", \"gid\", \"effective_user\", \"service_account\"}\nprivilege_flag_attrs := {\"privileged\", \"allow_privilege_escalation\"}\ncapability_attrs := {\"capabilities\", \"add_capabilities\", \"sysctls\"}\npolicy_attrs := {\"actions\", \"permissions\", \"policy\", \"role_definition\"}\n\nroot_ids := {\"root\", \"0\"}\ndangerous_perms := {\"*\", \"all\", \"sys_admin\", \"net_admin\", \"administratoraccess\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    node := glitch_lib.all_atomic_units(parent)[_]\n    attr := glitch_lib.all_attributes(node)[_]\n\n    check_unnecessary_privilege(attr)\n\n    result := {{\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": sprintf(\"Execution with Unnecessary Privileges - Attribute '%s' grants excessive permissions. (CWE-250)\", [attr.name])\n    }}\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == user_context_attrs[_]\n    is_root(attr.value)\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == privilege_flag_attrs[_]\n    is_true(attr.value)\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == capability_attrs[_]\n    has_dangerous_value(attr.value)\n}\n\ncheck_unnecessary_privilege(attr) {\n    attr.name == policy_attrs[_]\n    has_dangerous_value(attr.value)\n}\n\nis_root(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == \"root\"\n}\n\nis_root(value) {\n    value.ir_type == \"Integer\"\n    value.value == 0\n}\n\nis_true(value) {\n    value.ir_type == \"Boolean\"\n    value.value == true\n}\n\nhas_dangerous_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == lower(dangerous_perms[_])\n}\n\nhas_dangerous_value(value) {\n    value.ir_type == \"Array\"\n    item := value.value[_]\n    item.ir_type == \"String\"\n    lower(item.value) == lower(dangerous_perms[_])\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            7
+          ],
+          "false_positives": [],
+          "file_name": "Shwetas25_ansiblenew-language_features-prompts.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 7, \"code\": \"remote_user: root\", \"name\": \"remote_user\", \"value\": {\"ir_type\": \"String\", \"line\": 7, \"code\": \"root\", \"value\": \"root\"}}], \"name\": \"\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/Shwetas25_ansiblenew-language_features-prompts.yml\", \"type\": \"block\", \"lines\": 60}], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/Shwetas25_ansiblenew-language_features-prompts.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/Shwetas25_ansiblenew-language_features-prompts.yml\", \"type\": \"script\", \"lines\": 60}",
+          "ir_node_reduction_percentage": 95.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            9
+          ],
+          "false_positives": [],
+          "file_name": "shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 6, \"code\": \"  vars_files: \\n    - variables.yml\\n  # SSH username used to connect to remote host\\n  \", \"name\": \"vars_files\", \"value\": {\"ir_type\": \"Array\", \"line\": 7, \"code\": \"    - variables.yml\\n  # SSH username used to connect to remote host\\n  \", \"value\": [{\"ir_type\": \"String\", \"line\": 7, \"code\": \"variables.yml\", \"value\": \"variables.yml\"}]}}, {\"ir_type\": \"Attribute\", \"line\": 9, \"code\": \"remote_user: root\", \"name\": \"remote_user\", \"value\": {\"ir_type\": \"String\", \"line\": 9, \"code\": \"root\", \"value\": \"root\"}}], \"name\": \"\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml\", \"type\": \"block\", \"lines\": 15}], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml\", \"type\": \"script\", \"lines\": 15}",
+          "ir_node_reduction_percentage": 65.0
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            10
+          ],
+          "false_positives": [],
+          "file_name": "github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 2, \"code\": \"define contrail::lib::check_os_master(\\n  $openstack_master,\\n  $host_control_ip,\\n  $contrail_logoutput = false,\\n) {\\n\\n  if ($host_control_ip != $openstack_master) {\\n    exec { 'check_galera_on_master' :\\n      command   => \\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\",\\n      unless    => 'grep -qx check_galera_on_master /etc/contrail/contrail_openstack_exec.out',\\n      provider  => shell,\\n      logoutput => $contrail_logoutput\\n    }\\n  }\\n}\", \"statements\": [{\"ir_type\": \"ConditionalStatement\", \"line\": 8, \"code\": \"\", \"statements\": [{\"ir_type\": \"AtomicUnit\", \"line\": 9, \"code\": \"exec { 'check_galera_on_master' :\\n      command   => \\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\",\\n      unless    => 'grep -qx check_galera_on_master /etc/contrail/contrail_openstack_exec.out',\\n      provider  => shell,\\n      logoutput => $contrail_logoutput\\n    }\", \"statements\": [], \"name\": null, \"type\": \"exec\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 10, \"code\": \"command   => \\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\"\", \"name\": \"command\", \"value\": {\"ir_type\": \"Sum\", \"line\": 10, \"code\": \"\\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\"\", \"left\": {\"ir_type\": \"Sum\", \"line\": 10, \"code\": \"\\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\"\", \"left\": {\"ir_type\": \"String\", \"line\": 10, \"code\": \"\\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\"\", \"value\": \"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@\"}, \"right\": {\"ir_type\": \"VariableReference\", \"line\": 10, \"code\": \"openstack_master\", \"value\": \"openstack_master\"}, \"type\": \"sum\"}, \"right\": {\"ir_type\": \"String\", \"line\": 10, \"code\": \"\\\"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@${openstack_master} \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\\\"\", \"value\": \" \\\\'cat /etc/contrail/contrail_openstack_exec.out | grep exec_vnc_galera\\\\' && echo check_galera_on_master >> /etc/contrail/contrail_openstack_exec.out\"}, \"type\": \"sum\"}}]}], \"condition\": null, \"type\": \"IF\", \"is_default\": false, \"is_top\": true, \"else_statement\": null}], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"contrail::lib::check_os_master\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp\", \"type\": \"definition\", \"lines\": 17}], \"attributes\": [], \"name\": \"github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/github-Juniper@contrail-puppet-contrail-environment-modules-contrail-manifests-lib-check_os_master.pp\", \"type\": \"script\", \"lines\": 17}",
+          "ir_node_reduction_percentage": 64.3
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": " rule attempts to detect the assignment of unnecessary privileges, such as running processes as root or enabling dangerous capabilities, by checking specific infrastructure attributes. It missed the Ansible `remote_user: root` configurations because the attribute name `remote_user` was omitted from the `user_context_attrs` set, preventing the rule from recognizing it as a user context field. Additionally, the rule failed to detect the privilege escalation in the Puppet `ssh root@...` command because it does not parse generic `command` string contents for embedded user contexts and lacks logic to handle the `Sum` IR type used for string concatenation."
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nuser_context_attrs := {\"run_as\", \"user\", \"run_as_user\", \"uid\", \"gid\", \"effective_user\", \"service_account\", \"remote_user\", \"become_user\", \"owner\"}\nprivilege_escalation_attrs := {\"privileged\", \"allow_privilege_escalation\", \"escalate\", \"become\"}\nmitigation_attrs := {\"no_new_privs\"}\ncapability_attrs := {\"capabilities\", \"add_capabilities\", \"sysctls\"}\npolicy_attrs := {\"policy\", \"actions\", \"permissions\", \"role_definition\"}\ncommand_attrs := {\"command\", \"cmd\", \"exec\", \"inline\"}\n\ndangerous_capabilities := {\"sys_admin\", \"net_admin\", \"all\", \"*\", \"administratoraccess\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    \n    attr := glitch_lib.all_attributes(parent)[_]\n\n    check_cwe250_violation(attr)\n\n    result := {{\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": sprintf(\"Execution with Unnecessary Privileges - Attribute '%s' grants excessive permissions. (CWE-250)\", [attr.name])\n    }}\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == user_context_attrs[_]\n    is_root_user(attr.value)\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == privilege_escalation_attrs[_]\n    glitch_lib.traverse(attr.value, true)\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == mitigation_attrs[_]\n    glitch_lib.traverse(attr.value, false)\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == capability_attrs[_]\n    glitch_lib.traverse(attr.value, dangerous_capabilities)\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == policy_attrs[_]\n    glitch_lib.traverse(attr.value, \"*\")\n}\n\ncheck_cwe250_violation(attr) {\n    attr.name == command_attrs[_]\n    glitch_lib.traverse(attr.value, \"(?i).*root@.*\")\n}\n\nis_root_user(value) {\n    glitch_lib.traverse(value, \"root\")\n}\n\nis_root_user(value) {\n    glitch_lib.traverse(value, \"0\")\n}\n\nis_root_user(value) {\n    value.ir_type == \"Integer\"\n    value.value == 0\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 3,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-21T17:04:47.990084+00:00",
+    "elapsed_time": "10m41s"
+  },
+  "llm_usage": {
+    "calls": 6,
+    "input_tokens_total": 37273,
+    "output_tokens_total": 35860,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}

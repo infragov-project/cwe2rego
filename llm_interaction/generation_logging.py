@@ -49,9 +49,10 @@ def model_to_directory_name(model: str) -> str:
         model_tail = model.split("/")[-1]
     else:
         # Bedrock format: [geo.]provider.model-name → model-name
-        parts = model.split(".", 2)
+        # Use split(".", 1) so model names with dots (e.g. kimi-k2.5) aren't fragmented
+        parts = model.split(".", 1)
         if len(parts) >= 2 and parts[0] in _BEDROCK_GEO_PREFIXES:
-            parts = parts[1:]
+            parts = parts[1].split(".", 1)
         # drop provider prefix, keep the model name portion
         model_tail = parts[-1] if len(parts) >= 2 else parts[0]
     return sanitize_file_token(model_tail, fallback="model")
