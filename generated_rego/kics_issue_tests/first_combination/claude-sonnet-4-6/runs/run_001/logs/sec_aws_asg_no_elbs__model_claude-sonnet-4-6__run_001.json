@@ -1,0 +1,99 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T19:24:08.582984+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/first_combination/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "first_combination",
+  "rule_id": "sec_aws_asg_no_elbs",
+  "type_name": "sec_aws_asg_no_elbs",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/first_combination/claude-sonnet-4-6/runs/run_001/sec_aws_asg_no_elbs.rego",
+  "condition": "# IaC Weakness: AWS Auto Scaling Group Missing ELB Association\n\n## Weakness Summary\nAWS Auto Scaling Groups (ASGs) without associated Elastic Load Balancers (ELBs) can lead to reduced availability, poor traffic distribution, and degraded application performance.\n\n---\n\n## Detection Criteria\n\n### Resource Types to Target\n- Auto Scaling Group resources\n- Auto Scaling configuration definitions\n\n### Key Keywords & Identifiers\n```\nautoscaling\nauto_scaling_group\nAutoScalingGroup\nlaunch_configuration\nlaunch_template\n```\n\n### Critical Attributes / Fields to Inspect\n```\nload_balancers\nLoadBalancerNames\nload_balancer_names\nelb_names\ntarget_group_arns          # ALB/NLB alternative association\n```\n\n---\n\n## Detection Logic\n\n| Condition | Risk |\n|---|---|\n| `LoadBalancerNames` / `load_balancers` is **absent** | \u26a0\ufe0f High |\n| `LoadBalancerNames` / `load_balancers` is **empty list `[]`** | \u26a0\ufe0f High |\n| `LoadBalancerNames` / `load_balancers` is **null/None** | \u26a0\ufe0f High |\n| `LoadBalancerNames` / `load_balancers` has **at least one valid entry** | \u2705 Compliant |\n\n---\n\n## Additional Signals\n- Missing **health check type** referencing `ELB`\n- `health_check_type` set to `EC2` only (no ELB health checking)\n- Absence of both `load_balancers` **and** `target_group_arns` (covers Classic ELB and ALB/NLB scenarios)",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_asg_no_elbs",
+    "entries_count": 2
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nlb_attr_names := {\"load_balancers\", \"LoadBalancerNames\", \"load_balancer_names\", \"elb_names\"}\ntarget_attr_names := {\"target_group_arns\"}\n\nis_asg_type(t) {\n    regex.match(\"(?i).*(autoscaling|auto_scaling_group).*\", t)\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"Array\"\n    count(attr.value.value) > 0\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"String\"\n    attr.value.value != \"\"\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"VariableReference\"\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"FunctionCall\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_asg_type(node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n\n    not has_valid_attr(attrs, lb_attr_names)\n    not has_valid_attr(attrs, target_attr_names)\n\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group missing ELB association - Auto Scaling Groups should be associated with a Load Balancer for high availability and proper traffic distribution.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            4
+          ],
+          "false_positives": [],
+          "file_name": "positive1.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: elb1\\n  community.aws.ec2_asg:\\n    name: special\\n    load_balancers: []\\n    availability_zones: [ 'eu-west-1a', 'eu-west-1b' ]\\n    launch_config_name: 'lc-1'\\n    min_size: 1\\n    max_size: 10\\n    desired_capacity: 5\\n    vpc_zone_identifier: [ 'subnet-abcd1234', 'subnet-1a2b3c4d' ]\\n    tags:\\n\", \"statements\": [], \"name\": null, \"type\": \"community.aws.ec2_asg\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 4, \"code\": \"load_balancers: []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_asg_no_elbs/positive1.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_asg_no_elbs/positive1.yaml\", \"type\": \"tasks\", \"lines\": 13}",
+          "ir_node_reduction_percentage": 87.5
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule attempted to detect:**\nThe rule aimed to flag Auto Scaling Group resources that lack any load balancer association \u2014 i.e., where attributes like `load_balancers`, `elb_names`, or `target_group_arns` are either absent or empty \u2014 indicating the ASG has no valid ELB/target group configured for traffic distribution.\n\n**What it missed:**\nThe rule failed to flag line 4 (`load_balancers: []`), which is a clear violation: the `load_balancers` attribute is explicitly present but set to an empty array, meaning no ELBs are associated with the ASG.\n\n**Why the logic failed:**\nThe root cause is in `is_asg_type`. The regex `(?i).*(autoscaling|auto_scaling_group).*` only matches strings containing the substrings `autoscaling` or `auto_scaling_group`. The Ansible module type in the IR is `community.aws.ec2_asg`, which uses the abbreviation `asg` \u2014 neither pattern matches it. As a result, the `is_asg_type` check fails immediately, and the rest of the rule never evaluates. The fix would be to extend the regex to also match the abbreviated form, e.g., adding `|ec2_asg` or `|\\basg\\b` as an alternative. Separately, the `has_valid_attr` array check correctly excludes empty arrays (`count > 0`), so that logic would have worked correctly had `is_asg_type` not blocked evaluation first."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nlb_attr_names := {\"load_balancers\", \"LoadBalancerNames\", \"load_balancer_names\", \"elb_names\"}\ntarget_attr_names := {\"target_group_arns\"}\n\nis_asg_type(t) {\n    regex.match(\"(?i).*(autoscal|auto_scaling|_asg).*\", t)\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"Array\"\n    count(attr.value.value) > 0\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"String\"\n    attr.value.value != \"\"\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"VariableReference\"\n}\n\nhas_valid_attr(attrs, names) {\n    attr := attrs[_]\n    names[attr.name]\n    attr.value.ir_type == \"FunctionCall\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_asg_type(node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n\n    not has_valid_attr(attrs, lb_attr_names)\n    not has_valid_attr(attrs, target_attr_names)\n\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group missing ELB association - Auto Scaling Groups should be associated with a Load Balancer for high availability and proper traffic distribution.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            4
+          ],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive1.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: elb1\\n  community.aws.ec2_asg:\\n    name: special\\n    load_balancers: []\\n    availability_zones: [ 'eu-west-1a', 'eu-west-1b' ]\\n    launch_config_name: 'lc-1'\\n    min_size: 1\\n    max_size: 10\\n    desired_capacity: 5\\n    vpc_zone_identifier: [ 'subnet-abcd1234', 'subnet-1a2b3c4d' ]\\n    tags:\\n\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"elb1\", \"value\": \"elb1\"}, \"type\": \"community.aws.ec2_asg\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 4, \"code\": \"load_balancers: []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_asg_no_elbs/positive1.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_asg_no_elbs/positive1.yaml\", \"type\": \"tasks\", \"lines\": 13}",
+          "ir_node_reduction_percentage": 84.4
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was attempting to detect:**\nThe rule tries to flag `community.aws.ec2_asg` (and similar ASG-type) resources that lack a meaningful ELB or target group association \u2014 i.e., resources where the relevant attachment attributes (`load_balancers`, `target_group_arns`, etc.) are either absent, empty, or otherwise non-functional.\n\n**What it missed or incorrectly flagged:**\n- **False positive (line 1):** The rule fires and reports the whole `AtomicUnit` node (which starts at line 1, the task definition), when the resource should not be considered a clean valid configuration \u2014 but the *element* reported is the wrong object.\n- **False negative (line 4):** The actual problematic attribute \u2014 `load_balancers: []` (an explicitly empty array) at line 4 \u2014 is never surfaced as the reported finding location, even though it is the specific evidence of misconfiguration.\n\n**Why the rule logic likely failed:**\nThe result sets `\"element\": node`, which points to the `AtomicUnit` at line 1 rather than to the offending attribute at line 4. The validation framework expects the detected element to reference the specific attribute causing the violation. Additionally, `has_valid_attr` correctly rejects the empty array (`count(attr.value.value) > 0` fails for `[]`), so the rule does fire \u2014 but because it binds `node` rather than the matched attribute in the result, the reported line is wrong (line 1 instead of line 4). The rule needs to surface the specific attribute object (e.g., the `load_balancers: []` attribute) as the result element rather than the parent `AtomicUnit`."
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nlb_attr_names := {\"load_balancers\", \"LoadBalancerNames\", \"load_balancer_names\", \"elb_names\", \"target_group_arns\"}\n\nis_asg_type(t) {\n    regex.match(\"(?i).*(autoscal|auto_scaling|_asg).*\", t)\n}\n\nis_valid_value(value) {\n    value.ir_type == \"Array\"\n    count(value.value) > 0\n}\n\nis_valid_value(value) {\n    value.ir_type == \"String\"\n    value.value != \"\"\n}\n\nis_valid_value(value) {\n    value.ir_type == \"VariableReference\"\n}\n\nis_valid_value(value) {\n    value.ir_type == \"FunctionCall\"\n}\n\nhas_valid_lb_attr(attrs) {\n    attr := attrs[_]\n    lb_attr_names[attr.name]\n    is_valid_value(attr.value)\n}\n\nany_lb_attr_exists(attrs) {\n    attr := attrs[_]\n    lb_attr_names[attr.name]\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_asg_type(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    not has_valid_lb_attr(attrs)\n    any_lb_attr_exists(attrs)\n    attr := attrs[_]\n    lb_attr_names[attr.name]\n    not is_valid_value(attr.value)\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group missing ELB association - Auto Scaling Groups should be associated with a Load Balancer for high availability and proper traffic distribution.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_asg_type(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    not has_valid_lb_attr(attrs)\n    not any_lb_attr_exists(attrs)\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group missing ELB association - Auto Scaling Groups should be associated with a Load Balancer for high availability and proper traffic distribution.\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 3,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T19:27:00.353074+00:00",
+    "elapsed_time": "2m51s"
+  },
+  "llm_usage": {
+    "calls": 6,
+    "input_tokens_total": 24602,
+    "output_tokens_total": 16998,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 12084
+  }
+}

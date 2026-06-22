@@ -2,14 +2,14 @@ package glitch
 
 import data.glitch_lib
 
-kms_types := {"aws_kms_key", "aws_kms", "kms_key", "kms", "customer_master_key", "cmk", "key_management_service"}
+kms_keywords := ["kms", "key", "customer_master_key", "cmk", "master_key"]
 
-enabled_attr_names := {"is_enabled", "enabled", "key_enabled", "enable", "state", "key_state"}
+enabled_attr_names := {"enabled", "is_enabled"}
 
-deletion_attr_names := {"pending_window", "deletion_window_in_days", "pending_window_in_days", "pending_deletion", "deletion_period", "key_deletion_window"}
+deletion_attr_names := {"deletion_window_in_days", "pending_window", "pending_window_in_days"}
 
 is_kms_resource(node) {
-    glitch_lib.contains(node.type, kms_types[_])
+    glitch_lib.contains(node.type, kms_keywords[_])
 }
 
 is_disabled(attr) {
@@ -19,12 +19,17 @@ is_disabled(attr) {
 
 is_disabled(attr) {
     attr.value.ir_type == "String"
-    regex.match("(?i)^(false|disabled|inactive)$", attr.value.value)
+    lower(attr.value.value) == "false"
 }
 
-has_enabled_attribute(attrs) {
-    attr := attrs[_]
-    attr.name == enabled_attr_names[_]
+is_disabled(attr) {
+    attr.value.ir_type == "String"
+    lower(attr.value.value) == "no"
+}
+
+is_disabled(attr) {
+    attr.value.ir_type == "Integer"
+    attr.value.value == 0
 }
 
 Glitch_Analysis[result] {
@@ -32,10 +37,12 @@ Glitch_Analysis[result] {
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
+
     is_kms_resource(node)
 
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
+
     attr.name == enabled_attr_names[_]
     is_disabled(attr)
 
@@ -43,7 +50,7 @@ Glitch_Analysis[result] {
         "type": "sec_aws_cmk_unusable",
         "element": attr,
         "path": parent.path,
-        "description": "AWS KMS Customer Master Key (CMK) is disabled - Disabled CMKs will cause encryption/decryption operations to fail for dependent services."
+        "description": "KMS Customer Master Key is disabled - Disabled cryptographic keys may represent orphaned or improperly lifecycle-managed resources."
     }
 }
 
@@ -52,34 +59,42 @@ Glitch_Analysis[result] {
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
-    is_kms_resource(node)
 
-    attrs := glitch_lib.all_attributes(node)
-    not has_enabled_attribute(attrs)
-
-    result := {
-        "type": "sec_aws_cmk_unusable",
-        "element": node,
-        "path": parent.path,
-        "description": "AWS KMS Customer Master Key (CMK) lacks an explicit enabled state - CMKs should explicitly define their enabled state to prevent unintended access failures."
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
     is_kms_resource(node)
 
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
+
     attr.name == deletion_attr_names[_]
+    attr.value.ir_type == "Integer"
 
     result := {
         "type": "sec_aws_cmk_unusable",
         "element": attr,
         "path": parent.path,
-        "description": "AWS KMS Customer Master Key (CMK) is scheduled for deletion - CMKs with a deletion window will be permanently deleted, causing irreversible data loss."
+        "description": "KMS Customer Master Key is scheduled for deletion - Keys with a deletion window defined indicate the key is being decommissioned and may no longer be available for cryptographic operations."
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+
+    is_kms_resource(node)
+
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+
+    attr.name == "key_state"
+    attr.value.ir_type == "String"
+    lower(attr.value.value) == {"disabled", "pendingdeletion"}[_]
+
+    result := {
+        "type": "sec_aws_cmk_unusable",
+        "element": attr,
+        "path": parent.path,
+        "description": "KMS Customer Master Key is in an unusable state - Keys that are disabled or pending deletion represent a security and operational risk due to improper key lifecycle management."
     }
 }

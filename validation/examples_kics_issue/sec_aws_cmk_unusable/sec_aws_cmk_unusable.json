@@ -1,6 +1,12 @@
 {
     "examples": [
         {
+            "file": "positive1.yaml",
+            "lines": [
+                6
+            ]
+        },
+        {
             "file": "positive2.yaml",
             "lines": [
                 6
