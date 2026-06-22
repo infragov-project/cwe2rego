@@ -1,0 +1,59 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T21:49:10.491996+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "no_semantic_check_test",
+  "rule_id": "cwe_546",
+  "type_name": "sec_susp_comm",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001/cwe_546.rego",
+  "condition": "# CWE-546: Suspicious Comment Detection in Infrastructure as Code\n\n## Core Weakness Overview\n\nIn IaC scripts, suspicious comments signal deferred security decisions, disabled controls, or incomplete configurations that may never be revisited, making them a direct risk indicator during infrastructure provisioning and deployment.\n\n---\n\n## Necessary Weaknesses to Detect\n\n### 1. **Deferred Security Configuration**\nComments indicating that security settings are intentionally incomplete or postponed.\n\n**Keywords/Patterns:**\n```\nTODO, FIXME, LATER, WIP, PENDING, REVISIT, REVIEW LATER\n```\n\n---\n\n### 2. **Acknowledged Insecure Workarounds**\nComments admitting known-bad configurations used as temporary bypasses.\n\n**Keywords/Patterns:**\n```\nHACK, WORKAROUND, KLUDGE, TEMP, TEMPORARY, SHORTCUT,\nBAND-AID, QUICK-FIX, NOT IDEAL, DIRTY FIX\n```\n\n---\n\n### 3. **Known Bug or Vulnerability Acknowledgment**\nComments explicitly flagging existing defects left unresolved.\n\n**Keywords/Patterns:**\n```\nBUG, XXX, BROKEN, DEFECT, FLAW, ISSUE, PROBLEM,\nKNOWN ISSUE, SECURITY ISSUE, VULNERABILITY\n```\n\n---\n\n### 4. **Disabled or Bypassed Security Controls**\nComments near disabled encryption, authentication, or access controls.\n\n**Keywords/Patterns:**\n```\nDISABLED, COMMENTED OUT, BYPASS, SKIP, IGNORE,\nTURNED OFF, NOT ENFORCED, REMOVE BEFORE PROD,\nDO NOT USE IN PRODUCTION, DEV ONLY, TESTING ONLY,\nNOT FOR PROD\n```\n\n---\n\n### 5. **Hard-coded or Placeholder Sensitive Values**\nComments acknowledging temporary credentials, tokens, or secrets.\n\n**Keywords/Patterns:**\n```\nREPLACE THIS, CHANGE ME, PLACEHOLDER, HARD-CODED,\nDEFAULT PASSWORD, DUMMY, FAKE, EXAMPLE ONLY,\nFILL IN, INSERT REAL\n```\n\n---\n\n### 6. **Incomplete Access Control Definitions**\nComments indicating permissions, roles, or policies are over-permissive pending refinement.\n\n**Keywords/Patterns:**\n```\nTOO PERMISSIVE, OPEN FOR NOW, RESTRICT LATER,\nTIGHTEN THIS, WIDE OPEN, OVERLY BROAD, LOCK DOWN LATER\n```\n\n---\n\n## Attributes and Fields Commonly Associated\n\n| Category | Fields/Attributes to Monitor Near Comments |\n|---|---|\n| **Secrets Management** | `password`, `secret`, `token`, `api_key`, `private_key`, `credentials` |\n| **Network Access** | `ingress`, `egress`, `port`, `cidr`, `firewall_rule`, `security_group` |\n| **Encryption** | `encryption`, `kms_key`, `ssl`, `tls`, `certificate`, `encrypt_at_rest` |\n| **Authentication** | `auth`, `mfa`, `iam_role`, `policy`, `access_control`, `permissions` |\n| **Logging/Monitoring** | `logging`, `audit`, `monitoring`, `cloudtrail`, `flow_logs` |\n| **Exposure** | `public`, `expose`, `open`, `allow_all`, `unrestricted` |\n\n---\n\n## Comment Syntax to Scan Across IaC Formats\n\n```\n#          \u2192 YAML, HCL, Shell-based IaC\n//         \u2192 HCL, JSON5\n/* ... */  \u2192 HCL multi-line\n<!-- -->   \u2192 XML/markup-based IaC\n--         \u2192 SQL-adjacent DSLs\n```\n\n---\n\n## Detection Logic Summary\n\n```\nIF comment_marker EXISTS\n  AND comment_text CONTAINS [suspicious_keyword]\n  AND adjacent_field IN [security-sensitive attributes]\nTHEN FLAG as CWE-546\n```\n\n> **Key Principle:** Suspicious comments adjacent to security-critical fields (encryption, access, authentication) carry **higher severity** than those in non-sensitive blocks.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_comment_pattern := \"(?i)(TODO|FIXME|LATER|WIP|PENDING|REVISIT|HACK|WORKAROUND|KLUDGE|\\\\bTEMP\\\\b|TEMPORARY|\\\\bBUG\\\\b|XXX|BROKEN|DEFECT|\\\\bFLAW\\\\b|VULNERABILITY|SECURITY ISSUE|KNOWN ISSUE|DISABLED|BYPASS|\\\\bSKIP\\\\b|\\\\bIGNORE\\\\b|TURNED OFF|NOT ENFORCED|REMOVE BEFORE PROD|DEV ONLY|TESTING ONLY|NOT FOR PROD|REPLACE THIS|CHANGE ME|PLACEHOLDER|HARD-CODED|HARDCODED|DEFAULT PASSWORD|\\\\bDUMMY\\\\b|\\\\bFAKE\\\\b|EXAMPLE ONLY|FILL IN|INSERT REAL|TOO PERMISSIVE|OPEN FOR NOW|RESTRICT LATER|TIGHTEN THIS|WIDE OPEN|OVERLY BROAD|LOCK DOWN LATER|SHORTCUT|QUICK.FIX|BAND.AID|DIRTY FIX|NOT IDEAL)\"\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n    regex.match(suspicious_comment_pattern, comment.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comments indicating deferred security decisions, disabled controls, acknowledged insecure workarounds, or incomplete configurations that may never be revisited. (CWE-546)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T21:49:10.632631+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 8846,
+    "output_tokens_total": 5429,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}

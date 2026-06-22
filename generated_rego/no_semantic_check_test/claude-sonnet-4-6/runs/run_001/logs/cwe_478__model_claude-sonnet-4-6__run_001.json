@@ -1,0 +1,59 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T21:47:55.777085+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "no_semantic_check_test",
+  "rule_id": "cwe_478",
+  "type_name": "sec_no_default_switch",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/no_semantic_check_test/claude-sonnet-4-6/runs/run_001/cwe_478.rego",
+  "condition": "# CWE-478: Missing Default Case in Multiple Condition Expression \u2014 IaC Detection Guide\n\n## Core Weakness Indicators\n\n### 1. Conditional Logic Without Fallback Handling\nConditional expressions that enumerate only specific expected values but lack a catch-all or fallback branch.\n\n**Keywords/Attributes to Watch:**\n- `condition`, `if`, `when`, `unless`, `equals`, `match`\n- Absence of: `else`, `otherwise`, `default`, `fallback`, `catch`\n- Inline ternary-style expressions with no else path\n\n---\n\n### 2. Rule Sets Without a Default/Catch-All Rule\nCollections of rules that only cover specific known cases, leaving unmatched inputs unhandled.\n\n**Keywords/Attributes to Watch:**\n- `rules`, `conditions`, `actions`, `policies`\n- `priority`, `order`, `rank` \u2014 numbered rules with no terminal default\n- Missing: terminal rule with wildcard (`*`, `0.0.0.0/0`, `any`, `_`)\n- `listener_rules`, `routing_rules`, `forwarding_rules` without `default_action`\n- `ingress`/`egress` blocks without explicit deny-all fallback\n\n---\n\n### 3. Lookup / Mapping Functions Without Default Values\nFunctions that map a key to a value without specifying what happens for unrecognized keys.\n\n**Keywords/Attributes to Watch:**\n- `lookup`, `map`, `select`, `find`, `findInMap`, `index`\n- Missing third argument (default value) in lookup-style functions\n- `mapping`, `dictionary`, `translations` without a `default` entry\n\n---\n\n### 4. Variable Validation Without Exhaustive Case Coverage\nInput variable constraints that define allowed values but do not handle values outside the defined set.\n\n**Keywords/Attributes to Watch:**\n- `validation`, `allowed_values`, `constraints`, `enum`, `type`\n- `condition` inside validation blocks with no error/fallback for unlisted values\n- `pattern`, `regex` without a defined behavior for non-matching input\n\n---\n\n### 5. Policy Documents Without Explicit Deny / Default Effect\nPermission or access control policies that only enumerate `Allow` cases without a terminal `Deny` or catch-all.\n\n**Keywords/Attributes to Watch:**\n- `effect`, `action`, `resource`, `principal`, `statement`\n- Absence of a `Deny` statement or wildcard deny at the end\n- `permissions`, `access`, `grant` \u2014 lists with no default-deny fallback\n- `not_action`, `not_resource` without complementary deny logic\n\n---\n\n### 6. State / Workflow Definitions Without Default Transitions\nFinite state machines or workflow engines where some input states or transitions are unaccounted for.\n\n**Keywords/Attributes to Watch:**\n- `states`, `transitions`, `choices`, `events`, `triggers`\n- `next`, `goto`, `on` \u2014 transition directives covering only specific cases\n- Missing: `default`, `otherwise`, `catch`, `fallback` transition\n- `step_functions`, `pipelines`, `workflows` with enumerated branches only\n\n---\n\n### 7. Dynamic Blocks / Loops Without Unmatched-Case Handling\nLoops or dynamic resource generation that assumes all input values map to known cases.\n\n**Keywords/Attributes to Watch:**\n- `dynamic`, `for_each`, `count`, `loop`, `iterate`\n- Conditional filters inside loops (`if condition`) with no else path\n- `flatten`, `compact` applied to results \u2014 may silently drop unhandled cases\n\n---\n\n### 8. Firewall / Security Group Rules Without Default Policy\nNetwork security configurations that do not define what happens to traffic not matching any explicit rule.\n\n**Keywords/Attributes to Watch:**\n- `default_action`, `default_policy`, `default_rule`\n- `allow`, `deny`, `drop`, `reject`, `accept`\n- Missing terminal rule with `0.0.0.0/0` / `::/0` and an explicit `deny`/`drop`\n- `priority` fields \u2014 lowest priority rule missing as a catch-all\n\n---\n\n## Summary Table\n\n| Weakness Pattern | Key Missing Attribute |\n|---|---|\n| Conditional without fallback | `else`, `default`, `otherwise` |\n| Rule set without catch-all | `default_action`, wildcard rule |\n| Lookup without default | Third default argument |\n| Variable validation gap | Fallback for out-of-range values |\n| Policy without deny | Terminal `Deny` / wildcard deny |\n| State machine incomplete | `default` transition / `catch` |\n| Dynamic block no else | Else path in loop filter |\n| Firewall no default policy | Explicit deny-all terminal rule |\n\n---\n\n## Key Detection Heuristic\n\n> **Any multi-branch decision structure (rules, conditions, maps, policies, states) that enumerates only specific known values without an explicit handler for all other possible values is a candidate for CWE-478.**",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nconditional_has_default(node) {\n    walk(node, [_, n])\n    n.ir_type == \"ConditionalStatement\"\n    n.is_default == true\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conditions := glitch_lib.all_conditional_statements(parent)\n    node := conditions[_]\n    node.is_top == true\n    not conditional_has_default(node)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Missing default case in conditional expression - Conditional structures should have a default/else branch to handle all possible input values. (CWE-478)\"\n    }\n}\n\nhas_deny_effect(attrs) {\n    attr := attrs[_]\n    attr.name == \"effect\"\n    attr.value.ir_type == \"String\"\n    lower(attr.value.value) == \"deny\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    allow_attr := attrs[_]\n    allow_attr.name == \"effect\"\n    allow_attr.value.ir_type == \"String\"\n    lower(allow_attr.value.value) == \"allow\"\n    not has_deny_effect(attrs)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": allow_attr,\n        \"path\": parent.path,\n        \"description\": \"Policy without explicit deny - Permission policies should include a terminal deny statement to prevent unintended access. (CWE-478)\"\n    }\n}\n\nhas_default_action(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*default.*(action|rule|policy).*\", attr.name)\n}\n\nhas_default_action(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*(action|rule|policy).*default.*\", attr.name)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    regex.match(\"(?i).*(rule|listener|routing|forwarding|acl|firewall|ingress|egress).*\", node.type)\n    attrs := glitch_lib.all_attributes(node)\n    not has_default_action(attrs)\n\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Missing default action in rule set - Rule collections should define a catch-all default action for unmatched inputs or traffic. (CWE-478)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T21:47:55.925779+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 13558,
+    "output_tokens_total": 8802,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}
