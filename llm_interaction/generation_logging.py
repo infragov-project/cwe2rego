@@ -176,6 +176,8 @@ def create_generation_log(
     validation_history_iterations: int | None,
     validation_history_pinned_messages: int,
     static_examples_dir: Path | None,
+    use_cwe_text: bool = False,
+    no_ir_slicing: bool = False,
 ) -> dict[str, Any]:
     """Create the initial generation log payload."""
     provider_info: dict[str, Any] = {"name": provider}
@@ -193,6 +195,8 @@ def create_generation_log(
         "use_rag": use_rag,
         "output_rego_path": str(output_rego_path.resolve()),
         "condition": condition,
+        "use_cwe_text": use_cwe_text,
+        "no_ir_slicing": no_ir_slicing,
         "example_generation": {
             "enabled": use_llm_examples,
             "model": examples_model if use_llm_examples else None,

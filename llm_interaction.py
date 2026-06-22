@@ -508,6 +508,8 @@ if __name__ == "__main__":
         validation_history_iterations=args.validation_history_iterations,
         validation_history_pinned_messages=args.validation_history_pinned_messages,
         static_examples_dir=static_examples_dir,
+        use_cwe_text=bool(getattr(args, "use_cwe_text", False)),
+        no_ir_slicing=bool(getattr(args, "no_ir_slicing", False)),
     )
     generation_log["llm_usage"] = llm_usage_totals
     persist_generation_log(log_path, generation_log)
