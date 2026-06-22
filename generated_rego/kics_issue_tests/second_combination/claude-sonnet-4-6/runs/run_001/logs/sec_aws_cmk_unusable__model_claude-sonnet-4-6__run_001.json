@@ -1,0 +1,151 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T19:33:53.040725+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/second_combination/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "second_combination",
+  "rule_id": "sec_aws_cmk_unusable",
+  "type_name": "sec_aws_cmk_unusable",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/second_combination/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_unusable.rego",
+  "condition": "# IaC Security Weakness: AWS KMS Customer Master Key (CMK) Usability\n\n## Weakness Overview\nAWS KMS CMKs must remain in a **usable state**, meaning they must be explicitly enabled and not scheduled for deletion.\n\n---\n\n## Detection Criteria\n\n### Resource Identifiers / Keywords\n- `kms`\n- `customer_master_key`\n- `cmk`\n- `kms_key`\n- `key_management`\n- `master_key`\n\n---\n\n### Critical Attributes & Fields to Inspect\n\n| Attribute | Risk Condition | Expected Safe Value |\n|---|---|---|\n| `enabled` | Set to `false` or **absent** | Must be `true` |\n| `pending_window` | **Defined/present** (any value) | Must be **undefined/absent** |\n| `deletion_window_in_days` | **Defined/present** | Must be **undefined/absent** |\n| `is_enabled` | Set to `false` | Must be `true` |\n| `key_state` | `PendingDeletion` | Must be `Enabled` |\n\n---\n\n### Detection Logic\n\n```\nWEAKNESS EXISTS IF:\n  \u251c\u2500\u2500 enabled = false\n  \u251c\u2500\u2500 enabled is ABSENT (not explicitly set)\n  \u251c\u2500\u2500 pending_window is DEFINED (any value)\n  \u2514\u2500\u2500 deletion_window_in_days is DEFINED (any value)\n```\n\n---\n\n### Additional Context Keywords\n- `schedule_key_deletion`\n- `disable_key`\n- `key_rotation`\n- `pending_deletion`\n- `key_policy`\n\n---\n\n## Summary\nAny IaC resource managing KMS keys should be flagged if the `enabled` attribute is **missing or false**, or if any **pending deletion window** attribute is present, as these conditions render the CMK unusable or mark it for destruction.",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable",
+    "entries_count": 2
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_keywords := {\"kms\", \"customer_master_key\", \"cmk\", \"kms_key\", \"key_management\", \"master_key\"}\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, kms_keywords[_])\n}\n\nhas_enabled_attr(node) {\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == \"enabled\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == \"enabled\"\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the 'enabled' attribute is set to false, making the key unusable.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    not has_enabled_attr(node)\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the 'enabled' attribute is absent, which may leave the key disabled by default.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == \"pending_window\"\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - the 'pending_window' attribute is defined, marking the key for destruction.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == \"deletion_window_in_days\"\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - the 'deletion_window_in_days' attribute is defined, marking the key for destruction.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive2.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key2\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    pending_window: 8\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"Update IAM policy on an existing KMS key2\", \"value\": \"Update IAM policy on an existing KMS key2\"}, \"type\": \"community.aws.aws_kms\", \"attributes\": []}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 72.7
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "terraform",
+          "missing_lines": [
+            3
+          ],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive.tf",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_kms_key\\\" \\\"a\\\" {\\n  description             = \\\"KMS key 1\\\"\\n  is_enabled = false\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"a\\\"\", \"value\": \"a\"}, \"type\": \"aws_kms_key\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 3, \"code\": \"is_enabled = false\", \"name\": \"is_enabled\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 3, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive.tf\", \"type\": \"unknown\", \"lines\": 4}",
+          "ir_node_reduction_percentage": 28.6
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**Intent:** The rule attempts to detect unusable or soon-to-be-deleted AWS KMS CMKs by flagging resources where `enabled` is explicitly `false`, where `enabled` is absent entirely, or where deletion-schedule attributes (`pending_window`, `deletion_window_in_days`) are present.\n\n---\n\n**Terraform \u2014 False Negative (line 3) + False Positive (line 1):**\nThe Terraform resource uses `is_enabled = false`, but the rule checks for `attr.name == \"enabled\"`. Because no attribute literally named `\"enabled\"` exists in the IR, the explicit-false branch never fires (missed detection at line 3). Simultaneously, the absence of an `\"enabled\"`-named attribute causes `has_enabled_attr` to return false, triggering the \"missing enabled attribute\" branch and generating a spurious flag at line 1. The rule simply hardcodes the wrong attribute name for Terraform's `aws_kms_key` resource type.\n\n---\n\n**Ansible \u2014 False Positive (line 1):**\nIn the Ansible IR the `attributes` array is completely empty (`\"attributes\": []`) \u2014 Ansible task parameters like `pending_window: 8` are not parsed into the IR's attribute list for this resource type. Consequently, neither the `pending_window` branch nor `has_enabled_attr` can match on actual attributes. Instead, the empty attribute list causes `has_enabled_attr` to return false, once again firing the \"missing enabled\" branch and producing a false positive for the wrong reason (the key update task is flagged as if it has no `enabled` setting, rather than correctly being flagged \u2014 or not \u2014 for its actual `pending_window` value).\n\n---\n\n**Root cause:** The rule conflates provider-specific attribute naming (`enabled` vs. `is_enabled`) and assumes attributes are always parsed into the IR's `attributes` array, neither of which holds across all languages and providers."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_keywords := {\"kms\", \"customer_master_key\", \"cmk\", \"kms_key\", \"key_management\", \"master_key\"}\nenabled_names := {\"enabled\", \"is_enabled\"}\ndeletion_names := {\"pending_window\", \"deletion_window_in_days\"}\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, kms_keywords[_])\n}\n\nhas_enabled_attr(node) {\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_names[_]\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the key is explicitly disabled.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == deletion_names[_]\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window attribute is defined.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    count(attrs) > 0\n    not has_enabled_attr(node)\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK may not be usable - no enabled/is_enabled attribute found.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive2.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key2\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    pending_window: 8\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"Update IAM policy on an existing KMS key2\", \"value\": \"Update IAM policy on an existing KMS key2\"}, \"type\": \"community.aws.aws_kms\", \"attributes\": []}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 72.7
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was trying to detect:**\nThe rule attempts to flag AWS KMS Customer Master Keys (CMKs) that are \"unusable\" \u2014 either because they are explicitly disabled (`enabled = false`), scheduled for deletion (a `pending_window` or `deletion_window_in_days` attribute is present), or lack an `enabled`/`is_enabled` attribute altogether.\n\n**What it incorrectly flagged:**\nLine 1 of the Ansible task (`community.aws.aws_kms` with `pending_window: 8`) is flagged as a false positive. Although the file does contain a `pending_window` attribute in the raw YAML, the rule is likely triggering the third branch \u2014 \"no enabled attribute found\" \u2014 rather than correctly matching the deletion window attribute by name.\n\n**Why the rule logic likely failed:**\nThe root cause is that in the Ansible IR, the task's parameters (`alias`, `policy`, `state`, `pending_window`) are **not** parsed into the `attributes` field of the `AtomicUnit`; that array is empty (`\"attributes\": []`). Because `glitch_lib.all_attributes(node)` returns an empty list, the second rule (deletion window check) never binds `pending_window` and cannot fire correctly. Meanwhile, the third rule's `count(attrs) > 0` guard should prevent it from firing on an empty attribute list, but if `glitch_lib.all_attributes` traverses beyond the node's own attributes or behaves unexpectedly with Ansible's flat task structure, the \"no enabled attr\" branch can still trigger on a resource that simply has no structured attributes in the IR \u2014 producing a spurious finding. Essentially, the rule assumes a structured attribute model that the Ansible IR does not populate for task parameters."
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_keywords := {\"kms\", \"customer_master_key\", \"cmk\", \"kms_key\", \"key_management\", \"master_key\"}\nenabled_names := {\"enabled\", \"is_enabled\"}\ndeletion_names := {\"pending_window\", \"deletion_window_in_days\"}\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, kms_keywords[_])\n}\n\nany_enabled_in_attrs(attrs) {\n    attr := attrs[_]\n    attr.name == enabled_names[_]\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == deletion_names[_]\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window attribute is defined.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    count(attrs) == 0\n    keyword := deletion_names[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), node.code)\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window keyword found in code.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the key is explicitly disabled.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    count(attrs) > 0\n    not any_enabled_in_attrs(attrs)\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK may not be usable - no enabled/is_enabled attribute found.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive2.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key2\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    pending_window: 8\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"Update IAM policy on an existing KMS key2\", \"value\": \"Update IAM policy on an existing KMS key2\"}, \"type\": \"community.aws.aws_kms\", \"attributes\": []}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 72.7
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n### What the Rule Attempted to Detect\nThe rule tries to identify unusable AWS KMS CMKs by flagging resources that either have a deletion window attribute (`pending_window` / `deletion_window_in_days`) indicating scheduled deletion, or have the key explicitly disabled via an `enabled`/`is_enabled` attribute set to `false`, or are missing an enabled attribute entirely.\n\n### What Was Incorrectly Flagged\nLine 1 (the task name line) is reported as a false positive. The actual `pending_window: 8` attribute is on line 6, so while the underlying detection is arguably correct in spirit, the wrong line is cited \u2014 making the result semantically incorrect as a finding location.\n\n### Why the Rule Logic Likely Failed\n\nThe critical issue is the IR structure: the Ansible parser left `attributes: []` empty for the `community.aws.aws_kms` AtomicUnit, even though `pending_window: 8` exists in the file. It only appears in the raw `code` string on the node.\n\nBecause of this:\n1. The **first rule** (structured attribute lookup for deletion names) never fires \u2014 `attrs` is empty.\n2. The **second rule** (fallback regex on `node.code`) *does* fire, correctly matching `pending_window` in the raw code string. However, it sets `element: node` \u2014 pointing to the AtomicUnit whose `line` is `1` (the task start), not line 6 where the attribute actually lives.\n\nThe fallback code-scanning branch has no way to resolve the precise line of the matched keyword within the unparsed `code` blob, so it anchors the finding to the AtomicUnit's own start line, producing a misleading (and here, incorrect) line attribution."
+    },
+    {
+      "attempt": 4,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_keywords := {\"kms\", \"customer_master_key\", \"cmk\", \"kms_key\", \"key_management\", \"master_key\"}\nenabled_names := {\"enabled\", \"is_enabled\"}\ndeletion_names := {\"pending_window\", \"deletion_window_in_days\"}\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, kms_keywords[_])\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == deletion_names[_]\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window attribute is defined.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the key is explicitly disabled.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    code_lines := split(node.code, \"\\n\")\n    some i\n    line_content := code_lines[i]\n    keyword := deletion_names[_]\n    regex.match(sprintf(\"(?i)^[^#]*%s\", [keyword]), line_content)\n    actual_line := node.line + i\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": {\"line\": actual_line, \"column\": node.column, \"end_line\": actual_line, \"end_column\": node.end_column, \"code\": line_content, \"ir_type\": \"Attribute\"},\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window keyword found in code.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            6
+          ],
+          "false_positives": [],
+          "file_name": "positive2.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key2\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    pending_window: 8\", \"statements\": [], \"name\": null, \"type\": \"community.aws.aws_kms\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 6, \"code\": \"pending_window: 8\", \"name\": \"pending_window\", \"value\": {\"ir_type\": \"Integer\", \"line\": 6, \"code\": \"8\", \"value\": 8}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_unusable/positive2.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 63.6
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n### What the Rule Attempted to Detect\nThe rule tries to flag KMS CMK resources that are unusable \u2014 either because a deletion window attribute (`pending_window`, `deletion_window_in_days`) is defined (scheduling the key for deletion), or because the key is explicitly disabled (`enabled: false`). It uses three rule heads covering structured attribute matching and a regex-based code scan fallback.\n\n### What It Missed (False Negative on Line 6)\nThe rule failed to detect the `pending_window: 8` attribute on the `community.aws.aws_kms` task, even though the attribute is clearly present in the IR under `atomic_units[0].attributes` with `name: \"pending_window\"` \u2014 a direct match for `deletion_names`.\n\n### Why the Logic Likely Failed\nThe root cause is the use of `glitch_lib._gather_parent_unit_blocks`. In the Ansible IR, the top-level node is itself the `UnitBlock` (with `path` set and `atomic_units` populated directly), and its `unit_blocks` field is an **empty array** (`[]`). The `_gather_parent_unit_blocks` helper almost certainly traverses the `unit_blocks` array of nested blocks \u2014 since that array is empty, it yields no results, so `parent` is never bound and none of the three rule branches can fire. The rule should instead use a helper that also considers the **root-level UnitBlock** as a valid parent (e.g., `glitch_lib.all_parent_unit_blocks` or a direct IR root traversal), which is where Ansible task-level `atomic_units` live."
+    },
+    {
+      "attempt": 5,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_keywords := {\"kms\", \"customer_master_key\", \"cmk\", \"kms_key\", \"key_management\", \"master_key\"}\ndeletion_names := {\"pending_window\", \"deletion_window_in_days\"}\nenabled_names := {\"enabled\", \"is_enabled\"}\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, kms_keywords[_])\n}\n\nGlitch_Analysis[result] {\n    walk(input, [_, parent])\n    parent.ir_type == \"UnitBlock\"\n    parent.path != \"\"\n    node := glitch_lib.all_atomic_units(parent)[_]\n    is_kms_resource(node)\n    attr := glitch_lib.all_attributes(node)[_]\n    attr.name == deletion_names[_]\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is scheduled for deletion - a deletion window attribute is defined.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    walk(input, [_, parent])\n    parent.ir_type == \"UnitBlock\"\n    parent.path != \"\"\n    node := glitch_lib.all_atomic_units(parent)[_]\n    is_kms_resource(node)\n    attr := glitch_lib.all_attributes(node)[_]\n    attr.name == enabled_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"KMS CMK is not usable - the key is explicitly disabled.\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 5,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T19:41:05.850407+00:00",
+    "elapsed_time": "7m12s"
+  },
+  "llm_usage": {
+    "calls": 10,
+    "input_tokens_total": 47328,
+    "output_tokens_total": 37655,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 24256
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T19:28:08.107187+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/first_combination/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "first_combination",
+  "rule_id": "sec_aws_cmk_rotation_disabled",
+  "type_name": "sec_aws_cmk_rotation_disabled",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/first_combination/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_rotation_disabled.rego",
+  "condition": "# IaC Security Weakness: CMK Key Rotation Not Enabled\n\n## Weakness Overview\nAWS Customer Master Keys (CMK) must have automatic key rotation enabled to reduce the risk of key compromise over time. Failing to rotate keys periodically increases the blast radius if a key is ever exposed.\n\n---\n\n## Detection Criteria\n\n### Resource Identifiers / Keywords\n- `kms`\n- `customer_master_key`\n- `cmk`\n- `kms_key`\n- `aws_kms_key`\n\n---\n\n### Critical Attributes & Fields to Inspect\n\n| Attribute | Risk Condition |\n|---|---|\n| `enable_key_rotation` | Missing, `false`, or `null` |\n| `key_enabled` / `is_enabled` | Set to `true` (key is active but rotation may be disabled) |\n| `deletion_window_in_days` | Key is active (not pending deletion) |\n| `key_usage` | `ENCRYPT_DECRYPT` keys specifically require rotation |\n| `key_spec` / `customer_master_key_spec` | `SYMMETRIC_DEFAULT` (rotation only applies to symmetric keys) |\n\n---\n\n### Detection Logic\n```\nIF resource is of type KMS Key\n  AND key is ENABLED (active state)\n  AND key_spec is SYMMETRIC\n  THEN:\n    enable_key_rotation MUST be explicitly set to TRUE\n```\n\n---\n\n### Common Misconfigurations to Flag\n- `enable_key_rotation` **attribute is completely absent**\n- `enable_key_rotation` explicitly set to **`false`**\n- `enable_key_rotation` set to **`null`** or empty string\n- Key is **enabled** but rotation field is **not declared**\n\n---\n\n### Additional Context Keywords\n- `rotation_period_in_days` *(if customizable)*\n- `multi_region`\n- `policy` *(ensure rotation isn't blocked by key policy)*\n- `grants`",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_rotation_disabled",
+    "entries_count": 2
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_kms_resource(node) {\n    glitch_lib.contains(node.type, \"kms\")\n}\n\nrotation_disabled(value) {\n    value.ir_type == \"Boolean\"\n    value.value == false\n}\n\nrotation_disabled(value) {\n    value.ir_type == \"Null\"\n}\n\nhas_key_rotation_attr(attrs) {\n    attr := attrs[_]\n    attr.name == \"enable_key_rotation\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == \"enable_key_rotation\"\n    rotation_disabled(attr.value)\n    result := {\n        \"type\": \"sec_aws_cmk_rotation_disabled\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"CMK Key Rotation Not Enabled - Customer Master Keys should have automatic key rotation explicitly enabled to reduce the risk of key compromise over time. (CWE-320)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_kms_resource(node)\n    attrs := glitch_lib.all_attributes(node)\n    not has_key_rotation_attr(attrs)\n    result := {\n        \"type\": \"sec_aws_cmk_rotation_disabled\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"CMK Key Rotation Not Enabled - Customer Master Keys are missing the enable_key_rotation attribute, which must be explicitly set to true. (CWE-320)\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T19:28:10.293841+00:00",
+    "elapsed_time": "0m2s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 6242,
+    "output_tokens_total": 5483,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}

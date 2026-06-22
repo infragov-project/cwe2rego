@@ -7,9 +7,21 @@
             ]
         },
         {
+            "file": "positive2.yaml",
+            "lines": [
+                1
+            ]
+        },
+        {
             "file": "positive1.tf",
             "lines": [
                 1
+            ]
+        },
+        {
+            "file": "positive2.tf",
+            "lines": [
+                12
             ]
         }
     ]

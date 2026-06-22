@@ -1,0 +1,57 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-22T19:43:44.955960+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/third_combination/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "third_combination",
+  "rule_id": "sec_aws_cmk_rotation_disabled",
+  "type_name": "sec_aws_cmk_rotation_disabled",
+  "model_used": "eu.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/third_combination/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_rotation_disabled.rego",
+  "condition": "# IaC Security Weakness: CMK Key Rotation Not Enabled\n\n## Weakness Overview\nAWS Customer Master Keys (CMK) without automatic key rotation enabled represent a cryptographic risk, as long-lived encryption keys increase the blast radius of potential key compromise.\n\n---\n\n## Detection Criteria\n\n### Resource Identification Keywords\n- `kms`\n- `key`\n- `master_key`\n- `customer_master_key`\n- `cmk`\n- `encryption_key`\n- `kms_key`\n\n### Critical Attributes / Fields to Inspect\n| Attribute | Risk Condition |\n|---|---|\n| `enable_key_rotation` | `false` or **missing entirely** |\n| `key_enabled` / `is_enabled` | `true` (key is active but rotation may be off) |\n| `key_usage` | `ENCRYPT_DECRYPT` (rotation applies to symmetric keys) |\n| `key_spec` / `customer_master_key_spec` | `SYMMETRIC_DEFAULT` (rotation only valid for symmetric keys) |\n\n---\n\n## Detection Logic\n\n```\nIF resource_type == KMS/CMK key\n  AND (key is enabled OR key_state == \"Enabled\")\n  AND (\n        enable_key_rotation == false\n        OR enable_key_rotation is ABSENT\n      )\nTHEN \u2192 FLAG as VULNERABLE\n```\n\n---\n\n## Key Considerations\n- **Rotation is only applicable** to **symmetric** CMKs (`SYMMETRIC_DEFAULT`)\n- Asymmetric keys **cannot** have rotation enabled \u2014 avoid false positives\n- A **missing** `enable_key_rotation` attribute should default to flagged, as the default behavior is **disabled**\n- Keys in **disabled state** may be exempt but should still be reviewed\n\n---\n\n## Risk\n| Property | Value |\n|---|---|\n| **Severity** | Medium\u2013High |\n| **Impact** | Prolonged key exposure, compliance violations (PCI-DSS, HIPAA) |\n| **CWE** | CWE-321 (Use of Hard-coded Cryptographic Key) / CWE-311 |",
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/tmp_kics_combo/sec_aws_cmk_rotation_disabled",
+    "entries_count": 2
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_key_type_pattern := \"(?i).*(kms|cmk|master[_\\\\-]?key|customer[_\\\\-]?master[_\\\\-]?key|encryption[_\\\\-]?key|kms[_\\\\-]?key).*\"\n\nis_asymmetric_key(attrs) {\n    attr := attrs[_]\n    attr.name == \"key_spec\"\n    attr.value.ir_type == \"String\"\n    not regex.match(\"(?i).*symmetric.*\", attr.value.value)\n}\n\nis_asymmetric_key(attrs) {\n    attr := attrs[_]\n    attr.name == \"customer_master_key_spec\"\n    attr.value.ir_type == \"String\"\n    not regex.match(\"(?i).*symmetric.*\", attr.value.value)\n}\n\nhas_key_rotation_attr(attrs) {\n    attr := attrs[_]\n    attr.name == \"enable_key_rotation\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    regex.match(kms_key_type_pattern, node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n    not is_asymmetric_key(attrs)\n\n    attr := attrs[_]\n    attr.name == \"enable_key_rotation\"\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_aws_cmk_rotation_disabled\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"CMK Key Rotation Not Enabled - Customer Master Keys should have automatic key rotation enabled to reduce the risk of key compromise. (CWE-321)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    regex.match(kms_key_type_pattern, node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n    not is_asymmetric_key(attrs)\n    not has_key_rotation_attr(attrs)\n\n    result := {\n        \"type\": \"sec_aws_cmk_rotation_disabled\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"CMK Key Rotation Not Enabled - Customer Master Keys should have automatic key rotation enabled to reduce the risk of key compromise. (CWE-321)\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-22T19:43:47.389533+00:00",
+    "elapsed_time": "0m2s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 6279,
+    "output_tokens_total": 4032,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0
+  }
+}
