@@ -1,0 +1,8 @@
+Platform
+Terraform and Ansible
+
+Provider
+AWS
+
+Description
+AWS Key Management Service (KMS) must only possess usable Customer Master Keys (CMK), which means the CMKs must have the attribute 'enabled' set to true and the attribute 'pending_window' must be undefined
