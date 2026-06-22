@@ -42,3 +42,4 @@ validation/KICS
 poetry.toml
 store
 test.py
+tmp_kics_combo/
