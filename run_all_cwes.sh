@@ -17,6 +17,7 @@ shift 5
 
 MAX_RUNS="${MAX_RUNS:-1}"
 PROVIDER="${PROVIDER:-openrouter}"
+EXTRA_ARGS=()
 
 # Optional flags before CWE numbers (CWE numbers must be numeric, so this is unambiguous).
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
         --provider=*)
             PROVIDER="${1#*=}"
             shift 1
+            ;;
+        --*)
+            EXTRA_ARGS+=("$1")
+            shift
             ;;
         *)
             break
@@ -111,7 +116,8 @@ for cwe in "$@"; do
             --semantic-examples-dir "$SEMANTIC_EXAMPLES_DIR" \
             --analysis-tool "$ANALYSIS_TOOL" \
             --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS" \
-            --provider "$PROVIDER"; then
+            --provider "$PROVIDER" \
+            "${EXTRA_ARGS[@]}"; then
             echo "CWE-$cwe completed successfully."
             success=1
             break
