@@ -229,6 +229,11 @@ def build_argument_parser() -> ArgumentParser:
         action="store_true",
         help="Skip semantic validation and semantic-regeneration; only enforce syntax/type validation.",
     )
+    parser.add_argument(
+        "--no-ir-slicing",
+        action="store_true",
+        help="Disable IR slicing; pass the full IR to the LLM on semantic check failures.",
+    )
     parser.add_argument("--examples-model", help="Model to use for generating semantic-check examples (default: same as main model)")
     parser.add_argument(
         "--validation-history-iterations",
@@ -646,6 +651,7 @@ if __name__ == "__main__":
             examples_folder=examples_folder,
             examples=semantic_examples,
             technologies=target_technologies,
+            slice_ir=not args.no_ir_slicing,
         )
 
         if skipped_empty_ir:

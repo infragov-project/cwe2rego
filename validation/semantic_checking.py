@@ -63,6 +63,7 @@ def _verify_example(
     example: Dict[str, Any],
     type_name: str,
     csv_path: Path,
+    slice_ir: bool = True,
 ) -> tuple[str, tuple]:
     """
     Verify a single example.
@@ -126,18 +127,17 @@ def _verify_example(
         ir_str = tool.extract_ir(str(script_path), unit_type)
         ir_reduction_percentage = 0.0
         
-        # Slice the IR to focus on relevant code and calculate reduction
-        try:
-            ir_json = json.loads(ir_str)
-            original_node_count = tool.count_ir_nodes(ir_json)
-            ir_json = tool.slice_ir(ir_json, false_positives, missing)
-            sliced_node_count = tool.count_ir_nodes(ir_json)
-            if original_node_count > 0:
-                ir_reduction_percentage = (1 - sliced_node_count / original_node_count) * 100
-            ir_str = json.dumps(ir_json)
-        except (json.JSONDecodeError, Exception):
-            # If slicing fails, use full IR
-            pass
+        if slice_ir:
+            try:
+                ir_json = json.loads(ir_str)
+                original_node_count = tool.count_ir_nodes(ir_json)
+                ir_json = tool.slice_ir(ir_json, false_positives, missing)
+                sliced_node_count = tool.count_ir_nodes(ir_json)
+                if original_node_count > 0:
+                    ir_reduction_percentage = (1 - sliced_node_count / original_node_count) * 100
+                ir_str = json.dumps(ir_json)
+            except (json.JSONDecodeError, Exception):
+                pass
         
         if missing:
             print(f"    ❌ Missing detections on lines: {missing}")
@@ -227,6 +227,7 @@ def semantic_check(
     examples_folder: Path,
     examples: List[Dict[str, Any]],
     technologies: Optional[List[str]] = None,
+    slice_ir: bool = True,
 ) -> Tuple[List[Tuple[str, str, List[int], List[int], str]], List[Tuple[str, str]], List[str]]:
     """
     Verify all examples for a rule using a preloaded examples manifest.
@@ -282,7 +283,7 @@ def semantic_check(
                 continue
 
         status, data = _verify_example(
-            tool, runner, folder, example, type_name, csv_path
+            tool, runner, folder, example, type_name, csv_path, slice_ir=slice_ir
         )
         if status == "fail":
             failures.append(data)

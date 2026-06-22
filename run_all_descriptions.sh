@@ -17,6 +17,7 @@ shift 5
 
 MAX_RUNS="${MAX_RUNS:-1}"
 PROVIDER="${PROVIDER:-openrouter}"
+EXTRA_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -43,6 +44,10 @@ while [[ $# -gt 0 ]]; do
         --provider=*)
             PROVIDER="${1#*=}"
             shift 1
+            ;;
+        --*)
+            EXTRA_ARGS+=("$1")
+            shift
             ;;
         *)
             break
@@ -84,7 +89,8 @@ for type_name in "$@"; do
             --semantic-examples-dir "$SEMANTIC_EXAMPLES_DIR" \
             --analysis-tool "$ANALYSIS_TOOL" \
             --validation-history-iterations "$VALIDATION_HISTORY_ITERATIONS" \
-            --provider "$PROVIDER"; then
+            --provider "$PROVIDER" \
+            "${EXTRA_ARGS[@]}"; then
             echo "$type_name completed successfully."
             success=1
             break
