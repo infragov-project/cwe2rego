@@ -1,0 +1,16 @@
+{
+    "examples": [
+        {
+            "file": "positive1.yaml",
+            "lines": [
+                1
+            ]
+        },
+        {
+            "file": "positive2.tf",
+            "lines": [
+                4
+            ]
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+[
+  {"type_name": "sec_def_admin",          "rego_file": "sec_def_admin.rego"},
+  {"type_name": "sec_empty_pass",         "rego_file": "sec_empty_pass.rego"},
+  {"type_name": "sec_hard_pass",          "rego_file": "sec_hard_pass.rego"},
+  {"type_name": "sec_hard_secr",          "rego_file": "sec_hard_secr.rego"},
+  {"type_name": "sec_hard_user",          "rego_file": "sec_hard_user.rego"},
+  {"type_name": "sec_https",              "rego_file": "sec_https.rego"},
+  {"type_name": "sec_invalid_bind",       "rego_file": "sec_invalid_bind.rego"},
+  {"type_name": "sec_no_default_switch",  "rego_file": "sec_no_default_switch.rego"},
+  {"type_name": "sec_no_int_check",       "rego_file": "sec_no_int_check.rego"},
+  {"type_name": "sec_susp_comm",          "rego_file": "sec_susp_comm.rego"},
+  {"type_name": "sec_weak_crypt",         "rego_file": "sec_weak_crypt.rego"}
+]

@@ -1,0 +1,8 @@
+Platform
+Terraform and Ansible
+
+Provider
+AWS
+
+Description
+Customer Master Keys (CMK) must have rotation enabled, which means the attribute 'enable_key_rotation' must be set to 'true' when the key is enabled

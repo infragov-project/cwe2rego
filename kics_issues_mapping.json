@@ -1,0 +1,5 @@
+[
+  {"type_name": "sec_aws_asg_no_elbs",          "rego_file": "sec_aws_asg_no_elbs.rego"},
+  {"type_name": "sec_aws_cmk_rotation_disabled", "rego_file": "sec_aws_cmk_rotation_disabled.rego"},
+  {"type_name": "sec_aws_cmk_unusable",          "rego_file": "sec_aws_cmk_unusable.rego"}
+]

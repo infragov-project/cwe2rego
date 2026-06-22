@@ -19,6 +19,7 @@ class GlitchTool(AnalysisTool):
         ".yaml": "ansible",
         ".rb": "chef",
         ".pp": "puppet",
+        ".tf": "terraform",
     }
 
     def _count_nodes_recursive(self, node: Any) -> int:
