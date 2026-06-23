@@ -2,245 +2,500 @@ package glitch
 
 import data.glitch_lib
 
-weak_algorithms := {"des", "3des", "rc4", "rc2", "blowfish", "md5", "md2", "md4", "sha1", "sha-1", "sha-0", "sha0", "ripemd", "ripemd160", "ripemd-160", "dsa", "hmacmd5", "hmac-sha1"}
+weak_algorithms = {"DES", "3DES", "RC2", "RC4", "MD5", "SHA1", "SHA-1", "ECB", "CBC"}
+weak_tls_versions = {"TLSv1.0", "TLSv1.1", "SSLv3", "TLS1.0", "TLS1.1"}
+encryption_keywords = {"encryption", "encrypted", "encrypt", "kms_key_id", "sse_algorithm", "cipher", "ciphers", "cipher_suites", "tls_version", "ssl_policy", "min_tls_version", "ssl_mode", "hash_algorithm", "digest", "key_exchange", "hash", "checksum", "auth_method", "password", "algorithm"}
 
-weak_tls_versions := {"sslv2", "sslv3", "tlsv1.0", "tlsv1.1", "tls1.0", "tls1.1", "ssl2", "ssl3", "1.0", "1.1", "v1.0", "v1.1"}
+disabled_flags = {"encryption_enabled", "encrypted", "sse_enabled", "tls_enabled", "ssl_enabled", "encryption"}
+inssl_flags = {"tls_disabled", "ssl_disabled", "insecure_ssl", "skip_ssl", "verify_ssl", "http_protocol", "ssl"}
 
-weak_cipher_indicators := {"_cbc_", "_ecb_", "_rc4_", "_des_", "_3des_", "md5", "sha1", "sha-1", "hmacmd5"}
-
-insecure_crypto_values := {"md5_crypt", "des_crypt", "sha1_crypt"}
-
-has_weak_crypto_pattern(str) {
-    lower_str := lower(str)
+is_weak_algorithm_exact(val) {
     alg := weak_algorithms[_]
-    contains(lower_str, alg)
+    lower(trim_space(val)) == lower(alg)
 }
 
-has_weak_crypto_pattern(str) {
-    lower_str := lower(str)
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)(^|[^a-z])md5([^a-z]|$)", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)sha[-_]?1", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)(^|[^a-z])des([^a-z]|$)", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)3des", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)rc2", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)rc4", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)ecb", val)
+}
+
+is_weak_algorithm_regex(val) {
+    regex.match("(?i)cbc", val)
+}
+
+is_weak_algorithm(val) {
+    is_weak_algorithm_exact(val)
+} else {
+    is_weak_algorithm_regex(val)
+}
+
+is_weak_tls_str(val) {
     ver := weak_tls_versions[_]
-    contains(lower_str, ver)
+    contains(val, ver)
 }
 
-has_weak_crypto_pattern(str) {
-    lower_str := lower(str)
-    indicator := weak_cipher_indicators[_]
-    contains(lower_str, indicator)
+encryption_related(name) {
+    kw := encryption_keywords[_]
+    contains(lower(name), lower(kw))
 }
 
-has_weak_crypto_pattern(str) {
-    lower_str := lower(str)
-    val := insecure_crypto_values[_]
-    lower_str == val
+is_encryption_disabled(attr) {
+    attr.name == disabled_flags[_]
+    attr.value.ir_type == "Boolean"
+    attr.value.value == false
 }
 
-get_string_value(node) = val {
-    node.ir_type == "String"
-    val = node.value
+is_insecure_ssl(attr) {
+    attr.name == inssl_flags[_]
+    attr.value.ir_type == "Boolean"
+    attr.value.value == true
 }
 
-get_string_value(node) = val {
-    node.ir_type == "VariableReference"
-    val = node.value
-}
-
-is_crypto_variable_name(name) {
-    name_lower := lower(name)
-    regex.match(".*(cipher_suites|encryption|cipher|crypto|hash|algorithm|auth_method|digest|password|suites|method|protocol|mode|version|ssl|tls|encrypt|auth).*", name_lower)
-}
-
-is_weak_crypto_function_name(name) {
-    lower_name := lower(name)
-    contains(lower_name, "md5")
-}
-
-is_weak_crypto_function_name(name) {
-    lower_name := lower(name)
-    contains(lower_name, "sha1")
-}
-
-check_string_weak_crypto(val) {
-    has_weak_crypto_pattern(val)
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    vars := glitch_lib.all_variables(parent)
-    node := vars[_]
-    
-    is_crypto_variable_name(node.name)
-    
-    walk(node.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic algorithm detected. (CWE-327)"
+all_leaves(root) = leaves {
+    leaves = {n |
+        walk(root, [path, n])
+        n.ir_type == "String"
     }
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    vars := glitch_lib.all_variables(parent)
-    node := vars[_]
-    
-    walk(node, [_, child])
-    child.ir_type == "FunctionCall"
-    is_weak_crypto_function_name(child.name)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic function call. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    lower(name) == "md5"
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    attrs := glitch_lib.all_attributes(parent)
-    node := attrs[_]
-    
-    is_crypto_variable_name(node.name)
-    
-    walk(node.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic configuration in attribute. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)sha[-_]?1", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    node.ir_type == "Attribute"
-    node.name == "encrypt"
-    
-    walk(node.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak encryption algorithm in encrypt attribute. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)(^|[^a-z])des([^a-z]|$)", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    node.ir_type == "Variable"
-    node.name == "encrypt"
-    
-    walk(node.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak encryption algorithm in encrypt variable. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)3des", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    node.ir_type == "Hash"
-    
-    entry := node.value[_]
-    entry_key := entry.key.value
-    entry_key == "encrypt"
-    
-    walk(entry.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": entry,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak encryption algorithm in hash entry. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)rc2", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    conds := glitch_lib.all_conditional_statements(parent)
-    cond := conds[_]
-    
-    walk(cond, [_, node])
-    node.ir_type == "Variable"
-    is_crypto_variable_name(node.name)
-    
-    walk(node.value, [_, child])
-    child.ir_type == "String"
-    check_string_weak_crypto(child.value)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic algorithm in conditional block. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)rc4", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    node.ir_type == "FunctionCall"
-    is_weak_crypto_function_name(node.name)
-    
-    result := {
-        "type": "sec_weak_crypt",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic function call. (CWE-327)"
-    }
+func_name_contains_weak(name) {
+    regex.match("(?i)hash.*md5", name)
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    node.ir_type == "FunctionCall"
-    
-    arg := node.args[_]
+func_name_contains_weak(name) {
+    regex.match("(?i)hash.*sha[-_]?1", name)
+}
+
+any_arg_contains_weak(args) {
+    arg := args[_]
     arg.ir_type == "String"
-    check_string_weak_crypto(arg.value)
+    is_weak_algorithm(arg.value)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "FunctionCall"
+    func_name_contains_weak(node.name)
     
     result := {
         "type": "sec_weak_crypt",
         "element": node,
         "path": parent.path,
-        "description": "Use of a Broken or Risky Cryptographic Algorithm - Weak cryptographic algorithm in function argument. (CWE-327)"
+        "description": "Use of broken or risky cryptographic algorithm - Function call using weak cryptographic algorithm. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "FunctionCall"
+    any_arg_contains_weak(node.args)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": node,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call with weak cryptographic algorithm argument. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "FunctionCall"
+    func_name_contains_weak(node.name)
+    any_arg_contains_weak(node.args)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": node,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call with weak cryptographic algorithm argument. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    attr.value.ir_type == "FunctionCall"
+    func_name_contains_weak(attr.value.name)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call using weak cryptographic algorithm. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    
+    attr := glitch_lib.all_attributes(node)[_]
+    attr.value.ir_type == "FunctionCall"
+    func_name_contains_weak(attr.value.name)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call using weak cryptographic algorithm. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    var := glitch_lib.all_variables(parent)[_]
+    var.value.ir_type == "FunctionCall"
+    func_name_contains_weak(var.value.name)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": var,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call using weak cryptographic algorithm. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    attr.value.ir_type == "FunctionCall"
+    any_arg_contains_weak(attr.value.args)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call with weak cryptographic algorithm argument. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    attr.value.ir_type == "FunctionCall"
+    any_arg_contains_weak(attr.value.args)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call with weak cryptographic algorithm argument. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    var := glitch_lib.all_variables(parent)[_]
+    var.value.ir_type == "FunctionCall"
+    any_arg_contains_weak(var.value.args)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": var,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Function call with weak cryptographic algorithm argument. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    encryption_related(attr.name)
+    attr.value.ir_type == "String"
+    is_weak_algorithm(attr.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Avoid using weak or deprecated cryptographic algorithms. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    encryption_related(attr.name)
+    attr.value.ir_type == "String"
+    is_weak_algorithm(attr.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Avoid using weak or deprecated cryptographic algorithms. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    var := glitch_lib.all_variables(parent)[_]
+    encryption_related(var.name)
+    var.value.ir_type == "String"
+    is_weak_algorithm(var.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": var,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Avoid using weak or deprecated cryptographic algorithms in variable. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "Variable"
+    encryption_related(node.name)
+    node.value.ir_type == "String"
+    is_weak_algorithm(node.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": node,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm in variable assignment. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    encryption_related(attr.name)
+    leaf := all_leaves(attr.value)[_]
+    is_weak_algorithm(leaf.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm detected in complex attribute. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    encryption_related(attr.name)
+    leaf := all_leaves(attr.value)[_]
+    is_weak_algorithm(leaf.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm detected in complex attribute. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    var := glitch_lib.all_variables(parent)[_]
+    encryption_related(var.name)
+    leaf := all_leaves(var.value)[_]
+    is_weak_algorithm(leaf.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": var,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm detected in complex variable assignment. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    encryption_related(attr.name)
+    attr.value.ir_type == "String"
+    is_weak_tls_str(attr.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak TLS version detected. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+    
+    attrs := glitch_lib.all_attributes(node)
+    attr := attrs[_]
+    encryption_related(attr.name)
+    attr.value.ir_type == "String"
+    is_weak_tls_str(attr.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak TLS version detected. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    is_encryption_disabled(attr)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Encryption should not be disabled. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attr := glitch_lib.all_attributes(parent)[_]
+    is_insecure_ssl(attr)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Insecure SSL/TLS configuration detected. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "Hash"
+    item := node.value[_]
+    item.key.ir_type == "String"
+    encryption_related(item.key.value)
+    item.value.ir_type == "String"
+    is_weak_algorithm(item.value.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": item,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm in hash structure. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [path, node])
+    node.ir_type == "Array"
+    elem := node.value[_]
+    elem.ir_type == "String"
+    is_weak_algorithm(elem.value)
+    
+    result := {
+        "type": "sec_weak_crypt",
+        "element": elem,
+        "path": parent.path,
+        "description": "Use of broken or risky cryptographic algorithm - Weak cryptographic algorithm in array element. (CWE-327)"
     }
 }

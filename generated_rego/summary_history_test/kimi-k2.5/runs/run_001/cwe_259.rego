@@ -2,126 +2,267 @@ package glitch
 
 import data.glitch_lib
 
-credential_keywords := {"password", "passwd", "pwd", "secret", "apikey", "api_key", "access_key", "secret_key", "token", "auth_token", "bearer_token", "credential", "credentials", "passphrase", "admin_password", "root_password", "default_password", "initial_password", "key", "sha512_password", "sha256_password", "hashed_password"}
+password_keywords := {"password", "passwd", "pwd", "secret", "credentials", "auth_token", "pass", "sha512_password", "sha256_password", "key", "token", "api_key", "secret_key", "access_key"}
 
-weak_passwords := {"password", "admin", "root", "123456", "P@ssw0rd", "changeme", "changeit", "pass123", "password123", "admin123", "test", "testing", "demo", "example", "secret", "secret123", "12345678", "qwerty", "letmein", "passw0rd", "telarista"}
-
-has_credential_keyword(name) {
-    lower_name := lower(name)
-    keyword := credential_keywords[_]
-    contains(lower_name, keyword)
+# Check if name contains credential keyword (exact match or word boundary)
+is_credential_name(name) {
+    lname := lower(name)
+    some keyword
+    password_keywords[keyword]
+    lname == keyword
 }
 
-is_hardcoded_string(value) {
+is_credential_name(name) {
+    lname := lower(name)
+    some keyword
+    password_keywords[keyword]
+    endswith(lname, concat("", ["_", keyword]))
+}
+
+is_credential_name(name) {
+    lname := lower(name)
+    some keyword
+    password_keywords[keyword]
+    startswith(lname, concat("", [keyword, "_"]))
+}
+
+# Check if this is a secure reference (not hard-coded)
+is_secure_reference(value) {
     value.ir_type == "String"
-    count(value.value) > 0
-    not glitch_lib.traverse_var(value)
+    regex.match("^\\$\\{|.*(vault|secret|lookup|env|var|data|file|template|key)\\s*\\(|^(variable|var|local|data|module|path)\\.", value.value)
 }
 
-is_weak_password(value) {
+is_secure_reference(value) {
+    value.ir_type == "VariableReference"
+}
+
+is_secure_reference(value) {
+    value.ir_type == "FunctionCall"
+    regex.match(".*(vault|secret|lookup|file|template|env)", value.name)
+}
+
+# Check if value is a hard-coded credential
+is_hardcoded_credential(value) {
     value.ir_type == "String"
-    lower_val := lower(value.value)
-    weak_passwords[lower_val]
+    not is_secure_reference(value)
+    value.value != ""
+    not regex.match("^\\$[0-9a-zA-Z]+\\$", value.value)
 }
 
-looks_like_encoded_secret(value) {
-    value.ir_type == "String"
-    regex.match("^[A-Za-z0-9+/=]{8,}$", value.value)
+# Extract key string from Hash entry structure (Ansible-style with key/value)
+get_key_string(entry) = key_str {
+    entry.key.ir_type == "String"
+    key_str := entry.key.value
 }
 
-looks_like_hash(value) {
-    value.ir_type == "String"
-    regex.match("^\\$[0-9a-zA-Z]+\\$[./a-zA-Z0-9]+$", value.value)
+# Check if string contains credential pattern like KEY=password
+string_contains_credential(str) = result {
+    parts := split(str, "=")
+    count(parts) >= 2
+    key_part := parts[0]
+    is_credential_name(key_part)
+    result := parts[count(parts) - 1]
 }
 
-is_suspicious_credential_value(value) {
-    is_weak_password(value)
-} else {
-    looks_like_encoded_secret(value)
-} else {
-    looks_like_hash(value)
+# Walk and find credentials in any structure
+find_hardcoded_credential(node) = result {
+    walk(node, [_, item])
+    item.ir_type == "String"
+    is_hardcoded_credential(item)
+    
+    # Check if this string is a KEY=value pattern with credential key
+    cred_value := string_contains_credential(item.value)
+    result := {
+        "value": item,
+        "cred_value": cred_value
+    }
 }
 
-find_credential_entries(node) = results {
-    results = {r |
-        walk(node, [_, child])
-        child.ir_type == "KeyValue"
-        child.key.ir_type == "String"
-        child.value.ir_type == "String"
-        has_credential_keyword(child.key.value)
-        is_hardcoded_string(child.value)
-        is_suspicious_credential_value(child.value)
-        r = {"key": child.key, "value": child.value}
+# Find credentials in Hash entries (Ansible-style nested structures)
+find_credential_in_hash_deep(node) = result {
+    walk(node, [_, item])
+    item.ir_type == "Hash"
+    walk(item.value, [_, entry])
+    entry.key.ir_type == "String"
+    entry.value
+    key_str := get_key_string(entry)
+    is_credential_name(key_str)
+    is_hardcoded_credential(entry.value)
+    result := entry.value
+}
+
+# Recursively find all hash-like structures and check their entries
+find_all_credentials(node) = result {
+    # Direct hash entry pattern (Python KeyValue or Ansible dict entry)
+    results := {r |
+        walk(node, [_, entry])
+        entry.key
+        entry.value
+        key_str := get_key_string(entry)
+        is_credential_name(key_str)
+        is_hardcoded_credential(entry.value)
+        r := entry.value
     }
     count(results) > 0
+    result := results[_]
 }
 
+# Check array elements for KEY=value credential patterns
+find_credential_in_array(node) = result {
+    walk(node, [_, item])
+    item.ir_type == "Array"
+    walk(item.value, [_, elem])
+    elem.ir_type == "String"
+    is_hardcoded_credential(elem)
+    string_contains_credential(elem.value)
+    result := elem
+}
+
+# Main analysis - Chef/Puppet style dotted variable names
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, node])
+    vars := {v |
+        walk(parent, [_, v])
+        v.ir_type == "Variable"
+    }
+    var := vars[_]
     
-    result = detect_credential_at_node(node, parent)
+    is_credential_name(var.name)
+    is_hardcoded_credential(var.value)
+    
+    result := {
+        "type": "sec_hard_pass",
+        "element": var,
+        "path": parent.path,
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
+    }
 }
 
-detect_credential_at_node(node, parent) = result {
-    node.ir_type == "KeyValue"
-    node.key.ir_type == "String"
-    has_credential_keyword(node.key.value)
-    node.value.ir_type == "String"
-    is_hardcoded_string(node.value)
-    is_suspicious_credential_value(node.value)
-    result = {
-        "type": "sec_hard_pass",
-        "element": node.value,
-        "path": parent.path,
-        "description": sprintf("Use of Hard-coded Password - Credentials should not be hardcoded in configuration files. Use secure secret management instead. (CWE-259) - Key: %s", [node.key.value])
+# Main analysis - direct credential attributes
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attrs := {a |
+        walk(parent, [_, a])
+        a.ir_type == "Attribute"
     }
-} else = result {
-    node.ir_type == "Hash"
-    creds := find_credential_entries(node)
-    cred := creds[_]
-    result = {
+    attr := attrs[_]
+    
+    is_credential_name(attr.name)
+    is_hardcoded_credential(attr.value)
+    
+    result := {
         "type": "sec_hard_pass",
-        "element": cred.value,
+        "element": attr,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Password - Credentials should not be hardcoded in configuration files. Use secure secret management instead. (CWE-259) - Key: %s", [cred.key.value])
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
     }
-} else = result {
-    node.ir_type == "Array"
-    elem := node.value[_]
-    elem.ir_type == "Hash"
-    creds := find_credential_entries(elem)
-    cred := creds[_]
-    result = {
-        "type": "sec_hard_pass",
-        "element": cred.value,
-        "path": parent.path,
-        "description": sprintf("Use of Hard-coded Password - Credentials should not be hardcoded in configuration files. Use secure secret management instead. (CWE-259) - Key: %s", [cred.key.value])
+}
+
+# Main analysis - nested credential keys in variables (deep search)
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    vars := {v |
+        walk(parent, [_, v])
+        v.ir_type == "Variable"
     }
-} else = result {
-    node.ir_type == "Variable"
-    has_credential_keyword(node.name)
-    node.value.ir_type == "String"
-    is_hardcoded_string(node.value)
-    is_suspicious_credential_value(node.value)
-    result = {
+    var := vars[_]
+    
+    violation := find_all_credentials(var.value)
+    
+    result := {
         "type": "sec_hard_pass",
-        "element": node.value,
+        "element": violation,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Password - Credentials should not be hardcoded in configuration files. Use secure secret management instead. (CWE-259) - Key: %s", [node.name])
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
     }
-} else = result {
-    node.ir_type == "Attribute"
-    has_credential_keyword(node.name)
-    node.value.ir_type == "String"
-    is_hardcoded_string(node.value)
-    is_suspicious_credential_value(node.value)
-    result = {
+}
+
+# Main analysis - nested credential keys in atomic units
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    au := atomic_units[_]
+    
+    violation := find_all_credentials(au)
+    
+    result := {
         "type": "sec_hard_pass",
-        "element": node.value,
+        "element": violation,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Password - Credentials should not be hardcoded in configuration files. Use secure secret management instead. (CWE-259) - Key: %s", [node.name])
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
+    }
+}
+
+# Handle KeyValue within Attribute values
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    attrs := {a |
+        walk(parent, [_, a])
+        a.ir_type == "Attribute"
+    }
+    attr := attrs[_]
+    
+    walk(attr.value, [_, kv])
+    kv.ir_type == "KeyValue"
+    is_credential_name(kv.name)
+    is_hardcoded_credential(kv.value)
+    
+    result := {
+        "type": "sec_hard_pass",
+        "element": kv.value,
+        "path": parent.path,
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
+    }
+}
+
+# Handle Puppet-style env arrays with KEY=value strings
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [_, item])
+    item.ir_type == "String"
+    is_hardcoded_credential(item)
+    string_contains_credential(item.value)
+    
+    result := {
+        "type": "sec_hard_pass",
+        "element": item,
+        "path": parent.path,
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
+    }
+}
+
+# Handle complex nested structures in arrays (Puppet env attributes)
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [_, attr])
+    attr.ir_type == "Attribute"
+    
+    walk(attr.value, [_, arr])
+    arr.ir_type == "Array"
+    
+    walk(arr.value, [_, elem])
+    elem.ir_type == "String"
+    is_hardcoded_credential(elem)
+    string_contains_credential(elem.value)
+    
+    result := {
+        "type": "sec_hard_pass",
+        "element": elem,
+        "path": parent.path,
+        "description": "Use of Hard-coded Password - Credentials should not be embedded directly in code. Use secure credential management systems. (CWE-259)"
     }
 }

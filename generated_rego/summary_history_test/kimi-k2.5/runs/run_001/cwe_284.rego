@@ -2,291 +2,228 @@ package glitch
 
 import data.glitch_lib
 
-# Check for open IP strings (0.0.0.0 with optional quotes)
-is_open_ip(node) {
-    node.ir_type == "String"
-    regex.match("^\"?0\\.0\\.0\\.0\"?$", node.value)
+# Network binding indicators that suggest IP binding configuration
+network_indicators := {"bind", "bindip", "bind_ip", "bindaddress", "bind_address", "host", "listen", "ip", "address", "addr", "interface"}
+
+# Unrestricted network values indicating exposure to all interfaces
+unrestricted_networks := {"0.0.0.0", "0.0.0.0/0", "::", "::/0", "*", "any", "all", "0.0.0.0/32", "[::]", "0:0:0:0:0:0:0:0"}
+
+# String patterns that indicate actual resource instantiation (not just data)
+resource_action_indicators := {"template", "service", "file", "package", "execute", "command", "script", "cron", "mount", "user", "group", "directory", "link", "route", "firewall", "selinux", "sysctl", "kernel_module", "sysctl_param", "minecraft_server", "windows_feature", "registry_key", "env", "path", "include_recipe", "notifies", "subscribes", "only_if", "unless"}
+
+# Check if string indicates network binding context
+is_network_context(str) {
+    lower_str := lower(str)
+    indicator := network_indicators[_]
+    contains(lower_str, indicator)
 }
 
-# Check if name contains bind-related patterns, handling Ruby symbols and various formats
-is_bind_var_name(name) {
-    lower_name := lower(name)
-    exact_match := {"ip", "host", "addr", "address"}
-    exact_match[lower_name]
-} else {
-    lower_name := lower(name)
-    contains(lower_name, "bind")
-} else {
-    lower_name := lower(name)
-    contains(lower_name, "listen")
-} else {
-    lower_name := lower(name)
-    regex.match(".*_ip$|.*_host$|.*_addr$|.*_address$", lower_name)
-} else {
-    lower_name := lower(name)
-    regex.match("^:ip$|^:host$|^:addr$|^:address$", lower_name)
+# Check if value represents unrestricted network access
+is_unrestricted_network(val) {
+    val.ir_type == "String"
+    clean_val := replace(replace(lower(val.value), "'", ""), "\"", "")
+    clean_val == unrestricted_networks[_]
 }
 
-# Check if a key string matches bind patterns (handles String keys with quotes)
-string_key_is_bind(key_str) {
-    clean_key := regex.replace(key_str, "^['\"](.+)['\"]$", "$1")
-    is_bind_var_name(clean_key)
-} else {
-    clean_key := regex.replace(key_str, "^:(.+)$", "$1")
-    is_bind_var_name(clean_key)
+# Strip Ruby symbol prefix for Chef
+strip_symbol(s) = result {
+    startswith(s, ":")
+    result := substring(s, 1, -1)
+} else = s
+
+# Convert various key types to string
+to_string(x) = s {
+    x.ir_type == "String"
+    s := x.value
+} else = s {
+    x.ir_type == "VariableReference"
+    s := x.value
+} else = "" {
+    true
 }
 
-# Check if any VariableReference in an Access chain matches bind patterns
-access_chain_has_bind(node) {
-    node.ir_type == "Access"
-    walk(node, [_, item])
-    item.ir_type == "VariableReference"
-    is_bind_var_name(item.value)
+# Check if a node has ancestors that indicate actual resource usage (not just data definition)
+has_resource_context(node, parent) {
+    walk(parent, [path, ancestor])
+    ancestor != node
+    ancestor.ir_type == "AtomicUnit"
+    contains(lower(ancestor.type), resource_action_indicators[_])
+} else {
+    walk(parent, [path, ancestor])
+    ancestor != node
+    ancestor.ir_type == "MethodCall"
+    contains(lower(ancestor.method), resource_action_indicators[_])
+} else {
+    walk(parent, [path, ancestor])
+    ancestor != node
+    ancestor.ir_type == "FunctionCall"
+    contains(lower(ancestor.name), resource_action_indicators[_])
 }
 
-# Check if a variable name suggests bind pattern
-var_name_is_bind(var_name) {
-    is_string(var_name)
-    is_bind_var_name(var_name)
-} else {
-    var_name == "VariableReference"
-    false
-} else {
-    access_chain_has_bind(var_name)
-} else {
-    is_string(var_name)
-    string_key_is_bind(var_name)
+# Check if variable is used in a resource context by examining sibling statements
+used_in_resource_context(parent, var_name) {
+    walk(parent, [_, stmt])
+    stmt.ir_type == "AtomicUnit"
+    contains(lower(stmt.type), resource_action_indicators[_])
+    walk(stmt, [_, used])
+    used.ir_type == "VariableReference"
+    used.value == var_name
 }
 
-# Check if a hash entry has bind key and open IP value
-hash_has_bind_entry(hash_node) {
+# Check if a Hash contains resource-related keys that indicate active configuration
+has_resource_keys(hash_node) {
     hash_node.ir_type == "Hash"
-    entry := hash_node.value[_]
-    key_is_bind(entry.key)
-    is_open_ip(entry.value)
+    some i
+    pair := hash_node.value[i]
+    kval := to_string(pair.key)
+    kclean := strip_symbol(kval)
+    contains(lower(kclean), resource_action_indicators[_])
 }
 
-# Check if a key is a bind key
-key_is_bind(key) {
-    key.ir_type == "VariableReference"
-    is_bind_var_name(key.value)
-} else {
-    key.ir_type == "String"
-    string_key_is_bind(key.value)
-} else {
-    access_chain_has_bind(key)
+# Check if Hash is directly assigned to a resource attribute
+is_resource_attribute_value(node, parent) {
+    walk(parent, [_, ancestor])
+    ancestor.ir_type == "Attribute"
+    ancestor.value == node
+    walk(parent, [_, au])
+    au.ir_type == "AtomicUnit"
+    contains(lower(au.type), resource_action_indicators[_])
 }
 
-# Find hash entries with bind key and open IP - returns the value node
-find_hash_bind_entry(hash_node) = value_node {
-    hash_node.ir_type == "Hash"
-    entry := hash_node.value[_]
-    key_is_bind(entry.key)
-    is_open_ip(entry.value)
-    value_node := entry.value
+# Check if this is just a data hash without resource context
+is_data_hash_without_context(node, parent) {
+    node.value.ir_type == "Hash"
+    not has_resource_keys(node.value)
+    not used_in_resource_context(parent, node.name)
 }
 
-# Walk nested structures to find any Hash with bind key and open IP
-walk_for_bind_open_ip(root) = value_node {
-    walk(root, [_, node])
+# Main detection: Variables with network binding names and unrestricted values - only if used in resource context
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    walk(parent, [_, node])
+    node.ir_type == "Variable"
+    
+    # Skip if just a data hash without resource context
+    not is_data_hash_without_context(node, parent)
+    
+    # Check variable name indicates network binding
+    is_network_context(node.name)
+    
+    # Check for unrestricted network in value
+    is_unrestricted_network(node.value)
+    
+    result := {
+        "type": "sec_invalid_bind",
+        "element": node,
+        "path": parent.path,
+        "description": "Improper Access Control - Service bound to unrestricted IP address (0.0.0.0), allowing access from any network. (CWE-284)"
+    }
+}
+
+# Detection: Hash entries with network binding keys and unrestricted values in resource context
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    # Look for Hash nodes that are in resource context
+    walk(parent, [_, node])
     node.ir_type == "Hash"
-    value_node := find_hash_bind_entry(node)
-}
-
-# Direct variable with bind name and open IP
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
     
-    is_bind_var_name(var.name)
-    is_open_ip(var.value)
+    # Must have resource context - either part of atomic unit or has resource keys
+    has_resource_context(node, parent)
     
-    result := {
-        "type": "sec_invalid_bind",
-        "element": var,
-        "path": parent.path,
-        "description": "Improper Access Control - Service bound to 0.0.0.0 allowing access from any IP address. (CWE-284)"
-    }
-}
-
-# Variable with Access/Array notation in name (e.g., default[:redis][:server][:addr])
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
+    some i
+    pair := node.value[i]
+    k := pair.key
+    v := pair.value
     
-    is_string(var.name)
-    var.name_value.ir_type == "Access"
-    access_chain_has_bind(var.name_value)
-    is_open_ip(var.value)
+    kval := to_string(k)
+    kclean := strip_symbol(kval)
+    is_network_context(kclean)
+    is_unrestricted_network(v)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": var,
+        "element": v,
         "path": parent.path,
-        "description": "Improper Access Control - Service bound to 0.0.0.0 in nested attribute. (CWE-284)"
+        "description": "Improper Access Control - Service configuration contains unrestricted IP binding (0.0.0.0) in nested options. (CWE-284)"
     }
 }
 
-# Variable name contains bracket notation with bind pattern (e.g., default[:redis][:server][:addr])
+# Detection: Hash entries in resource attributes
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
     
-    is_string(var.name)
-    contains(lower(var.name), "[:")
-    regex.match(".*\\[:?(ip|host|addr|address)\\]?", lower(var.name))
-    is_open_ip(var.value)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": var,
-        "path": parent.path,
-        "description": "Improper Access Control - Service bound to 0.0.0.0 in bracket-style attribute name. (CWE-284)"
-    }
-}
-
-# Variable with Hash value directly containing bind key and open IP
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
-    
-    var.value.ir_type == "Hash"
-    found_value := find_hash_bind_entry(var.value)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": found_value,
-        "path": parent.path,
-        "description": "Improper Access Control - Service configuration contains bind address 0.0.0.0. (CWE-284)"
-    }
-}
-
-# Deep nested hash in variable using walk
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
-    
-    var.value.ir_type == "Hash"
-    found_value := walk_for_bind_open_ip(var.value)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": found_value,
-        "path": parent.path,
-        "description": "Improper Access Control - Service configuration contains bind address 0.0.0.0 in nested structure. (CWE-284)"
-    }
-}
-
-# Check in nested unit_blocks
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    nested_blocks := parent.unit_blocks
-    block := nested_blocks[_]
-    block.variables
-    var := block.variables[_]
-    
-    is_open_ip(var.value)
-    
-    # Check if variable name is bind pattern OR if its value contains a hash with bind entry
-    is_bind_var_name(var.name)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": var,
-        "path": parent.path,
-        "description": "Improper Access Control - Service bound to 0.0.0.0 in nested block. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    nested_blocks := parent.unit_blocks
-    block := nested_blocks[_]
-    block.variables
-    var := block.variables[_]
-    
-    var.value.ir_type == "Hash"
-    found_value := walk_for_bind_open_ip(var.value)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": found_value,
-        "path": parent.path,
-        "description": "Improper Access Control - Service configuration contains bind address 0.0.0.0 in nested block structure. (CWE-284)"
-    }
-}
-
-# Atomic unit attribute with bind name and open IP
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
+    au := atomic_units[_]
     
-    attrs := glitch_lib.all_attributes(node)
+    attrs := glitch_lib.all_attributes(au)
     attr := attrs[_]
     
-    is_bind_var_name(attr.name)
-    is_open_ip(attr.value)
+    attr.value.ir_type == "Hash"
+    
+    some i
+    pair := attr.value.value[i]
+    k := pair.key
+    v := pair.value
+    
+    kval := to_string(k)
+    kclean := strip_symbol(kval)
+    is_network_context(kclean)
+    is_unrestricted_network(v)
     
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Improper Access Control - Service bound to 0.0.0.0 in resource attribute. (CWE-284)"
+        "description": "Improper Access Control - Service configuration contains unrestricted IP binding (0.0.0.0) in nested attribute options. (CWE-284)"
     }
 }
 
-# Atomic unit with Hash value containing bind key and open IP
+# Detection: Attributes in atomic units with direct unrestricted values
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
+    au := atomic_units[_]
     
-    attrs := glitch_lib.all_attributes(node)
+    attrs := glitch_lib.all_attributes(au)
     attr := attrs[_]
     
-    attr.value.ir_type == "Hash"
-    found_value := find_hash_bind_entry(attr.value)
+    is_network_context(attr.name)
+    is_unrestricted_network(attr.value)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": found_value,
+        "element": attr,
         "path": parent.path,
-        "description": "Improper Access Control - Service configuration contains bind address 0.0.0.0 in resource. (CWE-284)"
+        "description": "Improper Access Control - Service bound to unrestricted IP address (0.0.0.0), allowing access from any network. (CWE-284)"
     }
 }
 
-# Deep nested in atomic unit attributes
+# Detection: Array values in attributes with unrestricted network
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
+    au := atomic_units[_]
     
-    attrs := glitch_lib.all_attributes(node)
+    attrs := glitch_lib.all_attributes(au)
     attr := attrs[_]
     
-    attr.value.ir_type == "Hash"
-    found_value := walk_for_bind_open_ip(attr.value)
+    is_network_context(attr.name)
+    attr.value.ir_type == "Array"
+    
+    some i
+    is_unrestricted_network(attr.value.value[i])
     
     result := {
         "type": "sec_invalid_bind",
-        "element": found_value,
+        "element": attr,
         "path": parent.path,
-        "description": "Improper Access Control - Service configuration contains bind address 0.0.0.0 in deeply nested resource. (CWE-284)"
+        "description": "Improper Access Control - Service bound to unrestricted IP address (0.0.0.0) in array attribute. (CWE-284)"
     }
 }
