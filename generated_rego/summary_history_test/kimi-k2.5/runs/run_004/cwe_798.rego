@@ -2,190 +2,170 @@ package glitch
 
 import data.glitch_lib
 
-credential_keywords := {"auth", "authentication", "credential", "cred", "login", "signin", "token", "oauth", "api_key", "apikey", "secret_key", "access_key", "password", "passwd", "pwd", "passphrase", "secret", "client_secret", "admin_password", "root_password", "private_key", "key_data", "ssh_key", "signing_key", "db_password", "database_url", "connection_string", "jdbc_url", "mongo_uri", "redis_auth", "service_account", "assume_role", "sha512_password", "sha256_password", "md5_password", "user_password", "bind_password", "ldap_password", "keystore_password", "truststore_password", "key_password", "store_password"}
-credential_exact := {"key", "cert", "certificate", "key_file", "tls_cert", "subscription_id", "tenant_id", "client_id", "iam_role", "keystore", "truststore"}
-suffix := {"_key", "_secret", "_token", "_password", "_pwd", "_auth", "_cert", "_store"}
-safe_reference_patterns := {"var.", "variable.", "local.", "data.", "module.", "env(", "getenv", "environment", "vault", "secretmanager", "key_vault", "kms", "parameter", "secure_string", "sensitive(", "file(", "templatefile("}
+credential_suffixes := {"_password", "_passwd", "_secret", "_token", "_key", "_api_key", "_apikey", "_access_key", "_secret_key", "_private_key", "_credentials"}
 
-schema_field_patterns := {"_tree_dn", "_objectclass", "_id_attribute", "_name_attribute", "_mail_attribute", "_allow_create", "_allow_update", "_allow_delete", "_member_attribute", "_desc_attribute", "_enabled_attribute", "_enabled_default", "_enabled_invert", "_cacertfile", "user_tree_dn", "group_tree_dn", "user_objectclass", "group_objectclass", "authenticator", "authorizer", "url", "uri", "host", "port", "server", "method", "type", "driver", "scheme", "version", "name", "description", "comment", "label", "tag"}
+credential_keywords := {"password", "passwd", "secret", "token", "api_key", "apikey", "access_key", "secret_key", "private_key", "credentials"}
 
-common_usernames := {"Administrator", "root", "admin", "user", "true", "false", "True", "False", "yes", "no", "on", "off", "enabled", "disabled", "default", "standard", "normal", "compute", "cassandra", "sensu"}
+sensitive_prefixes := {"sha512_", "sha256_", "md5_", "bcrypt_", "scrypt_", "pbkdf2_"}
 
-is_schema_field(name) {
-    lower_name := lower(name)
-    pattern := schema_field_patterns[_]
-    contains(lower_name, pattern)
-}
+auth_context_keywords := {"auth", "cvauth", "login", "credential", "rsa", "dsa", "ecdsa", "ed25519", "keystore", "truststore", "authentication", "method", "cert"}
 
-is_credential_field(name) {
-    lower_name := lower(name)
-    not is_schema_field(lower_name)
-    keyword := credential_keywords[_]
-    contains(lower_name, keyword)
-} else {
-    lower_name := lower(name)
-    not is_schema_field(lower_name)
-    exact := credential_exact[_]
-    lower_name == exact
-} else {
-    lower_name := lower(name)
-    not is_schema_field(lower_name)
-    s := suffix[_]
-    endswith(lower_name, s)
-}
-
-is_safe_reference(value) {
-    value.ir_type == "VariableReference"
-    ref := value.value
-    pattern := safe_reference_patterns[_]
-    contains(ref, pattern)
-}
-
-is_safe_reference(value) {
-    value.ir_type == "FunctionCall"
-    name := lower(value.name)
-    pattern := safe_reference_patterns[_]
-    contains(name, pattern)
-}
-
-is_common_username(val) {
-    lower(val) == lower(common_usernames[_])
-} else {
-    regex.match(`^(?i)(cn=|uid=|ou=|dc=|o=|availability|up|down|ok|none|null|default)$`, val)
-}
-
-looks_like_credential_value(value) {
-    value.ir_type == "String"
-    val := value.value
+is_likely_secret_value(val) {
     count(val) > 0
-    not is_common_username(val)
-} else {
-    value.ir_type == "String"
-    val := value.value
-    count(val) > 0
-    regex.match(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`, val)
+    not regex.match("^\\s*$", val)
+    not regex.match("^\\{\\{", val)
+    not regex.match("\\$\\{", val)
+    not regex.match("^<%", val)
+    not regex.match("^__", val)
+    not regex.match("^(TODO|FIXME|YOUR[_-].*|CHANGE[_-].*|EXAMPLE|DUMMY|TEST|PLACEHOLDER|INSERT|REPLACE|N/A|NA|NONE|NULL|true|false|yes|no|on|off|0|1)$", lower(val))
+    not is_file_path(val)
 }
 
-extract_last_segment(name) = last {
-    parts := split(name, ".")
-    count(parts) > 0
-    last = parts[count(parts) - 1]
-} else = last {
-    matches := regex.find_all_string_submatch_n(`\['([^']+)'\]$`, name, 1)
-    count(matches) > 0
-    count(matches[0]) > 1
-    last = matches[0][1]
-} else = last {
-    matches := regex.find_all_string_submatch_n(`\["([^"]+)"\]$`, name, 1)
-    count(matches) > 0
-    count(matches[0]) > 1
-    last = matches[0][1]
-} else = name {
-    true
+is_file_path(val) {
+    regex.match("^(?:/|\\.\\./|\\.\\./|[a-zA-Z]:\\\\\\\\|conf/|./|file://|/etc/|/var/|/usr/|/opt/|/home/)", val)
 }
 
-check_credential_in_hash_entry(key_node, val_node) {
-    key_node.ir_type == "String"
-    key_name := key_node.value
-    is_credential_field(key_name)
-    val_node.ir_type == "String"
-    looks_like_credential_value(val_node)
-    not is_safe_reference(val_node)
+contains_credential_keyword(name) {
+    lower_name := lower(name)
+    some kw
+    credential_keywords[kw]
+    lower_name == kw
 }
 
-collect_all_hash_nodes(node) = hash_nodes {
-    hash_nodes := {n |
+contains_credential_keyword(name) {
+    lower_name := lower(name)
+    some kw
+    credential_keywords[kw]
+    endswith(lower_name, concat("", ["_", kw]))
+}
+
+contains_credential_keyword(name) {
+    lower_name := lower(name)
+    some kw
+    credential_keywords[kw]
+    startswith(lower_name, concat("", [kw, "_"]))
+}
+
+contains_credential_keyword(name) {
+    lower_name := lower(name)
+    some kw
+    credential_keywords[kw]
+    contains(lower_name, concat("", [".", kw]))
+}
+
+contains_credential_suffix(name) {
+    lower_name := lower(name)
+    some suffix
+    credential_suffixes[suffix]
+    endswith(lower_name, suffix)
+}
+
+has_sensitive_prefix(name) {
+    lower_name := lower(name)
+    some prefix
+    sensitive_prefixes[prefix]
+    startswith(lower_name, prefix)
+}
+
+is_credential_key(key_str) {
+    contains_credential_suffix(key_str)
+}
+
+is_credential_key(key_str) {
+    contains_credential_keyword(key_str)
+    not is_non_credential_field(key_str)
+}
+
+is_credential_key(key_str) {
+    has_sensitive_prefix(key_str)
+}
+
+is_special_key_in_context(key_str, sibling_names) {
+    lower_key := lower(key_str)
+    lower_key == "key"
+    some sibling
+    sibling_names[sibling]
+    some ctx_kw
+    auth_context_keywords[ctx_kw]
+    regex.match(sprintf(".*%s.*", [ctx_kw]), lower(sibling))
+}
+
+is_special_key_in_context(key_str, sibling_names) {
+    lower_key := lower(key_str)
+    lower_key == "secret"
+    some sibling
+    sibling_names[sibling]
+    some ctx_kw
+    auth_context_keywords[ctx_kw]
+    regex.match(sprintf(".*%s.*", [ctx_kw]), lower(sibling))
+}
+
+is_non_credential_field(name) {
+    lower_name := lower(name)
+    lower_name == "key"
+}
+
+is_non_credential_field(name) {
+    lower_name := lower(name)
+    startswith(lower_name, "ssh_")
+    endswith(lower_name, "_key")
+}
+
+is_non_credential_field(name) {
+    lower_name := lower(name)
+    regex.match("^(public_key|authorized_keys?|known_hosts|key_file|key_path|key_name|api_version|auth_type|auth_method|auth_version|auth_strategy)$", lower_name)
+}
+
+is_non_credential_field(name) {
+    regex.match("^(user|username|uid|principal|subject)$", lower(name))
+}
+
+get_sibling_keys(hash_entries, current_idx) = sibling_keys {
+    sibling_keys = {lower(hash_entries[j].key.value) |
+        some j
+        j != current_idx
+        j < count(hash_entries)
+        hash_entries[j].key.ir_type == "String"
+    }
+}
+
+check_hash_entries_for_creds(entries, path_prefix) = creds {
+    creds = {cred |
+        some i
+        entry := entries[i]
+        entry.key.ir_type == "String"
+        key_str := entry.key.value
+        
+        entry.value.ir_type == "String"
+        val_str := entry.value.value
+        is_likely_secret_value(val_str)
+        
+        key_match(key_str, entries, i)
+        
+        cred = {
+            "key": key_str,
+            "val_node": entry.value
+        }
+    }
+}
+
+key_match(key_str, entries, idx) {
+    is_credential_key(key_str)
+}
+
+key_match(key_str, entries, idx) {
+    sibling_keys := get_sibling_keys(entries, idx)
+    is_special_key_in_context(key_str, sibling_keys)
+}
+
+collect_all_creds(node) = all_creds {
+    all_creds = {cred |
+        some _, n
         walk(node, [_, n])
         n.ir_type == "Hash"
-    }
-}
-
-collect_direct_creds_in_hash(hash_node, base_path) = creds {
-    creds := {cred |
-        entry := hash_node.value[_]
-        k := entry.key
-        v := entry.value
-        k.ir_type == "String"
-        is_credential_field(k.value)
-        v.ir_type == "String"
-        looks_like_credential_value(v)
-        not is_safe_reference(v)
-        path := sprintf("%s.%s", [base_path, k.value])
-        cred := [k.value, v, path]
-    }
-}
-
-all_creds_in_node(node, path_str) = creds {
-    node.ir_type == "Hash"
-    hash_nodes := collect_all_hash_nodes(node)
-    
-    creds := {cred |
-        hash_node := hash_nodes[_]
-        hash_node_node := hash_node
-        
-        entry := hash_node_node.value[_]
-        k := entry.key
-        v := entry.value
-        
-        k.ir_type == "String"
-        is_credential_field(k.value)
-        v.ir_type == "String"
-        looks_like_credential_value(v)
-        not is_safe_reference(v)
-        
-        full_path := sprintf("%s.%s", [path_str, k.value])
-        cred := [k.value, v, full_path]
-    }
-}
-
-all_creds_in_node(node, path_str) = creds {
-    node.ir_type == "Array"
-    array_nodes := {n |
-        walk(node, [_, n])
-        n.ir_type == "Hash"
-    }
-    
-    creds := {cred |
-        hash_node := array_nodes[_]
-        
-        entry := hash_node.value[_]
-        k := entry.key
-        v := entry.value
-        
-        k.ir_type == "String"
-        is_credential_field(k.value)
-        v.ir_type == "String"
-        looks_like_credential_value(v)
-        not is_safe_reference(v)
-        
-        path := sprintf("%s.%s", [path_str, k.value])
-        cred := [k.value, v, path]
-    }
-}
-
-all_creds_in_node(node, path_str) = creds {
-    not node.ir_type == "Hash"
-    not node.ir_type == "Array"
-    creds := set()
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, node])
-    
-    node.ir_type == "Variable"
-    node.value.ir_type == "Hash"
-    
-    creds := all_creds_in_node(node.value, node.name)
-    count(creds) > 0
-    
-    result := {
-        "type": "sec_hard_secr",
-        "element": node,
-        "path": parent.path,
-        "description": sprintf("Use of hard-coded credentials (field: %s) - Credentials should not be hard-coded in configuration files. Use environment variables, secret management systems, or dynamic configuration sources instead. (CWE-798)", [node.name])
+        count(n.value) > 0
+        creds := check_hash_entries_for_creds(n.value, "")
+        cred := creds[_]
     }
 }
 
@@ -193,18 +173,16 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, node])
-    
-    node.ir_type == "Variable"
-    node.value.ir_type == "String"
-    
-    check_credential_in_name(node.name, node.value)
+    var := parent.variables[_]
+    is_credential_key(var.name)
+    var.value.ir_type == "String"
+    is_likely_secret_value(var.value.value)
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
+        "element": var,
         "path": parent.path,
-        "description": sprintf("Use of hard-coded credentials (field: %s) - Credentials should not be hard-coded in configuration files. Use environment variables, secret management systems, or dynamic configuration sources instead. (CWE-798)", [node.name])
+        "description": "Use of hard-coded credentials - Hard-coded credentials in source code can lead to security vulnerabilities. Use external secret management systems. (CWE-798)"
     }
 }
 
@@ -212,18 +190,16 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, node])
-    node.ir_type == "Variable"
-    node.value.ir_type == "Array"
+    var := parent.variables[_]
     
-    creds := all_creds_in_node(node.value, node.name)
-    count(creds) > 0
+    all_creds := collect_all_creds(var.value)
+    cred := all_creds[_]
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
+        "element": cred.val_node,
         "path": parent.path,
-        "description": sprintf("Use of hard-coded credentials (field: %s) - Credentials should not be hard-coded in configuration files. Use environment variables, secret management systems, or dynamic configuration sources instead. (CWE-798)", [node.name])
+        "description": "Use of hard-coded credentials - Hard-coded credentials in source code can lead to security vulnerabilities. Use external secret management systems. (CWE-798)"
     }
 }
 
@@ -231,17 +207,19 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, node])
-    node.ir_type == "Attribute"
-    node.value.ir_type == "String"
+    au := parent.atomic_units[_]
+    attrs := glitch_lib.all_attributes(au)
+    attr := attrs[_]
     
-    check_credential_in_name(node.name, node.value)
+    is_credential_key(attr.name)
+    attr.value.ir_type == "String"
+    is_likely_secret_value(attr.value.value)
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
+        "element": attr,
         "path": parent.path,
-        "description": sprintf("Use of hard-coded credentials (field: %s) - Credentials should not be hard-coded in configuration files. Use environment variables, secret management systems, or dynamic configuration sources instead. (CWE-798)", [node.name])
+        "description": "Use of hard-coded credentials - Hard-coded credentials in source code can lead to security vulnerabilities. Use external secret management systems. (CWE-798)"
     }
 }
 
@@ -249,25 +227,17 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, node])
-    node.ir_type == "Attribute"
-    node.value.ir_type == "Hash"
+    au := parent.atomic_units[_]
+    attrs := glitch_lib.all_attributes(au)
+    attr := attrs[_]
     
-    creds := all_creds_in_node(node.value, node.name)
-    count(creds) > 0
+    all_creds := collect_all_creds(attr.value)
+    cred := all_creds[_]
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
+        "element": cred.val_node,
         "path": parent.path,
-        "description": sprintf("Use of hard-coded credentials (field: %s) - Credentials should not be hard-coded in configuration files. Use environment variables, secret management systems, or dynamic configuration sources instead. (CWE-798)", [node.name])
+        "description": "Use of hard-coded credentials - Hard-coded credentials in source code can lead to security vulnerabilities. Use external secret management systems. (CWE-798)"
     }
-}
-
-check_credential_in_name(name, value) {
-    not is_schema_field(name)
-    is_credential_field(name)
-    value.ir_type == "String"
-    looks_like_credential_value(value)
-    not is_safe_reference(value)
 }

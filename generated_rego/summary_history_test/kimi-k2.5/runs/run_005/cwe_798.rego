@@ -2,286 +2,239 @@ package glitch
 
 import data.glitch_lib
 
-credential_keywords := {
-    "password", "passwd", "pwd", "secret", "secret_key", "secrets",
-    "token", "api_token", "auth_token", "bearer_token", "access_token",
-    "api_key", "apikey", "access_key", "key",
-    "credentials", "credential",
-    "private_key", "public_key", "certificate", "cert",
-    "conn_string", "connection_string",
-    "db_password", "database_password", "root_password", "admin_password",
-    "master_key", "encryption_key", "signing_key", "shared_key", "session_key",
-    "keystore_password", "truststore_password", "keystore_pass", "truststore_pass",
-    "initial_password", "setup_password", "bootstrap_password",
-    "service_password", "user_password", "manager_password",
-    "passphrase", "pass",
-    "sha512_password", "sha256_password", "encrypted_password", "hashed_password"
+credential_names := {"password", "passwd", "pwd", "secretpassword", "secret_password", "api_key", "apikey", "api_secret", "apisecret", "token", "access_token", "auth_token", "secret_token", "secret", "client_secret", "private_key", "secret_key", "encryption_key", "connection_string", "dsn", "credentials"}
+
+credential_suffixes := {"_password", "_passwd", "_pwd", "_secret", "_key", "_token", "_apikey", "_keystore", "_truststore"}
+
+common_username_values := {"admin", "administrator", "root", "user", "guest", "test", "demo"}
+
+auth_context_patterns := {"auth", "login", "credential", "access", "token"}
+
+is_file_path(str) {
+    regex.match("^[./~]", str)
 }
 
-sensitive_contexts := {
-    "auth", "authentication", "login", "credential", "credentials",
-    "security", "private", "secret", "encrypt", "encryption",
-    "keystore", "truststore", "cert", "certificate", "ssl", "tls",
-    "sign", "signature", "signing", "verify", "verification",
-    "rabbitmq", "cassandra", "rbd", "bgp", "ldap", "cvauth", "user", "pass",
-    "bgp", "peer", "peer_group", "neighbors", "terminattr", "cvpadmin", "admin",
-    "local_users", "sensu", "keystone", "backend"
+is_file_path(str) {
+    regex.match("^[a-zA-Z]:", str)
 }
 
-common_usernames := {
-    "root", "admin", "administrator", "sensu", "guest", "user", "test", "temp",
-    "localhost", "api", "service", "system"
+is_file_path(str) {
+    regex.match("/[a-zA-Z0-9_.-]+/", str)
 }
 
-looks_like_secret_manager_ref(value) {
-    regex.match("^(var|data|module|local|each|path|terraform|aws_secretsmanager|azurerm_key_vault|vault_|lookup)\\.", value)
-} else {
-    regex.match("^\\$\\{", value)
-} else {
-    regex.match("^\\{\\{", value)
+is_placeholder_or_reference(str) {
+    regex.match(".*\\$\\{.*\\}.*", str)
 }
 
-is_path_or_dn(value) {
-    startswith(lower(value), "/")
-} else {
-    startswith(lower(value), "cn=")
-} else {
-    startswith(lower(value), "uid=")
-} else {
-    startswith(lower(value), "ou=")
-} else {
-    startswith(lower(value), "dc=")
-} else {
-    startswith(lower(value), "o=")
-} else {
-    startswith(lower(value), "ldaps://")
-} else {
-    startswith(lower(value), "ldap://")
-} else {
-    regex.match("^[a-z]+://", lower(value))
+is_placeholder_or_reference(str) {
+    regex.match("^(vault|var|local|data|module|env|secret|lookup|template|each|path|terraform|ref)\\..*", lower(str))
 }
 
-looks_like_encoded_or_hash(value) {
-    regex.match("^\\$[0-9a-z]+\\$", value)
-} else {
-    regex.match("[A-Za-z0-9+/]{20,}={0,2}$", value)
+is_placeholder_or_reference(str) {
+    regex.match("^\\s*\\$\\(", str)
 }
 
-is_common_username(value) {
+is_placeholder_or_reference(str) {
+    regex.match("^\\$[a-zA-Z_]", str)
+}
+
+is_placeholder_or_reference(str) {
+    regex.match("^<<", str)
+}
+
+matches_credential_name(name) {
+    lower_name := lower(name)
+    cred := credential_names[_]
+    lower_name == cred
+}
+
+matches_credential_name(name) {
+    lower_name := lower(name)
+    suffix := credential_suffixes[_]
+    endswith(lower_name, suffix)
+}
+
+is_key_in_auth_context(key_name, hash_keys) {
+    lower(key_name) == "key"
+    key_auth := hash_keys[_]
+    auth_ctx := auth_context_patterns[_]
+    contains(lower(key_auth), auth_ctx)
+}
+
+extract_bracket_field_name(name) = extracted {
+    regex.match("^[^']*\\['([^']+)'\\]", name)
+    parts := regex.find_all_string_submatch_n("^[^']*\\['([^']+)'\\]", name, -1)
+    count(parts) > 0
+    count(parts[0]) > 1
+    extracted := parts[0][1]
+} else = name {
+    true
+}
+
+is_likely_username_value(value) {
     lower_val := lower(value)
-    lower_val == common_usernames[_]
+    common_username_values[lower_val]
 }
 
-is_short_common_word(value) {
-    lower_val := lower(value)
-    lower_val == "true"
-} else {
-    lower_val := lower(value)
-    lower_val == "false"
-} else {
-    lower_val := lower(value)
-    lower_val == "yes"
-} else {
-    lower_val := lower(value)
-    lower_val == "no"
-} else {
-    lower_val := lower(value)
-    lower_val == "on"
-} else {
-    lower_val := lower(value)
-    lower_val == "off"
-} else {
-    lower_val := lower(value)
-    lower_val == "null"
-} else {
-    lower_val := lower(value)
-    lower_val == "none"
-} else {
-    lower_val := lower(value)
-    lower_val == "nil"
-}
-
-extract_dotted_components(name) = parts {
-    parts := split(name, ".")
-}
-
-extract_bracket_components(name) = parts {
-    parts := regex.split("\\['|']", name)
-}
-
-get_all_name_parts(name) = parts {
-    dotted := extract_dotted_components(name)
-    parts := {part | part := dotted[_]; part != ""}
-} else = parts {
-    bracket := extract_bracket_components(name)
-    parts := {trim(part, "'\"") | part := bracket[_]; part != ""}
-}
-
-key_matches_credential_keyword(key_str) {
-    kw := credential_keywords[_]
-    key_str == kw
-} else {
-    kw := credential_keywords[_]
-    endswith(key_str, concat("", ["_", kw]))
-} else {
-    kw := credential_keywords[_]
-    startswith(key_str, concat("", [kw, "_"]))
-}
-
-name_contains_cred_keyword(full_name) {
-    parts := get_all_name_parts(full_name)
-    some part
-    part = parts[_]
-    some kw
-    kw = credential_keywords[_]
-    lower_part := lower(part)
-    lower_part == kw
-} else {
-    parts := get_all_name_parts(full_name)
-    some part
-    part = parts[_]
-    some kw
-    kw = credential_keywords[_]
-    lower_part := lower(part)
-    endswith(lower_part, concat("", ["_", kw]))
-} else {
-    parts := get_all_name_parts(full_name)
-    some part
-    part = parts[_]
-    some kw
-    kw = credential_keywords[_]
-    lower_part := lower(part)
-    startswith(lower_part, concat("", [kw, "_"]))
-}
-
-has_sensitive_context(full_name) {
-    lower_key := lower(full_name)
-    ctx := sensitive_contexts[_]
-    contains(lower_key, ctx)
-}
-
-is_likely_credential_value(val) {
-    val != ""
-    count(val) > 1
-    not is_short_common_word(val)
-    not is_path_or_dn(val)
-    not looks_like_secret_manager_ref(val)
-}
-
-should_skip_contextual_detection(key_name, val) {
-    is_common_username(val)
-} else {
-    has_sensitive_context(key_name)
-    not regex.match("[^a-zA-Z0-9]", val)
-    count(val) < 20
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
+check_string_value_credential(val, key_name, path) = result {
+    val.ir_type == "String"
+    val.value != ""
+    not is_file_path(val.value)
+    not is_placeholder_or_reference(val.value)
+    not is_likely_username_value(val.value)
     
-    walk(parent, [_, node])
-    node.ir_type == "Variable"
-    
-    var_name := node.name
-    var_value := node.value
-    
-    var_value.ir_type == "String"
-    
-    name_contains_cred_keyword(var_name)
-    
-    val_str := var_value.value
-    is_likely_credential_value(val_str)
-    not should_skip_contextual_detection(var_name, val_str)
+    matches_credential_name(key_name)
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials should not be hard-coded in configuration. Use secret management solutions instead. (CWE-798)"
+        "element": val,
+        "path": path,
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
     }
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
+check_hash_main(hash_node, path, hash_keys) = result {
+    entry_main := hash_node.value[_]
+    key_name := entry_main.key.value
     
-    walk(parent, [_, node])
-    node.ir_type == "Attribute"
+    check_result := check_string_value_credential(entry_main.value, key_name, path)
+    check_result != null
     
-    attr_name := node.name
-    attr_value := node.value
+    result := check_result
+}
+
+check_hash_auth(hash_node, path, hash_keys) = result {
+    entry_auth := hash_node.value[_]
+    key_name := entry_auth.key.value
     
-    attr_value.ir_type == "String"
+    is_key_in_auth_context(key_name, hash_keys)
     
-    name_contains_cred_keyword(attr_name)
-    
-    val_str := attr_value.value
-    is_likely_credential_value(val_str)
-    not should_skip_contextual_detection(attr_name, val_str)
+    val := entry_auth.value
+    val.ir_type == "String"
+    val.value != ""
+    not is_file_path(val.value)
+    not is_placeholder_or_reference(val.value)
+    not is_likely_username_value(val.value)
     
     result := {
         "type": "sec_hard_secr",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials should not be hard-coded in configuration. Use secret management solutions instead. (CWE-798)"
+        "element": val,
+        "path": path,
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
     }
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [path, node])
-    node.ir_type == "KeyValue"
-    node.key.ir_type == "String"
-    
-    key_str := lower(node.key.value)
-    val_node := node.value
-    
-    val_node.ir_type == "String"
-    val_str := val_node.value
-    
-    key_matches_credential_keyword(key_str)
-    
-    is_likely_credential_value(val_str)
-    not should_skip_contextual_detection(key_str, val_str)
-    
-    result := {
-        "type": "sec_hard_secr",
-        "element": val_node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials should not be hard-coded in configuration. Use secret management solutions instead. (CWE-798)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, hash_node])
+check_hash_credential(hash_node, path) = result {
     hash_node.ir_type == "Hash"
     
-    walk(hash_node.value, [_, kv])
-    kv.ir_type == "KeyValue"
-    kv.key.ir_type == "String"
+    hash_keys := [hk.key.value | hk := hash_node.value[_]]
     
-    inner_key := lower(kv.key.value)
-    inner_val := kv.value
+    result := check_hash_main(hash_node, path, hash_keys)
+}
+
+check_hash_credential(hash_node, path) = result {
+    hash_node.ir_type == "Hash"
     
-    inner_val.ir_type == "String"
-    val_str := inner_val.value
+    hash_keys := [hk2.key.value | hk2 := hash_node.value[_]]
     
-    key_matches_credential_keyword(inner_key)
+    result := check_hash_auth(hash_node, path, hash_keys)
+}
+
+walk_check_hash(root, path) = result {
+    walk(root, [_, node])
     
-    is_likely_credential_value(val_str)
-    not should_skip_contextual_detection(inner_key, val_str)
+    node.ir_type == "Hash"
+    
+    result := check_hash_credential(node, path)
+}
+
+walk_check_array_hash(root, path) = result {
+    walk(root, [_, node])
+    
+    node.ir_type == "Array"
+    
+    item_arr := node.value[_]
+    result := check_hash_credential(item_arr, path)
+}
+
+walk_check_array_nested(root, path) = result {
+    walk(root, [_, node])
+    
+    node.ir_type == "Array"
+    
+    item_arr2 := node.value[_]
+    item_arr2.ir_type == "Hash"
+    
+    entry_arr := item_arr2.value[_]
+    key_name := entry_arr.key.value
+    
+    result := check_string_value_credential(entry_arr.value, key_name, path)
+}
+
+check_var_credential(var, path) = result {
+    var.ir_type == "Variable"
+    var.value.ir_type == "String"
+    var.value.value != ""
+    not is_file_path(var.value.value)
+    not is_placeholder_or_reference(var.value.value)
+    not is_likely_username_value(var.value.value)
+    
+    candidate_names := {
+        lower(var.name),
+        lower(extract_bracket_field_name(var.name))
+    }
+    
+    raw_parts := split(var.name, ".")
+    raw_part := raw_parts[_]
+    field_part_var := extract_bracket_field_name(raw_part)
+    
+    lower_field := lower(field_part_var)
+    
+    matches_credential_name(lower_field)
     
     result := {
         "type": "sec_hard_secr",
-        "element": inner_val,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials in nested hash structure. Use secret management solutions instead. (CWE-798)"
+        "element": var.value,
+        "path": path,
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
+    }
+}
+
+check_var_credential_alt(var, path) = result {
+    var.ir_type == "Variable"
+    var.value.ir_type == "String"
+    var.value.value != ""
+    not is_file_path(var.value.value)
+    not is_placeholder_or_reference(var.value.value)
+    not is_likely_username_value(var.value.value)
+    
+    raw_parts2 := split(var.name, ".")
+    raw_part2 := raw_parts2[_]
+    field_part_var2 := extract_bracket_field_name(raw_part2)
+    
+    lower_field2 := lower(field_part_var2)
+    
+    matches_credential_name(lower_field2)
+    
+    result := {
+        "type": "sec_hard_secr",
+        "element": var.value,
+        "path": path,
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
+    }
+}
+
+get_all_variables(node) = vars {
+    vars := {v |
+        walk(node, [_, v])
+        v.ir_type == "Variable"
+    }
+}
+
+get_all_attributes(node) = attrs {
+    attrs := {a |
+        walk(node, [_, a])
+        a.ir_type == "Attribute"
     }
 }
 
@@ -289,66 +242,119 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, var_node])
-    var_node.ir_type == "Variable"
-    
-    var_name := var_node.name
-    
-    not name_contains_cred_keyword(var_name)
-    has_sensitive_context(var_name)
-    
-    var_value := var_node.value
-    var_value.ir_type == "String"
-    val_str := var_value.value
-    
-    is_likely_credential_value(val_str)
-    count(val_str) > 6
-    not is_common_username(val_str)
-    
-    result := {
-        "type": "sec_hard_secr",
-        "element": var_node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Potential credential in sensitive security context. Use secret management solutions instead. (CWE-798)"
-    }
-}
-
-hash_deep_scan(hash_contents, prefix) = {[key, val] |
-    walk(hash_contents, [_, kv])
-    kv.ir_type == "KeyValue"
-    kv.key.ir_type == "String"
-    kv.value.ir_type == "String"
-    key := concat(".", [prefix, kv.key.value])
-    val := kv.value.value
+    var := parent.variables[_]
+    result := check_var_credential(var, parent.path)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    walk(parent, [_, var_node])
-    var_node.ir_type == "Variable"
+    var := parent.variables[_]
+    result := walk_check_hash(var.value, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     
-    var_name := var_node.name
-    var_value := var_node.value
+    var := parent.variables[_]
+    result := walk_check_array_hash(var.value, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     
-    var_value.ir_type == "Hash"
+    var := parent.variables[_]
+    result := walk_check_array_nested(var.value, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     
-    pair := hash_deep_scan(var_value.value, var_name)[_]
-    inner_key := pair[0]
-    inner_val := pair[1]
+    au := parent.atomic_units[_]
+    attr := au.attributes[_]
+    attr.value.ir_type == "String"
+    attr.value.value != ""
+    not is_file_path(attr.value.value)
+    not is_placeholder_or_reference(attr.value.value)
+    not is_likely_username_value(attr.value.value)
     
-    key_matches_credential_keyword(lower(inner_key))
-    
-    is_likely_credential_value(inner_val)
-    not should_skip_contextual_detection(inner_key, inner_val)
+    matches_credential_name(attr.name)
     
     result := {
         "type": "sec_hard_secr",
-        "element": var_node,
+        "element": attr.value,
         "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials in deeply nested structure. Use secret management solutions instead. (CWE-798)"
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
     }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    nested_ub := parent.unit_blocks[_]
+    
+    var := nested_ub.variables[_]
+    result := check_var_credential_alt(var, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    nested_ub := parent.unit_blocks[_]
+    
+    var := nested_ub.variables[_]
+    result := walk_check_hash(var.value, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    nested_ub := parent.unit_blocks[_]
+    
+    attr := nested_ub.attributes[_]
+    attr.value.ir_type == "String"
+    attr.value.value != ""
+    not is_file_path(attr.value.value)
+    not is_placeholder_or_reference(attr.value.value)
+    not is_likely_username_value(attr.value.value)
+    
+    matches_credential_name(attr.name)
+    
+    result := {
+        "type": "sec_hard_secr",
+        "element": attr.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Avoid embedding plaintext credentials in configurations. Use secure secret management instead. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    cond_stmt := parent.statements[_]
+    cond_stmt.ir_type == "ConditionalStatement"
+    
+    stmt_var := get_all_variables(cond_stmt)[_]
+    result := check_var_credential_alt(stmt_var, parent.path)
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    
+    cond_stmt := parent.statements[_]
+    cond_stmt.ir_type == "ConditionalStatement"
+    
+    stmt_var := get_all_variables(cond_stmt)[_]
+    result := walk_check_hash(stmt_var.value, parent.path)
 }
 
 Glitch_Analysis[result] {
@@ -356,56 +362,6 @@ Glitch_Analysis[result] {
     parent.path != ""
     
     walk(parent, [_, node])
-    node.ir_type == "BlockExpr"
-    
-    walk(node.statements, [_, stmt])
-    stmt.ir_type == "KeyValue"
-    stmt.key.ir_type == "String"
-    
-    key_str := lower(stmt.key.value)
-    val_node := stmt.value
-    
-    val_node.ir_type == "String"
-    val_str := val_node.value
-    
-    key_matches_credential_keyword(key_str)
-    
-    is_likely_credential_value(val_str)
-    not should_skip_contextual_detection(key_str, val_str)
-    
-    result := {
-        "type": "sec_hard_secr",
-        "element": val_node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials in block expression. Use secret management solutions instead. (CWE-798)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    walk(parent, [_, stmt])
-    stmt.ir_type == "ConditionalStatement"
-    
-    walk(stmt.statements, [_, inner_stmt])
-    walk(inner_stmt, [_, inner_node])
-    
-    inner_node.ir_type == "Variable"
-    
-    inner_value := inner_node.value
-    inner_value.ir_type == "String"
-    inner_val := inner_value.value
-    
-    name_contains_cred_keyword(inner_node.name)
-    
-    is_likely_credential_value(inner_val)
-    not should_skip_contextual_detection(inner_node.name, inner_val)
-    
-    result := {
-        "type": "sec_hard_secr",
-        "element": inner_node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Credentials - Credentials in conditional statement. Use secret management solutions instead. (CWE-798)"
-    }
+    node.ir_type == "Hash"
+    result := check_hash_credential(node, parent.path)
 }

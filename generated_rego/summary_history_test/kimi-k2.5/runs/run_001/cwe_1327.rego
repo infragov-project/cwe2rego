@@ -2,77 +2,71 @@ package glitch
 
 import data.glitch_lib
 
-unrestricted_ipv4 := {"0.0.0.0", "0.0/0", "*", "all", "any"}
-unrestricted_ipv6 := {"::", "::0", "::/0", "[::]", "[::0]"}
-bind_address_keywords := {"listen", "bind", "address", "ip", "host", "interface", "endpoint", "socket", "iface", "allowed", "permitted", "client", "source", "net", "addr"}
+unrestricted_ip_patterns := {"0.0.0.0", "*", "::", "0.0.0.0/0", "0.0.0.0/8"}
 
-is_unrestricted_address(str) {
-    lower_str := lower(str)
-    unrestricted_ipv4[lower_str]
+binding_keywords := {"listen", "listenaddr", "listen_address", "bind", "bind_addr", "bind_address", "host", "hostname", "interface", "address", "socket", "endpoint", "ip", "bindip", "bind-ip", "bind_address"}
+
+server_keywords := {"server", "service", "daemon", "listener", "ingress", "expose", "exposed", "public", "database", "db_server", "cache", "message_queue"}
+
+network_keywords := {"all_interfaces", "any", "wildcard", "unrestricted", "open", "hostnetwork"}
+
+all_binding_keywords[k] {
+    k := binding_keywords[_]
+}
+
+all_binding_keywords[k] {
+    k := server_keywords[_]
+}
+
+all_binding_keywords[k] {
+    k := network_keywords[_]
+}
+
+contains(str, substr) {
+    regex.match(sprintf(".*%s.*", [substr]), str)
+}
+
+is_unrestricted_ip(value) {
+    value.ir_type == "String"
+    unrestricted_ip_patterns[value.value]
 } else {
-    unrestricted_ipv6[str]
+    value.ir_type == "String"
+    regex.match("^\\[?::\\]?$", value.value)
 }
 
-has_bind_keyword(name) {
-    lower_name := lower(name)
-    keyword := bind_address_keywords[_]
-    contains(lower_name, keyword)
+has_binding_keyword(name) {
+    name_lower := lower(name)
+    contains(name_lower, all_binding_keywords[_])
 }
 
-check_string_unrestricted(node) {
-    node.ir_type == "String"
-    is_unrestricted_address(node.value)
+value_has_unrestricted_ip(val) {
+    walk(val, [_, node])
+    is_unrestricted_ip(node)
 }
 
-walk_hash_step[val] {
-    walk(input, [path, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    key_val.key.ir_type == "String"
-    has_bind_keyword(key_val.key.value)
-    val := key_val.value
-}
-
-walk_hash_step[val] {
-    walk(input, [path, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    key_val.key.ir_type == "VariableReference"
-    has_bind_keyword(key_val.key.value)
-    val := key_val.value
-}
-
-find_hash_binding = result {
-    walk_hash_step[target]
-    target.ir_type == "String"
-    check_string_unrestricted(target)
-    result := target
-}
-
-find_hash_binding = result {
-    walk_hash_step[target]
-    target.ir_type == "Array"
-    item := target.value[_]
-    item.ir_type == "String"
-    is_unrestricted_address(item.value)
-    result := item
+get_key_string(key) = result {
+    key.ir_type == "String"
+    result := key.value
+} else = result {
+    key.ir_type == "VariableReference"
+    result := key.value
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
-    
-    has_bind_keyword(var.name)
-    check_string_unrestricted(var.value)
+    walk(parent, [_, node])
+    node.ir_type == "Variable"
+    node.name
+    has_binding_keyword(node.name)
+    value_has_unrestricted_ip(node.value)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": var,
+        "element": node,
         "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
+        "description": "Binding to an Unrestricted IP Address - Variable with binding keyword configured with unrestricted IP address (0.0.0.0, *, or ::), which may expose services to unauthorized access. (CWE-1327)"
     }
 }
 
@@ -80,49 +74,20 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
+    walk(parent, [_, hash_node])
+    hash_node.ir_type == "Hash"
     
-    walk(var.value, [_, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    has_bind_key(key_val.key)
-    
-    child_val := key_val.value
-    child_val.ir_type == "String"
-    is_unrestricted_address(child_val.value)
+    entry := hash_node.value[_]
+    key_str := get_key_string(entry.key)
+    has_binding_keyword(key_str)
+    walk(entry.value, [_, leaf])
+    is_unrestricted_ip(leaf)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": key_val,
+        "element": leaf,
         "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
-    
-    walk(var.value, [_, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    has_bind_key(key_val.key)
-    
-    child_val := key_val.value
-    child_val.ir_type == "Array"
-    item := child_val.value[_]
-    item.ir_type == "String"
-    is_unrestricted_address(item.value)
-    
-    result := {
-        "type": "sec_invalid_bind",
-        "element": key_val,
-        "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
+        "description": "Binding to an Unrestricted IP Address - Nested hash key with binding keyword configured with unrestricted IP address (0.0.0.0, *, or ::), which may expose services to unauthorized access. (CWE-1327)"
     }
 }
 
@@ -136,14 +101,14 @@ Glitch_Analysis[result] {
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
     
-    has_bind_keyword(attr.name)
-    check_string_unrestricted(attr.value)
+    has_binding_keyword(attr.name)
+    value_has_unrestricted_ip(attr.value)
     
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
+        "description": "Binding to an Unrestricted IP Address - Attribute with binding keyword configured with unrestricted IP address (0.0.0.0, *, or ::), which may expose services to unauthorized access. (CWE-1327)"
     }
 }
 
@@ -157,20 +122,19 @@ Glitch_Analysis[result] {
     attrs := glitch_lib.all_attributes(node)
     attr := attrs[_]
     
-    walk(attr.value, [_, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    has_bind_key(key_val.key)
+    attr.value.ir_type == "Hash"
     
-    child_val := key_val.value
-    child_val.ir_type == "String"
-    is_unrestricted_address(child_val.value)
+    entry := attr.value.value[_]
+    key_str := get_key_string(entry.key)
+    has_binding_keyword(key_str)
+    walk(entry.value, [_, leaf])
+    is_unrestricted_ip(leaf)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": key_val,
+        "element": leaf,
         "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
+        "description": "Binding to an Unrestricted IP Address - Nested hash in attribute with binding keyword configured with unrestricted IP address (0.0.0.0, *, or ::), which may expose services to unauthorized access. (CWE-1327)"
     }
 }
 
@@ -178,37 +142,16 @@ Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-    
-    attrs := glitch_lib.all_attributes(node)
+    attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
     
-    walk(attr.value, [_, n])
-    n.ir_type == "Hash"
-    key_val := n.value[_]
-    has_bind_key(key_val.key)
-    
-    child_val := key_val.value
-    child_val.ir_type == "Array"
-    item := child_val.value[_]
-    item.ir_type == "String"
-    is_unrestricted_address(item.value)
+    has_binding_keyword(attr.name)
+    value_has_unrestricted_ip(attr.value)
     
     result := {
         "type": "sec_invalid_bind",
-        "element": key_val,
+        "element": attr,
         "path": parent.path,
-        "description": "Binding to an unrestricted IP address - Network-facing resources should not bind to 0.0.0.0, ::, or wildcard addresses allowing unrestricted remote access. (CWE-1327)"
+        "description": "Binding to an Unrestricted IP Address - UnitBlock attribute with binding keyword configured with unrestricted IP address (0.0.0.0, *, or ::), which may expose services to unauthorized access. (CWE-1327)"
     }
-}
-
-has_bind_key(node) {
-    node.ir_type == "String"
-    has_bind_keyword(node.value)
-}
-
-has_bind_key(node) {
-    node.ir_type == "VariableReference"
-    has_bind_keyword(node.value)
 }

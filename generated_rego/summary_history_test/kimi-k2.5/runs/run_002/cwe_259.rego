@@ -1,286 +1,152 @@
 package glitch
 
 import data.glitch_lib
+import future.keywords.in
 
-password_attr_exact := {"password", "passwd", "pwd", "secret", "credentials", "auth_token", "api_key", "private_key", "initial_password", "admin_password", "root_password", "default_password", "keystore_password", "truststore_password", "sha512_password", "key"}
+credential_keywords := {"password", "pwd", "pass", "secret", "auth_token", "credential", "keystore_password", "truststore_password", "key", "token", "auth", "passwd", "sha512_password", "sha256_password", "md5_password"}
 
-password_attr_suffixes := {"_password", "_secret", "_key", "_token", "_credentials"}
+default_passwords := {"admin", "password", "123456", "default", "changeme", "root", "toor", "guest", "user", "test", "password123", "admin123", "12345678", "qwerty", "letmein", "welcome", "login", "pass", "cassandra", "telarista"}
 
-is_password_attr(name) {
+is_external_reference(str) {
+    regex.match("\\$\\{", str)
+}
+
+is_external_reference(str) {
+    regex.match("(?i)secret|vault|keyvault|key.?manager|data\\.", str)
+}
+
+is_variable_reference(str) {
+    regex.match("\\$\\(|\\$\\{|\\$[a-zA-Z_]|\\$\\$", str)
+}
+
+is_credential_attribute(name) {
     lower_name := lower(name)
-    password_attr_exact[lower_name]
+    some kw in credential_keywords
+    regex.match(sprintf(".*%s.*", [kw]), lower_name)
 }
 
-is_password_attr(name) {
-    lower_name := lower(name)
-    endswith(lower_name, password_attr_suffixes[_])
+is_default_password(val_str) {
+    lower_val := lower(val_str)
+    default_passwords[lower_val]
 }
 
-is_password_attr(name) {
-    lower_name := lower(name)
-    contains(lower_name, "_password_")
+is_hardcoded_password(val_str) {
+    count(val_str) > 0
+    not regex.match("^\\s*$", val_str)
+    not is_external_reference(val_str)
+    not is_variable_reference(val_str)
 }
 
-contains_password_in_brackets(name) {
-    parts := split(name, "[")
-    some i
-    i > 0
-    part := parts[i]
-    trimmed := trim(part, "'\"]")
-    is_password_attr(trimmed)
+looks_like_password(str_val) {
+    is_hardcoded_password(str_val)
 }
 
-is_credential_key(name) {
-    lower_name := lower(name)
-    lower_name == "key"
+looks_like_password(str_val) {
+    is_default_password(str_val)
 }
 
-is_credential_context(path) {
-    count(path) > 0
-    parent_key := path[count(path) - 1]
-    lower_parent := lower(parent_key)
-    lower_parent == "cvauth"
+hash_value_key_str(entry) = key_str {
+    entry.key.ir_type == "String"
+    key_str := entry.key.value
 }
 
-is_safe_pattern(val) {
-    regex.match(".*\\$\\{.*\\}.*", val)
+hash_value_key_str(entry) = key_str {
+    not entry.key.ir_type == "String"
+    key_str := ""
 }
 
-is_safe_pattern(val) {
-    regex.match(".*\\$[a-zA-Z_][a-zA-Z0-9_]*", val)
-    not regex.match("^\\$[0-9]", val)
+# Walk all nodes using native walk and collect credential pairs with paths
+# Returns objects with key, val_node, and full path from root
+walk_and_collect(root, root_path) = findings {
+    findings := {f |
+        some [path, node] in walk(root)
+        node.ir_type == "Hash"
+        some entry in node.value
+        key_str := hash_value_key_str(entry)
+        key_str != ""
+        is_credential_attribute(key_str)
+        val_node := entry.value
+        f := {
+            "key": key_str,
+            "val_node": val_node,
+            "base_path": root_path
+        }
+    }
 }
 
-is_safe_pattern(val) {
-    regex.match("^::[a-zA-Z_].*$", val)
-}
-
-is_safe_pattern(val) {
-    regex.match(".*\\bdata\\..*", val)
-}
-
-is_safe_pattern(val) {
-    regex.match(".*\\blookup\\b.*", lower(val))
-}
-
-is_safe_pattern(val) {
-    regex.match(".*\\bvault_.*", lower(val))
-}
-
-is_safe_pattern(val) {
-    regex.match(".*\\bget_secret\\b.*", lower(val))
-}
-
-is_path_value(val) {
-    regex.match("^[\\./].*", val)
-}
-
-is_path_value(val) {
-    regex.match("^[a-zA-Z]:\\\\", val)
-}
-
-is_path_value(val) {
-    regex.match("^conf/", val)
-}
-
-is_path_value(val) {
-    endswith(lower(val), ".keystore")
-}
-
-is_path_value(val) {
-    endswith(lower(val), ".p12")
-}
-
-is_path_value(val) {
-    endswith(lower(val), ".jks")
-}
-
-is_path_value(val) {
-    endswith(lower(val), ".truststore")
-}
-
-is_hardcoded_string_value(node) {
-    node.ir_type == "String"
-    val := node.value
-    val != ""
-    not is_safe_pattern(val)
-    not is_path_value(val)
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    walk(parent, [path, node])
-    node.ir_type == "Hash"
-    some k
-    node.value[k]
-    kv := node.value[k]
-    kv.key.ir_type == "String"
-    key_name := kv.key.value
-    is_password_attr(key_name)
-    is_hardcoded_string_value(kv.value)
+# Check a credential finding and emit result if it's a hardcoded password
+emit_credential_finding(finding) = result {
+    finding.val_node.ir_type == "String"
+    val_str := finding.val_node.value
+    looks_like_password(val_str)
     result := {
         "type": "sec_hard_pass",
-        "element": kv.value,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Hardcoded password in nested Hash value. Use secure secret management instead. (CWE-259)"
+        "element": finding.val_node,
+        "path": finding.base_path,
+        "description": "Use of hard-coded password - Credentials should not be hard-coded in configuration. Use secret management services instead. (CWE-259)"
+    }
+}
+
+# Direct credential check for Variable with String value
+check_variable_direct(var, path) = result {
+    var.ir_type == "Variable"
+    is_credential_attribute(var.name)
+    var.value.ir_type == "String"
+    val_str := var.value.value
+    looks_like_password(val_str)
+    result := {
+        "type": "sec_hard_pass",
+        "element": var.value,
+        "path": path,
+        "description": "Use of hard-coded password - Credentials should not be hard-coded in configuration. Use secret management services instead. (CWE-259)"
+    }
+}
+
+# Direct credential check for Attribute with String value
+check_attribute_direct(attr, path) = result {
+    attr.ir_type == "Attribute"
+    is_credential_attribute(attr.name)
+    attr.value.ir_type == "String"
+    val_str := attr.value.value
+    looks_like_password(val_str)
+    result := {
+        "type": "sec_hard_pass",
+        "element": attr.value,
+        "path": path,
+        "description": "Use of hard-coded password - Credentials should not be hard-coded in configuration. Use secret management services instead. (CWE-259)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    walk(parent, [path, node])
-    node.ir_type == "Hash"
-    some k
-    node.value[k]
-    kv := node.value[k]
-    kv.key.ir_type == "String"
-    key_name := kv.key.value
-    is_credential_key(key_name)
-    is_credential_context(path)
-    is_hardcoded_string_value(kv.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": kv.value,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Hardcoded authentication key in credential context. Use secure secret management instead. (CWE-259)"
-    }
+    some var in glitch_lib.all_variables(parent)
+    result := check_variable_direct(var, parent.path)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    walk(parent, [path, node])
-    node.ir_type == "String"
-    is_hardcoded_string_value(node)
-    val := node.value
-    parts := split(val, "=")
-    count(parts) > 1
-    key_name := parts[0]
-    is_password_attr(key_name)
-    result := {
-        "type": "sec_hard_pass",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Hardcoded password in key=value string. Use secure secret management instead. (CWE-259)"
-    }
+    some var in glitch_lib.all_variables(parent)
+    var.value.ir_type in {"Hash", "Array"}
+    all_findings := walk_and_collect(var.value, parent.path)
+    some finding in all_findings
+    result := emit_credential_finding(finding)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    vars := parent.variables[_]
-    is_password_attr(vars.name)
-    is_hardcoded_string_value(vars.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": vars,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in variable with credential-related name. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
+    some attr in glitch_lib.all_attributes(parent)
+    result := check_attribute_direct(attr, parent.path)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    vars := parent.variables[_]
-    contains_password_in_brackets(vars.name)
-    is_hardcoded_string_value(vars.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": vars,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in Chef bracket-style variable. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    vars := parent.variables[_]
-    var_name := vars.name
-    parts := split(var_name, ".")
-    some i
-    part := parts[i]
-    is_password_attr(part)
-    is_hardcoded_string_value(vars.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": vars,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in Chef/Puppet dotted variable name. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    conds := glitch_lib.all_conditional_statements(parent)
-    cond := conds[_]
-    walk(cond, [path, node])
-    node.ir_type == "Variable"
-    is_password_attr(node.name)
-    is_hardcoded_string_value(node.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in conditional statement variable. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    conds := glitch_lib.all_conditional_statements(parent)
-    cond := conds[_]
-    walk(cond, [path, node])
-    node.ir_type == "Variable"
-    contains_password_in_brackets(node.name)
-    is_hardcoded_string_value(node.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in Chef bracket-style conditional variable. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    conds := glitch_lib.all_conditional_statements(parent)
-    cond := conds[_]
-    walk(cond, [path, node])
-    node.ir_type == "Variable"
-    var_name := node.name
-    parts := split(var_name, ".")
-    some i
-    part := parts[i]
-    is_password_attr(part)
-    is_hardcoded_string_value(node.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": node,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Password hardcoded in conditional variable with dotted credential name. Use secure secret management instead of hardcoded credentials. (CWE-259)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    unit := atomic_units[_]
-    attrs := glitch_lib.all_attributes(unit)
-    attr := attrs[_]
-    is_password_attr(attr.name)
-    is_hardcoded_string_value(attr.value)
-    result := {
-        "type": "sec_hard_pass",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of Hard-coded Password - Hardcoded password in attribute value. Use secure secret management instead. (CWE-259)"
-    }
+    some attr in glitch_lib.all_attributes(parent)
+    attr.value.ir_type in {"Hash", "Array"}
+    all_findings := walk_and_collect(attr.value, parent.path)
+    some finding in all_findings
+    result := emit_credential_finding(finding)
 }

@@ -1,270 +1,383 @@
 package glitch
 
 import data.glitch_lib
+import future.keywords.in
 
-credential_patterns := [
-    "password", "secret", "_password", "__password", "_secret", "__secret",
-    "private_key", "public_key", "ca_cert", "tls_key", "ssh_key",
-    "api_key", "api_secret", "client_secret", "access_key", "access_token",
-    "session_token", "connection_string", "root_password", "admin_password",
-    "master_password", "replication_password", "keystore_password", "truststore_password",
-    "broker_password", "cert_file", "key_file", "cert", "key", "token",
-    "credentials", "creds", "passphrase", "pin", "auth_token", "api_token",
-    "service_token", "access.secret", "access.key", "secret.key", "signing.key"
-]
+credential_keywords := {
+    "password",
+    "passwd",
+    "pwd",
+    "secret",
+    "secret_key",
+    "private_key",
+    "encryption_key",
+    "signing_key",
+    "master_key",
+    "api_key",
+    "access_key",
+    "secret_access_key",
+    "auth_token",
+    "bearer_token",
+    "client_secret",
+    "connection_string",
+    "root_password",
+    "admin_password",
+    "sha512_password",
+    "sha256_password",
+    "crypt_password",
+    "ssh_password",
+    "pass",
+    "token",
+    "credential",
+}
 
-excluded_value_patterns := [
-    "authenticator", "authorizer", "authentication", "authorization",
-    "cacertfile", "ca_cert_file", "cert_file", "tls_cacertfile"
-]
+keystore_password_patterns := {
+    "keystore_password",
+    "truststore_password",
+}
 
 is_credential_field(name) {
     lower_name := lower(name)
-    pattern := credential_patterns[_]
-    contains(lower_name, pattern)
+    some keyword in credential_keywords
+    contains(lower_name, keyword)
 }
 
-is_excluded_value_field(name) {
+is_keystore_password_field(name) {
     lower_name := lower(name)
-    pattern := excluded_value_patterns[_]
+    some pattern in keystore_password_patterns
     contains(lower_name, pattern)
 }
 
-is_secure_reference(str) {
-    regex.match("^\\$\\{", str)
+is_not_reference(val) {
+    lower_val := lower(val)
+    not startswith(lower_val, "var.")
+    not startswith(lower_val, "data.")
+    not startswith(lower_val, "vault_")
+    not startswith(val, "${")
+    not startswith(val, "$")
+    not startswith(val, "{{")
+    not contains(lower_val, "lookup(")
+    not contains(lower_val, "ansible_vault")
+    not contains(lower_val, "secrets_manager")
+    not contains(lower_val, "key_vault")
+    not contains(lower_val, "parameter_store")
 }
 
-is_secure_reference(str) {
-    regex.match("^\\$[A-Za-z_]", str)
+is_hardcoded_string(value) {
+    value.ir_type == "String"
+    value.value != ""
+    count(value.value) > 0
+    is_not_reference(value.value)
 }
 
-is_secure_reference(str) {
-    regex.match("(?i)(var|local|data|module|secret|vault|kms|ssm|keyvault|lookup|vars)", str)
+check_credential_kv(key_value) {
+    key_value.ir_type == "KeyValue"
+    key_value.key.ir_type == "String"
+    key_value.value.ir_type == "String"
+    is_hardcoded_string(key_value.value)
+    is_credential_field(key_value.key.value)
 }
 
-is_secure_reference(str) {
-    regex.match("^\\{\\s*\\{", str)
+check_credentials_in_hash(hash_value) {
+    hash_value.ir_type == "Hash"
+    some entry in hash_value.value
+    check_credential_kv(entry)
 }
 
-is_java_class(str) {
-    regex.match("^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+$", str)
-}
-
-is_file_path(str) {
-    regex.match("^(/[a-zA-Z0-9_\\-\\.]+)+/?$|^([a-zA-Z]:\\\\)?([a-zA-Z0-9_\\-\\.]+\\\\)+[a-zA-Z0-9_\\-\\.]+$", str)
-}
-
-is_hardcoded_value(str) {
-    not is_secure_reference(str)
-    not is_java_class(str)
-    not is_file_path(str)
-    count(str) > 0
-}
-
-check_hash_for_credentials(node, base_path, orig_path) = [result] {
-    node.ir_type == "Hash"
-    entry := node.value[_]
-    entry.key.ir_type == "String"
-    key_str := entry.key.value
-    is_credential_field(key_str)
-    not is_excluded_value_field(key_str)
-    entry.value.ir_type == "String"
-    val_str := entry.value.value
-    is_hardcoded_value(val_str)
-    result := {
-        "type": "sec_hard_secr",
-        "element": entry.value,
-        "path": orig_path,
-        "description": sprintf("Use of Hard-coded Credentials - Sensitive credential field '%s' should not contain hardcoded values. Use external secret stores or variable references. (CWE-798)", [key_str])
+collect_all_nested_credentials(node) = credentials {
+    credentials := {cred |
+        [path, n] := walk(node)
+        n.ir_type == "KeyValue"
+        n.key.ir_type == "String"
+        n.value.ir_type == "String"
+        is_hardcoded_string(n.value)
+        key_name := n.key.value
+        is_credential_field(key_name)
+        cred := {
+            "key": key_name,
+            "value": n.value,
+        }
     }
 }
 
-check_hash_for_credentials(node, base_path, orig_path) = [result] {
-    node.ir_type == "Hash"
-    entry := node.value[_]
-    entry.key.ir_type == "String"
-    _ := entry.key.value
-    entry.value.ir_type == "Hash"
-    result := check_hash_for_credentials(entry.value, [base_path, entry.key.value], orig_path)
+collect_keystore_nested_credentials(node) = credentials {
+    credentials := {cred |
+        [path, n] := walk(node)
+        n.ir_type == "KeyValue"
+        n.key.ir_type == "String"
+        n.value.ir_type == "String"
+        is_hardcoded_string(n.value)
+        key_name := n.key.value
+        is_keystore_password_field(key_name)
+        cred := {
+            "key": key_name,
+            "value": n.value,
+        }
+    }
 }
 
-check_hash_for_credentials(node, base_path, orig_path) = [result] {
-    node.ir_type == "Hash"
-    entry := node.value[_]
-    entry.key.ir_type == "String"
-    _ := entry.key.value
-    entry.value.ir_type == "Array"
-    item := entry.value.value[_]
-    result := check_hash_for_credentials(item, [base_path, entry.key.value], orig_path)
+find_credential_in_node(node, name) = result {
+    node.ir_type == "String"
+    is_hardcoded_string(node)
+    is_credential_field(name)
+    result := {
+        "key": name,
+        "value": node,
+    }
 }
 
-get_chef_variable_name_parts(name) = parts {
-    parts := split(name, "\\.")
-}
-
-get_chef_variable_name_parts(name) = parts {
-    not contains(name, ".")
-    startswith(name, "default[")
-    inner := substring(name, 7, -1)
-    clean := regex.replace(inner, "^\\['|'\\]$", "")
-    parts := concat(".", split(clean, "']['"))
+check_any_value_recursive(node) = results {
+    results := {cred |
+        [path, n] := walk(node)
+        check_credential_kv(n)
+        cred := {
+            "key": n.key.value,
+            "value": n.value,
+        }
+    }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    vars := glitch_lib.all_variables(parent)
-    var := vars[_]
-    var.value.ir_type == "String"
-    val_str := var.value.value
-    is_hardcoded_value(val_str)
-    
-    name_lower := lower(var.name)
-    
-    check1 {
-        is_credential_field(var.name)
-        not is_excluded_value_field(var.name)
-    }
-    check2 {
-        parts := get_chef_variable_name_parts(var.name)
-        part := parts[_]
-        is_credential_field(part)
-        not is_excluded_value_field(part)
-    }
-    
+    some var in parent.variables
+    var.value != null
+    var.name != ""
+    cred := find_credential_in_node(var.value, var.name)
     result := {
         "type": "sec_hard_secr",
-        "element": var.value,
+        "element": cred.value,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Credentials - Sensitive credential field '%s' should not contain hardcoded values. Use external secret stores or variable references. (CWE-798)", [var.name])
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    
-    walk(parent, [path, node])
-    node.ir_type == "Hash"
-    
-    result := check_hash_for_credentials(node, [], parent.path)[_]
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    atoms := glitch_lib.all_atomic_units(parent)
-    atom := atoms[_]
-    
-    walk(atom, [path, node])
-    node.ir_type == "Hash"
-    
-    result := check_hash_for_credentials(node, [], parent.path)[_]
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    atoms := glitch_lib.all_atomic_units(parent)
-    atom := atoms[_]
-    attrs := glitch_lib.all_attributes(atom)
-    attr := attrs[_]
-    
-    is_credential_field(attr.name)
-    not is_excluded_value_field(attr.name)
-    
-    attr.value.ir_type == "String"
-    val_str := attr.value.value
-    
-    is_hardcoded_value(val_str)
-    
+    some var in parent.variables
+    var.value != null
+    creds := collect_all_nested_credentials(var.value)
+    some cred in creds
     result := {
         "type": "sec_hard_secr",
-        "element": attr.value,
+        "element": cred.value,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Credentials - Sensitive credential field '%s' should not contain hardcoded values. Use external secret stores or variable references. (CWE-798)", [attr.name])
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    
-    conds := {n |
-        walk(parent, [_, n])
-        n.ir_type == "ConditionalStatement"
-    }
-    cond := conds[_]
-    
-    statements := cond.statements
-    stmt := statements[_]
-    
-    walk(stmt, [path, node])
-    node.ir_type == "Hash"
-    
-    result := check_hash_for_credentials(node, [], parent.path)[_]
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    
-    conds := {n |
-        walk(parent, [_, n])
-        n.ir_type == "ConditionalStatement"
-    }
-    cond := conds[_]
-    
-    statements := cond.statements
-    stmt := statements[_]
-    stmt.ir_type == "Variable"
-    
-    stmt.value.ir_type == "String"
-    val_str := stmt.value.value
-    is_hardcoded_value(val_str)
-    
-    name_lower := lower(stmt.name)
-    
-    is_credential_field(stmt.name)
-    not is_excluded_value_field(stmt.name)
-    
+    some var in parent.variables
+    var.value != null
+    creds := collect_keystore_nested_credentials(var.value)
+    some cred in creds
     result := {
         "type": "sec_hard_secr",
-        "element": stmt.value,
+        "element": cred.value,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Credentials - Sensitive credential field '%s' should not contain hardcoded values. Use external secret stores or variable references. (CWE-798)", [stmt.name])
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
     }
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    
-    conds := {n |
-        walk(parent, [_, n])
-        n.ir_type == "ConditionalStatement"
-    }
-    cond := conds[_]
-    
-    statements := cond.statements
-    stmt := statements[_]
-    stmt.ir_type == "Variable"
-    
-    stmt.value.ir_type == "String"
-    val_str := stmt.value.value
-    is_hardcoded_value(val_str)
-    
-    parts := get_chef_variable_name_parts(stmt.name)
-    part := parts[_]
-    is_credential_field(part)
-    not is_excluded_value_field(part)
-    
+    some attr in parent.attributes
+    attr.value != null
+    cred := find_credential_in_node(attr.value, attr.name)
     result := {
         "type": "sec_hard_secr",
-        "element": stmt.value,
+        "element": cred.value,
         "path": parent.path,
-        "description": sprintf("Use of Hard-coded Credentials - Sensitive credential field '%s' should not contain hardcoded values. Use external secret stores or variable references. (CWE-798)", [stmt.name])
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some attr in parent.attributes
+    attr.value != null
+    creds := collect_all_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some attr in parent.attributes
+    attr.value != null
+    creds := collect_keystore_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some au in parent.atomic_units
+    some attr in au.attributes
+    attr.value != null
+    cred := find_credential_in_node(attr.value, attr.name)
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some au in parent.atomic_units
+    some attr in au.attributes
+    attr.value != null
+    creds := collect_all_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some au in parent.atomic_units
+    some attr in au.attributes
+    attr.value != null
+    creds := collect_keystore_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some var in ub.variables
+    var.value != null
+    cred := find_credential_in_node(var.value, var.name)
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some var in ub.variables
+    var.value != null
+    creds := collect_all_nested_credentials(var.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some attr in ub.attributes
+    attr.value != null
+    cred := find_credential_in_node(attr.value, attr.name)
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some attr in ub.attributes
+    attr.value != null
+    creds := collect_all_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some subub in ub.unit_blocks
+    some var in subub.variables
+    var.value != null
+    creds := collect_all_nested_credentials(var.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some ub in parent.unit_blocks
+    some au in ub.atomic_units
+    some attr in au.attributes
+    attr.value != null
+    creds := collect_all_nested_credentials(attr.value)
+    some cred in creds
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    some cond in glitch_lib.all_conditional_statements(parent)
+    some cred in check_any_value_recursive(cond)
+    result := {
+        "type": "sec_hard_secr",
+        "element": cred.value,
+        "path": parent.path,
+        "description": "Use of hard-coded credentials - Credentials should not be hardcoded and should use external secret management. (CWE-798)"
     }
 }
