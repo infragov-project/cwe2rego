@@ -39,18 +39,22 @@ def _extract_usage_summary(usage: Any) -> dict[str, Any]:
     input_tokens = _usage_get(usage, "input_tokens", 0)
     output_tokens = _usage_get(usage, "output_tokens", 0)
     cache_read_tokens = _usage_get(usage, "cache_read_tokens", 0) or 0
-    
+    cache_write_tokens = _usage_get(usage, "cache_write_tokens", 0) or 0
+
     usage_details = _usage_get(usage, "details", {}) or {}
     if not isinstance(usage_details, dict):
         usage_details = {}
-    
+
     reasoning_tokens = int(usage_details.get("reasoning_tokens") or 0)
+    if not cache_write_tokens:
+        cache_write_tokens = int(usage_details.get("cache_creation_input_tokens") or 0)
 
     return {
         "input_tokens": int(input_tokens or 0),
         "output_tokens": int(output_tokens or 0),
         "reasoning_tokens": reasoning_tokens,
         "cache_read_tokens": cache_read_tokens,
+        "cache_write_tokens": cache_write_tokens,
     }
 
 def _make_openrouter_model(api_key: str, model: str) -> OpenRouterModel:

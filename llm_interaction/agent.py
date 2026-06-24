@@ -49,20 +49,20 @@ class InfraAgent:
         completion_tokens = _usage_get(usage_data, 'output_tokens', 0)
         
         cache_read_tokens = _usage_get(usage_data, 'cache_read_tokens', 0) or 0
+        cache_write_tokens = _usage_get(usage_data, 'cache_write_tokens', 0) or 0
         usage_details = _usage_get(usage_data, 'details', {}) or {}
         if not isinstance(usage_details, dict):
             usage_details = {}
 
-        reasoning_tokens = int(
-            usage_details.get('reasoning_tokens')
-            or 0
-        )
+        reasoning_tokens = int(usage_details.get('reasoning_tokens') or 0)
+        if not cache_write_tokens:
+            cache_write_tokens = int(usage_details.get('cache_creation_input_tokens') or 0)
         visible_completion_tokens = max(completion_tokens - reasoning_tokens, 0)
 
         print(
             f"Usage: prompt={prompt_tokens}, completion_total={completion_tokens}, "
             f"completion_visible={visible_completion_tokens}, reasoning={reasoning_tokens}, "
-            f"cache_read_tokens={cache_read_tokens}"
+            f"cache_read={cache_read_tokens}, cache_write={cache_write_tokens}"
         )
         
         return response, usage_data

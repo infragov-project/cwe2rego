@@ -192,6 +192,7 @@ def _init_llm_usage_totals() -> dict:
         "output_tokens_total": 0,
         "reasoning_tokens_total": 0,
         "cache_read_tokens_total": 0,
+        "cache_write_tokens_total": 0,
     }
 
 
@@ -201,6 +202,7 @@ def _accumulate_llm_usage(totals: dict, usage: dict) -> None:
     totals["output_tokens_total"] += int(usage.get("output_tokens", 0) or 0)
     totals["reasoning_tokens_total"] += int(usage.get("reasoning_tokens", 0) or 0)
     totals["cache_read_tokens_total"] += int(usage.get("cache_read_tokens", 0) or 0)
+    totals["cache_write_tokens_total"] += int(usage.get("cache_write_tokens", 0) or 0)
 
 
 def build_argument_parser() -> ArgumentParser:
