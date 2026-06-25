@@ -131,8 +131,7 @@ def _verify_example(
             try:
                 ir_json = json.loads(ir_str)
                 original_node_count = tool.count_ir_nodes(ir_json)
-                keep_lines = expected_lines if missing else []
-                ir_json = tool.slice_ir(ir_json, false_positives, keep_lines)
+                ir_json = tool.slice_ir(ir_json, false_positives, expected_lines)
                 sliced_node_count = tool.count_ir_nodes(ir_json)
                 if original_node_count > 0:
                     ir_reduction_percentage = (1 - sliced_node_count / original_node_count) * 100
