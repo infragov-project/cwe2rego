@@ -61,7 +61,7 @@ python llm_interaction.py <model> --cwe <n> --type-name <type_name> --experiment
 Example:
 
 ```bash
-python llm_interaction.py xiaomi/mimo-v2-flash --cwe 259 --type-name sec_hard_pass --experiment-name my_experiment
+python llm_interaction.py xiaomi/mimo-v2.5-pro --cwe 259 --type-name sec_hard_pass --experiment-name my_experiment
 ```
 
 ### Description mode
@@ -75,7 +75,7 @@ python llm_interaction.py <model> --description --type-name <type_name> --experi
 Example:
 
 ```bash
-python llm_interaction.py xiaomi/mimo-v2-flash --description --type-name sec_hard_pass --experiment-name my_experiment
+python llm_interaction.py xiaomi/mimo-v2.5-pro --description --type-name sec_hard_pass --experiment-name my_experiment
 ```
 
 To add a new type, create `prompt_data/descriptions/<type_name>.txt` with a short description of what to detect.
@@ -90,10 +90,15 @@ To add a new type, create `prompt_data/descriptions/<type_name>.txt` with a shor
 | `--use-llm-examples` | Generate semantic examples via LLM instead of loading from disk |
 | `--use-cwe-text` / `--use-description-text` | Skip LLM distillation and use the input text directly as the condition |
 | `--condition-only` | Only generate and save the distilled condition, then exit |
-| `--validation-history-iterations N` | Keep only the N most recent validation iterations in context |
+| `--validation-history-iterations N` | Keep only the N most recent validation iterations in context (`-1` keeps all) |
+| `--validation-history-pinned-messages M` | Always keep the first M messages regardless of the iteration window (default: 1) |
 | `--skip-semantic-check` | Run syntax validation only |
+| `--no-ir-slicing` | Disable IR slicing; pass the full IR to the LLM on semantic check failures |
+| `--use-rag` | Enable RAG for syntax error assistance |
+| `--examples-model <model>` | Model to use for generating semantic-check examples (default: same as main model) |
+| `--technologies <tech...>` | Only run semantic check on these technologies (e.g. `ansible chef`); omit to use all |
 
-When using `--provider bedrock`, pass the full Bedrock inference profile ID as the model argument (e.g. `us.anthropic.claude-sonnet-4-6-20250514-v1:0`). On-demand model IDs without a regional prefix (`anthropic.*`) are not supported for newer models.
+When using `--provider bedrock`, pass the Bedrock inference profile ID as the model argument (e.g. `global.anthropic.claude-sonnet-4-6`).
 
 ---
 
@@ -121,9 +126,11 @@ Static semantic examples live in `validation/examples/<type_name>/`.
 Example:
 
 ```bash
-./run_all_cwes.sh openai/gpt-5.2-codex my_experiment validation/examples_extension glitch 1 --max-runs 5 259 319 546
-./run_all_cwes.sh us.anthropic.claude-sonnet-4-6-20250514-v1:0 my_experiment validation/examples_extension glitch 1 --provider bedrock 259 319 546
+./run_all_cwes.sh openai/gpt-5.2-codex my_experiment validation/examples_extension glitch -1 --max-runs 5 259 319 546
+./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 my_experiment validation/examples_extension glitch -1 --provider bedrock 259 319 546
 ```
+
+Any flags after the positional arguments are forwarded directly to `llm_interaction.py` (e.g. `--skip-semantic-check`, `--no-ir-slicing`, `--use-rag`).
 
 ### `run_all_descriptions.sh` — Description mode
 
@@ -134,11 +141,28 @@ Example:
 Example:
 
 ```bash
-./run_all_descriptions.sh openai/gpt-5.2-codex my_experiment validation/examples glitch 1 --max-runs 5 sec_hard_pass sec_https
-./run_all_descriptions.sh us.anthropic.claude-sonnet-4-6-20250514-v1:0 my_experiment validation/examples glitch 1 --provider bedrock sec_hard_pass sec_https
+./run_all_descriptions.sh openai/gpt-5.2-codex my_experiment validation/examples glitch -1 --max-runs 5 sec_hard_pass sec_https
+./run_all_descriptions.sh global.anthropic.claude-sonnet-4-6 my_experiment validation/examples glitch -1 --provider bedrock sec_hard_pass sec_https
 ```
 
 Both scripts retry failed runs up to `--max-runs` times (default: 1, overridable via `MAX_RUNS` env var) and report failures at the end. The provider defaults to `openrouter` and can also be set via the `PROVIDER` environment variable.
+
+Any flags after the known positional/optional arguments are forwarded directly to `llm_interaction.py`.
+
+### `run_kics_issues_combinations.sh` — KICS issue combinations
+
+Runs four predefined combinations of KICS issue positive-file pairs through `run_all_descriptions.sh`. Each combination selects specific positive example files from `validation/examples_kics_issue/` and assembles a temporary examples directory before invoking the pipeline. Results are collected under `generated_rego/kics_issue_tests/`.
+
+```bash
+./run_kics_issues_combinations.sh <model> <validation_history_iterations> [--max-runs N] [--provider openrouter|bedrock]
+```
+
+Example:
+
+```bash
+./run_kics_issues_combinations.sh xiaomi/mimo-v2.5-pro -1 --max-runs 5
+./run_kics_issues_combinations.sh global.anthropic.claude-sonnet-4-6 -1 --max-runs 5 --provider bedrock
+```
 
 ---
 
@@ -162,7 +186,7 @@ The mapping is a list of `type_name` → `rego_file` entries, where `rego_file` 
 Use `--only-cwe` to deploy only selected CWEs:
 
 ```bash
-python prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/my_experiment/mimo-v2-flash --mapping glitch_rego_mapping.json --only-cwe 259 319
+python prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/my_experiment/mimo-v2.5-pro --mapping glitch_rego_mapping.json --only-cwe 259 319
 ```
 
 Before writing, the script removes any previously deployed rules for the mapped type names.
@@ -171,9 +195,4 @@ Before writing, the script removes any previously deployed rules for the mapped 
 
 ## Validation history
 
-During iterative repair, the full conversation history is kept by default. Use these flags to limit context size:
-
-- `--validation-history-iterations N` — keep only the N most recent validation iterations
-- `--validation-history-pinned-messages M` — always keep the first M messages (default: 1, preserving the initial generation prompt)
-
-Set `--validation-history-iterations 0` to keep only the pinned messages.
+During iterative repair, the full conversation history is kept by default. Pass `-1` to `--validation-history-iterations` to explicitly preserve all history (same as omitting the flag). Use a positive `N` to keep only the N most recent iterations, or `0` to keep only the pinned messages. `--validation-history-pinned-messages M` controls how many leading messages are always preserved (default: 1).
