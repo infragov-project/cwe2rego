@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:43:44.825913+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_546",
+  "type_name": "sec_susp_comm",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_546.rego",
+  "condition": "# CWE-546: Suspicious Comment Detection in Infrastructure as Code\n\n## Core Weakness to Detect\n\nThe primary weakness involves identifying **inline or block comments within IaC scripts that signal unfinished, insecure, or problematic configurations**, particularly near security-sensitive resource definitions.\n\n---\n\n## Suspicious Comment Keywords to Scan For\n\n### High-Priority Indicators\n| Keyword | Implication |\n|---|---|\n| `TODO` | Incomplete implementation, possibly missing security controls |\n| `FIXME` | Known broken or insecure logic pending correction |\n| `HACK` | Non-standard workaround that may bypass security policies |\n| `BUG` | Known defect left unresolved |\n| `XXX` | Problematic code requiring attention |\n| `WORKAROUND` | Temporary bypass of intended security behavior |\n| `TEMP` / `TEMPORARY` | Configuration not intended for production |\n| `KLUDGE` | Inelegant fix with potential security implications |\n| `LATER` / `LATER2` | Deferred security implementation |\n\n### Security-Specific Suspicious Terms\n| Keyword/Phrase | Implication |\n|---|---|\n| `HARDCODED` | Credentials or secrets embedded directly |\n| `INSECURE` | Acknowledged insecure configuration |\n| `DISABLED` | Intentionally turned-off security control |\n| `NOCHECK` / `NO_CHECK` | Skipped validation or verification |\n| `REMOVE THIS` / `DELETE` | Code meant to be removed before deployment |\n| `NOSEC` / `NOSONAR` | Suppressed security scanner findings |\n| `PASSWORD` / `SECRET` / `CRED` | Possible credential hint in comments |\n| `ALLOW ALL` / `OPEN` | Overly permissive access hinted in comment |\n| `BYPASS` | Skipping authorization or authentication |\n| `REVIEW` | Configuration pending security review |\n\n---\n\n## IaC-Specific Comment Attributes and Fields to Inspect\n\n### Comment Proximity to Sensitive Attributes\nSuspicious comments found **adjacent to or within** the following field types are elevated-risk:\n\n- **Access control fields**: `permissions`, `policy`, `role`, `binding`, `acl`, `allow`, `deny`, `effect`\n- **Authentication fields**: `credentials`, `auth`, `token`, `key`, `password`, `secret`, `certificate`\n- **Network exposure fields**: `ingress`, `egress`, `cidr`, `port`, `protocol`, `public_access`, `open`\n- **Encryption fields**: `encryption`, `kms`, `tls`, `ssl`, `at_rest`, `in_transit`\n- **Logging/Monitoring fields**: `logging`, `audit`, `monitoring`, `alert`, `trail`\n- **Resource exposure fields**: `public`, `expose`, `external`, `internet_facing`\n\n---\n\n## Detection Patterns\n\n### Pattern 1 \u2014 Incomplete Security Control\n```\n# TODO: restrict this CIDR range before production\ncidr_block = \"0.0.0.0/0\"\n```\n\n### Pattern 2 \u2014 Commented-Out Security Configuration\n```\n# encryption_enabled = true  # FIXME: breaks deployment, investigate\nencryption_enabled = false\n```\n\n### Pattern 3 \u2014 Acknowledged Insecurity\n```\n# HACK: using wildcard permissions temporarily\naction = \"*\"\nresource = \"*\"\n```\n\n### Pattern 4 \u2014 Deferred Authentication Implementation\n```\n# LATER: add proper authentication here\nauth_enabled = false\n```\n\n---\n\n## Detection Rules Summary\n\n| Rule | Description |\n|---|---|\n| **R1** | Scan all comment tokens (`#`, `//`, `/* */`, `!`) for suspicious keywords |\n| **R2** | Flag comments immediately preceding or following security-sensitive attribute assignments |\n| **R3** | Detect commented-out security controls (blocks of commented configuration) |\n| **R4** | Identify comments containing `nosec`, `nocheck`, or scanner-suppression hints |\n| **R5** | Flag comments referencing credential or secret terms near value assignments |\n| **R6** | Detect `disable`, `bypass`, `skip` terms within comments near policy definitions |\n\n---\n\n## Risk Elevation Factors\n\nA suspicious comment should be treated as **higher severity** when found near:\n- IAM/RBAC policy definitions\n- Network security group or firewall rules\n- Secret/credential references\n- Encryption configurations\n- Public endpoint exposure settings\n- Audit and logging toggles",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_keywords := [\n    \"TODO\", \"FIXME\", \"HACK\", \"BUG\", \"XXX\", \"WORKAROUND\",\n    \"TEMP\", \"TEMPORARY\", \"KLUDGE\", \"LATER\", \"LATER2\",\n    \"HARDCODED\", \"INSECURE\", \"DISABLED\", \"NOCHECK\", \"NO_CHECK\",\n    \"NOSEC\", \"NOSONAR\", \"PASSWORD\", \"SECRET\", \"CRED\",\n    \"BYPASS\", \"REVIEW\", \"REMOVE\", \"DELETE\"\n]\n\ncomment_is_suspicious(comment) {\n    keyword := suspicious_keywords[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [keyword]), comment.content)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    walk(parent, [_, comment])\n    comment.ir_type == \"Comment\"\n    comment_is_suspicious(comment)\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious comment detected - Comments containing keywords such as TODO, FIXME, HACK, INSECURE, or PASSWORD may indicate incomplete, insecure, or problematic configurations. (CWE-546)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:43:44.920972+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 8948,
+    "output_tokens_total": 4523,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 8928
+  }
+}

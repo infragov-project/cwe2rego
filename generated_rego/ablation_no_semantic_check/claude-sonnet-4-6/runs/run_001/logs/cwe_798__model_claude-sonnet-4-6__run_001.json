@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:45:38.443219+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_798",
+  "type_name": "sec_hard_secr",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_798.rego",
+  "condition": "# CWE-798: Use of Hard-coded Credentials in Infrastructure as Code\n\n## Necessary Weaknesses to Detect\n\n### 1. Plain-text Credential Assignment\nCredentials assigned directly as literal string values within resource definitions, variable blocks, or configuration parameters instead of being referenced from a secrets management system.\n\n**Keywords / Attributes / Fields:**\n- `password`, `passwd`, `pass`\n- `secret`, `secret_key`, `secret_value`\n- `api_key`, `api_token`, `api_secret`\n- `access_key`, `access_key_id`, `secret_access_key`\n- `auth_token`, `auth_password`\n- `private_key`, `private_key_data`\n- `client_secret`, `client_password`\n- `db_password`, `database_password`, `db_pass`\n- `admin_password`, `root_password`\n\n---\n\n### 2. Hard-coded Connection Strings Containing Credentials\nFull connection strings or URIs that embed username/password pairs inline rather than composing them from secure references.\n\n**Keywords / Attributes / Fields:**\n- `connection_string`, `connectionString`\n- `jdbc_url`, `connection_url`, `dsn`\n- `endpoint_url` (when containing credentials)\n- URI schemes containing `://user:password@` patterns\n- `mongo_uri`, `redis_url`, `database_url`\n- `host_string`, `server_url`\n\n---\n\n### 3. Credentials Embedded in Environment Variables\nSensitive values passed directly as literal strings in environment variable definitions within compute, container, or service configurations.\n\n**Keywords / Attributes / Fields:**\n- `env`, `environment`, `env_vars`\n- `value` (child of an environment block)\n- `ENV_PASSWORD`, `ENV_SECRET`, `ENV_KEY`, `ENV_TOKEN`\n- `DB_PASS`, `DB_USER`, `APP_SECRET`\n- `KEY_ID`, `ACCESS_SECRET`\n- `PRIVATE_KEY`, `AUTH_TOKEN`\n\n---\n\n### 4. Hard-coded Cryptographic Keys and Certificates\nCryptographic material (private keys, symmetric keys, certificates) written directly as literal values in configuration definitions.\n\n**Keywords / Attributes / Fields:**\n- `private_key`, `private_key_pem`\n- `certificate`, `cert_body`, `tls_cert`\n- `encryption_key`, `kms_key`, `cmk`\n- `signing_key`, `hmac_key`\n- `ssh_private_key`, `rsa_key`\n- Strings beginning with `-----BEGIN`, `-----BEGIN RSA PRIVATE KEY-----`, `-----BEGIN EC PRIVATE KEY-----`\n- Long base64-encoded strings assigned to key-related fields\n\n---\n\n### 5. Hard-coded Tokens and Bearer Credentials\nAuthentication tokens, OAuth credentials, or bearer tokens written as literal values in scripts or templates.\n\n**Keywords / Attributes / Fields:**\n- `token`, `bearer_token`, `access_token`\n- `refresh_token`, `oauth_token`\n- `github_token`, `gitlab_token`, `registry_token`\n- `webhook_secret`, `webhook_token`\n- `session_token`, `temporary_token`\n- `authorization`, `auth_header`\n\n---\n\n### 6. Default or Weak Hard-coded Credentials\nUse of well-known default credentials (e.g., `admin/admin`, `root/root`, `user/password`) that appear as literal values.\n\n**Keywords / Attributes / Fields:**\n- `username` or `user` paired with `password` set to predictable strings\n- `admin`, `administrator`, `root`, `guest` (as literal values)\n- `default_user`, `default_password`\n- `initial_password`, `bootstrap_password`\n- `master_password`, `master_key`\n\n---\n\n### 7. Credentials in Initialization or Bootstrap Scripts\nCredentials embedded within inline startup scripts, user-data blocks, or provisioning commands executed at resource creation time.\n\n**Keywords / Attributes / Fields:**\n- `user_data`, `custom_data`, `startup_script`\n- `init_script`, `bootstrap`, `provisioner`\n- `inline`, `commands`, `run`\n- Credential-related flags within command strings (e.g., `-p`, `--password`, `--token`, `--key`)\n- `cloud_init`, `metadata`, `startup_config`\n\n---\n\n### 8. Credentials Stored in Output or State Definitions\nSensitive values exposed through output definitions, logs, or state storage blocks without masking or encryption.\n\n**Keywords / Attributes / Fields:**\n- `output`, `outputs` (containing credential-related values)\n- `sensitive = false` on credential-bearing outputs\n- `export`, `expose`\n- Credentials referenced in `description` or `value` fields of outputs\n\n---\n\n### 9. Secrets Defined in Variable Defaults\nSensitive values hard-coded as default values in variable or parameter declarations rather than being injected at runtime.\n\n**Keywords / Attributes / Fields:**\n- `default` (within a variable or parameter block holding a sensitive value)\n- `default_value`, `parameter_value`\n- `vars`, `variables` (containing literal credential values)\n- `value` inside `var` or `param` blocks\n\n---\n\n## Summary Table\n\n| Weakness Category | Primary Signal Fields |\n|---|---|\n| Plain-text credential assignment | `password`, `secret`, `api_key`, `private_key` |\n| Connection strings with credentials | `connection_string`, `database_url`, URI patterns |\n| Environment variables with credentials | `env`, `environment`, `value` in env blocks |\n| Hard-coded cryptographic material | `-----BEGIN...-----` PEM patterns, `encryption_key` |\n| Tokens and bearer credentials | `token`, `access_token`, `oauth_token` |\n| Default/weak credentials | `admin`, `root`, `password=password` literals |\n| Init/bootstrap script credentials | `user_data`, `startup_script`, `inline` commands |\n| Output exposure | `output` blocks, `sensitive = false` |\n| Variable default values | `default` within credential-bearing variable blocks |\n\n> **Detection Heuristic:** Any field whose name semantically relates to authentication or secrets, **and whose value is a non-empty literal string** (rather than a reference to a secrets manager, vault, environment injection, or parameterized reference), should be treated as a candidate for CWE-798.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_credential_field_name(name) {\n    regex.match(`(?i).*(password|passwd|secret|api_key|api_token|api_secret|access_key|secret_key|auth_token|auth_password|private_key|client_secret|db_pass|database_password|bearer_token|encryption_key|master_key|master_password|webhook_secret|cert_body|tls_cert|connection_string|database_url|mongo_uri|redis_url|oauth_token|refresh_token|session_token|hmac_key|ssh_private_key).*`, name)\n}\n\nis_literal_credential_value(value) {\n    value.ir_type == \"String\"\n    value.value != \"\"\n    not regex.match(`^\\$\\{`, value.value)\n    not regex.match(`^\\{\\{`, value.value)\n    not regex.match(`^\\$\\(`, value.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_credential_field_name(attr.name)\n    is_literal_credential_value(attr.value)\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded credentials - Credentials should not be stored as literal values in IaC scripts. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    is_credential_field_name(v.name)\n    is_literal_credential_value(v.value)\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded credentials - Credentials should not be stored as literal values in IaC scripts. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(`(?i)://[^:@\\s]+:[^@\\s]+@`, attr.value.value)\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded credentials in connection string - Connection strings should not embed credentials inline. (CWE-798)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(`-----BEGIN`, attr.value.value)\n    result := {\n        \"type\": \"sec_hard_secr\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded cryptographic key material - Cryptographic keys should not be stored as literal values. (CWE-798)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:45:38.540665+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 18582,
+    "output_tokens_total": 8926,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 18562
+  }
+}

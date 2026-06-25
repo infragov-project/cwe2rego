@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:42:34.066366+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_478",
+  "type_name": "sec_no_default_switch",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_478.rego",
+  "condition": "# CWE-478: Missing Default Case in Multiple Condition Expression \u2014 IaC Detection Guide\n\n## Core Weaknesses to Detect\n\n### 1. Incomplete Conditional Branching\nConditional logic structures that enumerate only specific known values or states without a catch-all fallback, leaving unhandled inputs or conditions to produce undefined behavior.\n\n**Indicators:**\n- `if` / `else if` / `elif` chains with no terminal `else`\n- `when` conditions without an `otherwise` or `default` clause\n- `match` / `case` / `select` blocks missing a wildcard (`_`, `*`) or `default` branch\n- `condition` blocks covering only positive/expected scenarios\n\n---\n\n### 2. Missing Default Action in Policy and Rule Definitions\nPolicy or rule engines that evaluate conditions sequentially but fail to define what happens when no condition matches.\n\n**Indicators:**\n- `rules` / `policies` blocks with no `default_action`, `default_effect`, or `default_behavior` field\n- `effect` or `action` fields present only in explicit match cases\n- `unmatched_requests_behavior` or `fallback_behavior` absent or undefined\n- `allow` rules defined without an implicit or explicit terminal `deny` default\n\n---\n\n### 3. Absent Catch-All in Access Control and Filtering Logic\nSecurity controls such as firewall rules, security groups, routing rules, or ingress/egress definitions that do not terminate with a default deny or catch-all rule.\n\n**Indicators:**\n- Security group or firewall rule sets lacking a terminal `deny_all` or `drop` rule\n- `ingress` / `egress` rule lists without a final wildcard rule\n- `routing_rules` missing a `default` target or fallback route\n- `filter` or `selector` expressions with no fallback handling for unmatched traffic\n- `priority`-ordered rules with no lowest-priority catch-all entry\n\n---\n\n### 4. Unhandled State Transitions in Lifecycle or Workflow Definitions\nState machine, lifecycle, or workflow configurations that define transitions only for expected states, leaving unexpected states unaddressed.\n\n**Indicators:**\n- `state` / `status` transition maps without a `default` or `error` state handler\n- `lifecycle` rule blocks covering only a subset of possible object or resource states\n- `on_transition` handlers missing an `else` or `unknown` path\n- `trigger` / `event` handlers not accounting for unexpected event types\n\n---\n\n### 5. Missing Error and Exception Handling Paths\nProvisioning or execution logic that handles success and known error codes but omits a general failure handler.\n\n**Indicators:**\n- `on_failure` / `on_error` absent from task or step definitions\n- `catch` / `rescue` blocks missing after multi-step conditional logic\n- Return code or exit status checks covering only specific values without a `default` or `else` handler\n- `retry` / `fallback` logic defined for specific errors but not generalized\n\n---\n\n## Summary Table of Keywords and Attributes\n\n| Category | Missing Keywords / Attributes / Fields |\n|---|---|\n| Conditional Logic | `else`, `otherwise`, `default`, `fallback`, `catch_all`, `wildcard` |\n| Policy/Rule Engines | `default_action`, `default_effect`, `default_behavior`, `fallback_behavior`, `unmatched_requests_behavior` |\n| Access Control | `deny_all`, `drop`, `default_rule`, `catch_all_rule`, `default_target` |\n| State/Lifecycle | `default_state`, `unknown_state_handler`, `error_state`, `on_unknown` |\n| Error Handling | `on_failure`, `on_error`, `catch`, `rescue`, `else_branch` |\n| Routing/Filtering | `default_route`, `default_target`, `unmatched_handler` |\n\n---\n\n## Key Detection Principle\n\nIn IaC, the absence of a **terminating default or catch-all construct** in any multi-branch decision structure (rules, policies, conditionals, state machines) is the primary signal for CWE-478. Detection should flag constructs where all branches are **explicitly named/valued** with **no residual case handler** defined.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nhas_default_branch(node) {\n    walk(node, [_, n])\n    n.ir_type == \"ConditionalStatement\"\n    n.is_default == true\n}\n\nhas_default_handling_attr(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i)(default|fallback|catch.?all|deny.?all|on.?failure|on.?error|otherwise|unmatched|drop.?all)\", attr.name)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    conds := glitch_lib.all_conditional_statements(parent)\n    node := conds[_]\n    node.is_top == true\n    not has_default_branch(node)\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Missing default case in multiple condition expression - Conditional chains should always include a default or else branch to handle all possible unmatched cases. (CWE-478)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    regex.match(\"(?i)^(rules?|policies|policy|actions?|effects?|conditions?|filters?)$\", attr.name)\n    not has_default_handling_attr(attrs)\n    result := {\n        \"type\": \"sec_no_default_switch\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Missing default action in policy or rule definition - Policy and rule definitions should include a default or fallback behavior for unmatched conditions. (CWE-478)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:42:34.161313+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 13382,
+    "output_tokens_total": 8666,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 13362
+  }
+}

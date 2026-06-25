@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:31:47.254776+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_259",
+  "type_name": "sec_hard_pass",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_259.rego",
+  "condition": "# CWE-259: Use of Hard-coded Password \u2014 Detection in Infrastructure as Code\n\n---\n\n## Core Weaknesses to Detect\n\n### 1. **Plaintext Password Assignment in Resource Definitions**\nPasswords are directly assigned as literal string values within resource configuration blocks instead of being referenced from a secrets manager or encrypted store.\n\n**Keywords / Attributes / Fields to Watch:**\n- `password`, `passwd`, `pass`\n- `db_password`, `database_password`, `admin_password`\n- `master_password`, `root_password`, `user_password`\n- `secret`, `secret_string`, `secret_value`\n- `credentials`, `credential`\n- `auth_password`, `login_password`\n\n---\n\n### 2. **Hard-coded Connection Strings Containing Credentials**\nFull connection strings embedding username/password pairs inline within configuration properties.\n\n**Keywords / Attributes / Fields to Watch:**\n- `connection_string`, `connectionString`, `connection_url`\n- `jdbc_url`, `database_url`, `db_url`\n- `dsn` (Data Source Name)\n- Patterns containing `pwd=`, `password=`, `pass=`, `user=`, `uid=` within string values\n- `uri`, `endpoint` fields containing embedded credentials (e.g., `scheme://user:pass@host`)\n\n---\n\n### 3. **Hard-coded Credentials in Environment Variable Declarations**\nSensitive values passed directly as environment variable values within container, compute, or function definitions rather than sourced from secrets management.\n\n**Keywords / Attributes / Fields to Watch:**\n- `env`, `environment`, `env_vars`, `environment_variables`\n- Variable names containing: `PASSWORD`, `PASSWD`, `SECRET`, `CREDENTIALS`, `AUTH`, `TOKEN`, `KEY`, `PWD`\n- `value` fields paired with the above sensitive variable names\n- `DB_PASSWORD`, `APP_PASSWORD`, `ADMIN_PASS`, `ROOT_PASSWORD`\n\n---\n\n### 4. **Default or Weak Credentials Left Unchanged**\nConfigurations that explicitly set well-known default passwords or trivially guessable values (e.g., `password`, `admin`, `123456`, `changeme`, `default`).\n\n**Keywords / Attributes / Fields to Watch:**\n- Any `password`-type field containing common default values\n- `initial_password`, `default_password`, `temp_password`\n- `bootstrap_password`, `setup_password`\n- `admin_pass`, `admin_secret`\n\n---\n\n### 5. **Hard-coded Credentials in Secret/ConfigMap-like Objects**\nSecrets stored in base64-encoded or plaintext form directly within IaC-managed secret objects instead of being injected at runtime from a vault or secrets manager.\n\n**Keywords / Attributes / Fields to Watch:**\n- `data`, `string_data`, `secret_data` within secret object definitions\n- `encoded_string`, `plaintext_value`\n- `secret_binary`, `secret_text`\n- Keys such as `password`, `token`, `auth`, `credentials` under data blocks\n- `initial_value`, `default_value` in secret resource blocks\n\n---\n\n### 6. **Hard-coded Credentials in User/Account Provisioning Blocks**\nUser accounts or IAM-like entities defined with inline passwords rather than requiring first-login password changes or using external identity providers.\n\n**Keywords / Attributes / Fields to Watch:**\n- `user_password`, `login_password`, `account_password`\n- `initial_password`, `console_password`\n- `pgp_key` absence combined with a plaintext password field\n- `force_destroy`, `password_reset_required` set to `false` alongside a literal password\n\n---\n\n### 7. **Hard-coded Credentials in Provisioner or Remote Execution Blocks**\nScripts, commands, or remote execution blocks that pass credentials as inline arguments or flags.\n\n**Keywords / Attributes / Fields to Watch:**\n- `inline`, `command`, `script`, `commands` fields containing `-p`, `--password`, `-password`, `--pass`\n- `script_arguments`, `args`, `parameters` with embedded password flags\n- `connection` blocks with inline `password` fields\n- `run_command`, `execute_command` containing credential literals\n\n---\n\n### 8. **Hard-coded Credentials in Database/Service Configuration**\nDatabase engines, cache services, or messaging systems provisioned with inline master/admin credentials.\n\n**Keywords / Attributes / Fields to Watch:**\n- `master_username`, `master_user_password`\n- `admin_user`, `admin_password`, `sa_password`\n- `replication_password`, `backup_password`\n- `auth_token`, `token` assigned literal string values\n- `manage_master_user_password` set to `false` with an inline password present\n\n---\n\n### 9. **Absence of Secrets Management Reference**\nConfigurations where password-type fields use static literal values instead of referencing an external secrets store, parameter store, or vault path.\n\n**Indicators of Missing Secure Reference:**\n- Password fields **not** referencing variables like `var.*`, `data.*secrets*`, `ssm:`, `secretsmanager:`, `vault:`, `{{ secrets.*}}`, `$(...)`, `${...}` patterns\n- Absence of `kms_key_id`, `encryption_key`, or similar encryption references alongside password fields\n- No `depends_on` or `source` pointing to a secrets vault resource\n\n---\n\n### 10. **Hard-coded Credentials in Metadata or Tag Blocks**\nCredentials accidentally embedded in resource tags, annotations, labels, or metadata descriptions.\n\n**Keywords / Attributes / Fields to Watch:**\n- `tags`, `labels`, `annotations`, `metadata` blocks containing keys/values with `password`, `secret`, `credential`, `auth`\n- `description`, `comment`, `note` fields containing credential-like strings\n- `user_data`, `custom_data`, `startup_script` containing inline credentials\n\n---\n\n## Summary Table\n\n| Weakness Pattern | Key Fields/Attributes | Risk |\n|---|---|---|\n| Plaintext password in resource block | `password`, `passwd`, `secret` | Critical |\n| Credential-embedded connection strings | `connection_string`, `db_url`, `uri` | Critical |\n| Environment variable with inline secret | `env.value`, `environment.PASSWORD` | High |\n| Default/trivial password values | `initial_password`, `admin_pass` | High |\n| Secret objects with inline data | `data.password`, `string_data` | Critical |\n| User provisioning with inline password | `console_password`, `login_password` | High |\n| Provisioner commands with credentials | `command`, `inline`, `args` | High |\n| Database service master credentials | `master_user_password`, `auth_token` | Critical |\n| No secrets manager reference | Absence of vault/SSM/KMS references | High |\n| Credentials in metadata/tags | `tags`, `annotations`, `user_data` | Medium |",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_name_pattern := \"(?i).*(password|passwd|secret|credential|auth_token|db_pass|connection_string|connection_url|db_url|jdbc_url|database_url|dsn|admin_pass|root_pass|master_pass|user_pass|sa_pass|console_pass|account_pass|initial_pass|bootstrap_pass|replication_pass|backup_pass|auth_pass|login_pass|master_user_password|string_data|secret_data|secret_string|secret_value|secret_binary|secret_text).*\"\n\nis_hardcoded_string(value) {\n    value.ir_type == \"String\"\n    value.value != \"\"\n    not regex.match(\"(?i)(var\\\\.|data\\\\.|ssm:|secretsmanager:|vault:|\\\\$\\\\{|\\\\$\\\\(|\\\\{\\\\{\\\\s*secret)\", value.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(password_name_pattern, attr.name)\n    is_hardcoded_string(attr.value)\n\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Passwords should not be hard-coded in IaC scripts. Use a secrets manager or encrypted store instead. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n\n    regex.match(password_name_pattern, var.name)\n    is_hardcoded_string(var.value)\n\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Passwords should not be hard-coded in IaC scripts. Use a secrets manager or encrypted store instead. (CWE-259)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:31:47.351938+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 15709,
+    "output_tokens_total": 5226,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 15689
+  }
+}

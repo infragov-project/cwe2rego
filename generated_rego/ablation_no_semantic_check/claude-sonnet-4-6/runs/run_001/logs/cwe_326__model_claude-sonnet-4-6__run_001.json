@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:36:53.845432+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_326",
+  "type_name": "sec_weak_crypt",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_326.rego",
+  "condition": "# CWE-326: Inadequate Encryption Strength \u2014 IaC Detection Guide\n\n## Necessary Weaknesses to Detect\n\n### 1. Weak Symmetric Encryption Algorithms\nConfigurations that specify outdated or broken symmetric ciphers.\n\n**Keywords/Attributes/Fields:**\n- `algorithm`, `encryption_algorithm`, `cipher`, `cipher_suite`\n- `server_side_encryption`, `encryption_type`, `sse_algorithm`\n- **Weak values:** `DES`, `3DES`, `RC4`, `RC2`, `IDEA`, `Blowfish`, `ECB` (mode)\n\n---\n\n### 2. Insufficient Key Length\nCryptographic key sizes below currently recommended minimums.\n\n**Keywords/Attributes/Fields:**\n- `key_size`, `key_length`, `key_bits`, `rsa_bits`, `modulus_size`, `bit_strength`\n- **Weak values:**\n  - RSA/DSA: `< 2048` bits\n  - ECC: `< 224` bits\n  - AES: `< 128` bits (context-sensitive)\n\n---\n\n### 3. Weak or Deprecated TLS/SSL Versions\nPermitting outdated protocol versions.\n\n**Keywords/Attributes/Fields:**\n- `tls_version`, `ssl_version`, `min_tls_version`, `minimum_tls_version`\n- `ssl_policy`, `security_policy`, `protocol_policy`\n- **Weak values:** `SSLv2`, `SSLv3`, `TLSv1`, `TLSv1.0`, `TLSv1.1`\n\n---\n\n### 4. Weak Cipher Suites in Transport Configuration\nExplicit allowance of weak cipher suites in load balancers, gateways, or API endpoints.\n\n**Keywords/Attributes/Fields:**\n- `cipher_suite`, `allowed_ciphers`, `ssl_ciphers`, `predefined_policy`\n- **Weak indicators:** `NULL`, `EXPORT`, `RC4`, `DES`, `3DES`, `anon`, `MD5` in cipher names\n\n---\n\n### 5. Weak Hashing Algorithms Used for Cryptographic Purposes\nConfigurations using broken hash functions for integrity or password storage.\n\n**Keywords/Attributes/Fields:**\n- `hash_algorithm`, `digest_algorithm`, `signing_algorithm`, `hashing_method`\n- **Weak values:** `MD5`, `SHA1`, `SHA-1`, `MD4`, `MD2`\n\n---\n\n### 6. Weak Asymmetric/Signing Key Configurations\nShort key lengths in certificate or signing configurations.\n\n**Keywords/Attributes/Fields:**\n- `key_algorithm`, `signature_algorithm`, `certificate_type`, `key_type`\n- `rsa_bits`, `ec_curve`, `dsa_key_size`\n- **Weak values:** `RSA_1024`, `DSA_1024`, `P-192` (NIST curve)\n\n---\n\n### 7. Storage Encryption Using Weak Schemes\nCloud storage, database, or volume encryption using insufficient schemes.\n\n**Keywords/Attributes/Fields:**\n- `storage_encrypted`, `encrypted`, `kms_key_id`, `disk_encryption_set_id`\n- `encryption_at_rest`, `encrypt_at_rest`, `volume_encryption`\n- Absence of strong KMS/CMK reference or use of provider-managed weak defaults\n\n---\n\n## Summary Table\n\n| Weakness Area | Key Attributes | Red-Flag Values |\n|---|---|---|\n| Symmetric cipher | `algorithm`, `cipher`, `sse_algorithm` | `DES`, `3DES`, `RC4`, `ECB` |\n| Key size | `key_size`, `rsa_bits`, `key_bits` | `< 2048` (RSA), `< 128` (AES) |\n| TLS/SSL version | `tls_version`, `ssl_policy` | `SSLv3`, `TLSv1.0`, `TLSv1.1` |\n| Cipher suites | `cipher_suite`, `allowed_ciphers` | `EXPORT`, `NULL`, `RC4`, `DES` |\n| Hash function | `hash_algorithm`, `digest_algorithm` | `MD5`, `SHA1` |\n| Signing/cert key | `key_algorithm`, `signature_algorithm` | `RSA_1024`, `P-192` |\n| Storage encryption | `encrypted`, `kms_key_id` | Missing key reference, weak defaults |",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(algorithm|encryption_algorithm|cipher|cipher_suite|server_side_encryption|encryption_type|sse_algorithm)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(DES|3DES|TRIPLE.?DES|RC4|RC2|IDEA|BLOWFISH|ECB)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak or broken encryption algorithm detected. Avoid DES, 3DES, RC4, RC2, IDEA, Blowfish, and ECB mode. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(tls_version|ssl_version|min_tls_version|minimum_tls_version|ssl_policy|security_policy|protocol_policy)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(SSLv2|SSLv3|TLSv1|TLSv1[._]0|TLSv1[._]1|TLS[_]1[_]0|TLS[_]1[_]1|.*TLS.*1[._]0.*|.*TLS.*1[._]1.*)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak or deprecated TLS/SSL version detected. Use TLS 1.2 or higher. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(hash_algorithm|digest_algorithm|signing_algorithm|hashing_method)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(MD5|SHA1|SHA-1|MD4|MD2)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak or broken hash algorithm detected. Avoid MD5, SHA1, MD4, and MD2 for cryptographic purposes. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(key_size|key_length|key_bits|rsa_bits|modulus_size|bit_strength|dsa_key_size)$\", attr.name)\n    attr.value.ir_type == \"Integer\"\n    attr.value.value < 2048\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Insufficient cryptographic key size. RSA/DSA keys must be at least 2048 bits. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(cipher_suite|allowed_ciphers|ssl_ciphers|predefined_policy)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i).*(NULL|EXPORT|RC4|[_-]DES[_-]|WITH_DES|_3DES_|WITH_3DES|ANON|[_-]MD5).*\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak cipher suite detected. Avoid NULL, EXPORT, RC4, DES, 3DES, anonymous, and MD5-based ciphers. (CWE-326)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(\"(?i)^(key_algorithm|signature_algorithm|key_type|ec_curve)$\", attr.name)\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(RSA.?1024|DSA.?1024|P.?192)$\", attr.value.value)\n    result := {\n        \"type\": \"sec_weak_crypt\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Weak asymmetric or signing key configuration detected. Avoid RSA-1024, DSA-1024, and P-192 elliptic curve. (CWE-326)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:36:53.940233+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 10742,
+    "output_tokens_total": 9551,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 10722
+  }
+}

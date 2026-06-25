@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:46:47.486355+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_1327",
+  "type_name": "sec_invalid_bind",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_1327.rego",
+  "condition": "# CWE-1327: Binding to an Unrestricted IP Address \u2014 IaC Detection Guide\n\n## Core Weakness to Detect\n\nThe fundamental issue is the use of **wildcard or unrestricted IP binding addresses** in service, server, or resource configurations within IaC scripts, which exposes the resource to all available network interfaces.\n\n---\n\n## Weakness Indicators in IaC Scripts\n\n### 1. Unrestricted IPv4 Wildcard Address\n**Keywords/Values:**\n- `0.0.0.0`\n- `\"0.0.0.0\"`\n- `'0.0.0.0'`\n\n### 2. Unrestricted IPv6 Wildcard Address\n**Keywords/Values:**\n- `::`\n- `\"::\"`\n- `0:0:0:0:0:0:0:0`\n\n---\n\n## Suspicious Attributes / Fields to Inspect\n\n| Attribute Category | Example Field Names |\n|---|---|\n| **Listen/Bind Address** | `listenaddr`, `listen_address`, `bind_address`, `bind`, `listen`, `host`, `address`, `ip_address`, `server_address` |\n| **Network Interface** | `interface`, `network_interface`, `iface` |\n| **Endpoint Configuration** | `endpoint`, `socket`, `listen_on`, `advertise_addr` |\n| **Service Binding** | `service_bind`, `rpc_bind`, `grpc_bind`, `api_listen` |\n| **Database/Cache Binding** | `bind-address`, `listening_address`, `accept_address` |\n\n---\n\n## Detection Patterns\n\n### Pattern 1 \u2014 Direct Wildcard Assignment\n```\n<bind_field> = \"0.0.0.0\"\n<listen_field> => \"0.0.0.0\"\n<host_field>: \"0.0.0.0\"\n```\n\n### Pattern 2 \u2014 Combined Host:Port with Wildcard\n```\n\"0.0.0.0:8080\"\n\"0.0.0.0:<any_port>\"\n```\n\n### Pattern 3 \u2014 Variable Indirection\nLook for variables or parameters that are later assigned to bind fields:\n```\n<variable> = \"0.0.0.0\"\n...\n<bind_field> = <variable>\n```\n\n---\n\n## Contextual Resource Types to Monitor\n\n| Resource Type | Why It Matters |\n|---|---|\n| **Database servers** | Exposes data store to all network traffic |\n| **Web/API servers** | Broad exposure of application endpoints |\n| **Message brokers** | Unrestricted queue/topic access |\n| **Container orchestration services** | Cluster-wide exposure of management APIs |\n| **Key/signing servers** | Cryptographic operations exposed publicly |\n| **Cache servers** | Memory store accessible without restriction |\n| **RPC/gRPC services** | Internal APIs exposed externally |\n\n---\n\n## Key Detection Rules Summary\n\n1. **Flag** any binding/listen/host field containing `0.0.0.0` or `::`\n2. **Flag** combined address strings starting with `0.0.0.0:`\n3. **Verify** whether a compensating firewall rule or network ACL exists alongside the binding\n4. **Check** if the resource type is network-facing (server, instance, service, pod, container)\n5. **Trace** variable references to confirm indirect wildcard assignments\n\n---\n\n## Recommended Safe Alternatives to Flag Absence Of\n\n- Specific IP addresses (e.g., loopback `127.0.0.1`, private ranges `10.x.x.x`, `172.16.x.x`, `192.168.x.x`)\n- Explicit interface-bound addresses\n- Private/internal DNS names resolving to restricted interfaces",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nbind_field_pattern := \"(?i)^(listen[_-]?addr(ess)?|bind[_-]?address|bind|listen|host|ip[_-]?address|server[_-]?address|network[_-]?interface|interface|iface|endpoint|socket|listen[_-]?on|advertise[_-]?addr|service[_-]?bind|rpc[_-]?bind|grpc[_-]?bind|api[_-]?listen|listening[_-]?address|accept[_-]?address)$\"\n\nis_wildcard_ip(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^0\\\\.0\\\\.0\\\\.0(:\\\\d+)?$\", value.value)\n}\n\nis_wildcard_ip(value) {\n    value.ir_type == \"String\"\n    value.value == \"::\"\n}\n\nis_wildcard_ip(value) {\n    value.ir_type == \"String\"\n    value.value == \"0:0:0:0:0:0:0:0\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n\n    regex.match(bind_field_pattern, attr.name)\n    is_wildcard_ip(attr.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses (0.0.0.0 or ::). (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n\n    regex.match(bind_field_pattern, v.name)\n    is_wildcard_ip(v.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - Services should not bind to wildcard addresses (0.0.0.0 or ::). (CWE-1327)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:46:47.582025+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 8950,
+    "output_tokens_total": 5957,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 8930
+  }
+}

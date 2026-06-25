@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T19:27:19.581753+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_barebones/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_barebones",
+  "rule_id": "cwe_1327",
+  "type_name": "sec_invalid_bind",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_barebones/claude-sonnet-4-6/runs/run_001/cwe_1327.rego",
+  "condition": "{\n    \"ID\": \"1327\",\n    \"Name\": \"Binding to an Unrestricted IP Address\",\n    \"Abstraction\": \"Base\",\n    \"Structure\": \"Simple\",\n    \"Status\": \"Incomplete\",\n    \"Description\": \"The product assigns the address 0.0.0.0 for a database server, a cloud service/instance, or any computing resource that communicates remotely.\",\n    \"ExtendedDescription\": \"\\n\\nWhen a server binds to the address 0.0.0.0, it allows connections from every IP address on the local machine, effectively exposing the server to every possible network. This might be much broader access than intended by the developer or administrator, who might only be expecting the server to be reachable from a single interface/network.\\n\",\n    \"RelatedWeaknesses\": [\n        {\n            \"Nature\": \"ChildOf\",\n            \"CweID\": \"668\",\n            \"ViewID\": \"1000\",\n            \"Ordinal\": \"Primary\"\n        }\n    ],\n    \"WeaknessOrdinalities\": [\n        {\n            \"Ordinality\": \"Primary\"\n        }\n    ],\n    \"ApplicablePlatforms\": [\n        {\n            \"Type\": \"Language\",\n            \"Name\": \"Other\",\n            \"Prevalence\": \"Undetermined\"\n        },\n        {\n            \"Type\": \"Operating_System\",\n            \"Class\": \"Not OS-Specific\",\n            \"Prevalence\": \"Undetermined\"\n        },\n        {\n            \"Type\": \"Architecture\",\n            \"Class\": \"Not Architecture-Specific\",\n            \"Prevalence\": \"Undetermined\"\n        },\n        {\n            \"Type\": \"Technology\",\n            \"Name\": \"Web Server\",\n            \"Prevalence\": \"Undetermined\"\n        },\n        {\n            \"Type\": \"Technology\",\n            \"Class\": \"Client Server\",\n            \"Prevalence\": \"Undetermined\"\n        },\n        {\n            \"Type\": \"Technology\",\n            \"Class\": \"Cloud Computing\",\n            \"Prevalence\": \"Undetermined\"\n        }\n    ],\n    \"ModesOfIntroduction\": [\n        {\n            \"Phase\": \"System Configuration\"\n        }\n    ],\n    \"CommonConsequences\": [\n        {\n            \"Scope\": [\n                \"Availability\"\n            ],\n            \"Impact\": [\n                \"DoS: Amplification\"\n            ],\n            \"Likelihood\": [\n                \"High\"\n            ]\n        }\n    ],\n    \"PotentialMitigations\": [\n        {\n            \"Phase\": [\n                \"System Configuration\"\n            ],\n            \"Description\": \"Assign IP addresses that are not 0.0.0.0.\",\n            \"Effectiveness\": \"High\"\n        },\n        {\n            \"Phase\": [\n                \"System Configuration\"\n            ],\n            \"Strategy\": \"Firewall\",\n            \"Description\": \"Unwanted connections to the configured server may be denied through a firewall or other packet filtering measures.\",\n            \"Effectiveness\": \"High\"\n        }\n    ],\n    \"DemonstrativeExamples\": [\n        {\n            \"Entries\": [\n                {\n                    \"IntroText\": \"The following code snippet uses 0.0.0.0 in a Puppet script.\"\n                },\n                {\n                    \"Nature\": \"Bad\",\n                    \"Language\": \"Other\",\n                    \"ExampleCode\": \"signingserver::instance {\\n\\n```\\n\\t \\\"nightly-key-signing-server\\\": \\n\\t\\t listenaddr => \\\"0.0.0.0\\\",\\n\\t\\t port => \\\"9100\\\",\\n\\t\\t code_tag => \\\"SIGNING_SERVER\\\",\\n\\t }\\n```\"\n                },\n                {\n                    \"BodyText\": \"The Puppet code snippet is used to provision a signing server that will use 0.0.0.0 to accept traffic. However, as 0.0.0.0 is unrestricted, malicious users may use this IP address to launch frequent requests and cause denial of service attacks.\"\n                },\n                {\n                    \"Nature\": \"Good\",\n                    \"Language\": \"Other\",\n                    \"ExampleCode\": \"signingserver::instance {\\n\\n```\\n\\t \\\"nightly-key-signing-server\\\": \\n\\t\\t listenaddr => \\\"127.0.0.1\\\",\\n\\t\\t port => \\\"9100\\\",\\n\\t\\t code_tag => \\\"SIGNING_SERVER\\\",\\n\\t }\\n```\"\n                }\n            ]\n        }\n    ],\n    \"ObservedExamples\": [\n        {\n            \"Reference\": \"CVE-2022-21947\",\n            \"Description\": \"Desktop manager for Kubernetes and container management binds a service to 0.0.0.0, allowing users on the network to make requests to a dashboard API.\",\n            \"Link\": \"https://www.cve.org/CVERecord?id=CVE-2022-21947\"\n        }\n    ],\n    \"RelatedAttackPatterns\": [\n        \"1\"\n    ],\n    \"References\": [\n        {\n            \"ExternalReferenceID\": \"REF-1158\",\n            \"Authors\": [\n                \"Akond Rahman\",\n                \"Md Rayhanur Rahman\",\n                \"Chris Parnin\",\n                \"Laurie Williams\"\n            ],\n            \"Title\": \"Security Smells in Ansible and Chef Scripts: A Replication Study\",\n            \"PublicationYear\": \"2020\",\n            \"PublicationMonth\": \"06\",\n            \"PublicationDay\": \"20\",\n            \"URL\": \"https://arxiv.org/pdf/1907.07159\",\n            \"URLDate\": \"2025-08-04\"\n        },\n        {\n            \"ExternalReferenceID\": \"REF-1159\",\n            \"Authors\": [\n                \"Akond Rahman\",\n                \"Chris Parnin\",\n                \"Laurie Williams\"\n            ],\n            \"Title\": \"The Seven Sins: Security Smells in Infrastructure as Code Scripts\",\n            \"Publication\": \"ICSE '19: Proceedings of the 41st International Conference on Software Engineering\",\n            \"PublicationYear\": \"2019\",\n            \"PublicationMonth\": \"05\",\n            \"URL\": \"https://dl.acm.org/doi/10.1109/ICSE.2019.00033\",\n            \"URLDate\": \"2023-04-07\"\n        }\n    ],\n    \"MappingNotes\": {\n        \"Usage\": \"Allowed\",\n        \"Rationale\": \"This CWE entry is at the Base level of abstraction, which is a preferred level of abstraction for mapping to the root causes of vulnerabilities.\",\n        \"Comments\": \"Carefully read both the name and description to ensure that this mapping is an appropriate fit. Do not try to 'force' a mapping to a lower-level Base/Variant simply to comply with this preferred level of abstraction.\",\n        \"Reasons\": [\n            \"Acceptable-Use\"\n        ]\n    },\n    \"ContentHistory\": [\n        {\n            \"Type\": \"Submission\",\n            \"SubmissionName\": \"Akond Rahman\",\n            \"SubmissionOrganization\": \"Tennessee Technological University\",\n            \"SubmissionDate\": \"2020-09-08\",\n            \"SubmissionVersion\": \"4.3\",\n            \"SubmissionReleaseDate\": \"2020-12-10\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2021-03-15\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-04-27\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-06-29\",\n            \"ModificationComment\": \"updated Mapping_Notes\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-10-26\",\n            \"ModificationComment\": \"updated Observed_Examples\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2025-09-09\",\n            \"ModificationComment\": \"updated References\",\n            \"ModificationVersion\": \"4.18\",\n            \"ModificationReleaseDate\": \"2025-09-09\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2025-12-11\",\n            \"ModificationComment\": \"updated Weakness_Ordinalities\",\n            \"ModificationVersion\": \"4.19\",\n            \"ModificationReleaseDate\": \"2025-12-11\"\n        }\n    ]\n}",
+  "use_cwe_text": true,
+  "no_ir_slicing": true,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 0,
+    "truncation_enabled": true,
+    "mode": "pinned_only",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_unrestricted_ip(value) {\n    value.ir_type == \"String\"\n    value.value == \"0.0.0.0\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    is_unrestricted_ip(attr.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - The use of 0.0.0.0 exposes the service to every possible network, allowing connections from any interface. (CWE-1327)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    is_unrestricted_ip(v.value)\n\n    result := {\n        \"type\": \"sec_invalid_bind\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Binding to an unrestricted IP address - The use of 0.0.0.0 exposes the service to every possible network, allowing connections from any interface. (CWE-1327)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T19:27:19.600693+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 1,
+    "input_tokens_total": 7958,
+    "output_tokens_total": 2068,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 7948
+  }
+}
