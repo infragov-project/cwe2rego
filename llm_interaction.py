@@ -217,7 +217,7 @@ def build_argument_parser() -> ArgumentParser:
     parser.add_argument(
         "--use-cwe-text",
         action="store_true",
-        help="Use raw CWE text directly instead of generating a distilled CWE condition via LLM.",
+        help="Use raw CWE text directly instead of generating a CWE condition via LLM.",
     )
     parser.add_argument(
         "--use-description-text",
