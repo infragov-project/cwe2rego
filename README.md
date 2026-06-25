@@ -1,4 +1,4 @@
-# smell2rego
+# RegoSmith
 
 LLM pipeline that generates Rego security rules for the [GLITCH](https://github.com/sr-lab/GLITCH) and KICS IaC analysis frameworks.
 Rules can be generated from a CWE description or from a plain natural language description of the security smell to detect.
@@ -35,6 +35,15 @@ The pipeline installs GLITCH automatically on first run (`validation/GLITCH/`). 
 ```bash
 mkdir -p validation/GLITCH && git clone https://github.com/sr-lab/GLITCH.git validation/GLITCH
 ```
+
+Followed by downloading the necessary binary for your system, available [here](https://github.com/sr-lab/GLITCH/releases/tag/rego_python-v0.2.0).
+After downloading, place it in the following directory inside the cloned repo:
+
+```
+glitch/rego/rego_python/src/rego_python/bin/
+```
+
+To use GLITCH for Chef, you also need Ruby and its Ripper package installed.
 
 ### OPA
 

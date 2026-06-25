@@ -1,5 +1,7 @@
+import platform
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any
 from click.testing import CliRunner
@@ -7,6 +9,7 @@ from click.testing import CliRunner
 from validation.tools.base import AnalysisTool
 
 GLITCH_REPO = "https://github.com/sr-lab/GLITCH.git"
+REGO_PYTHON_RELEASE = "https://github.com/sr-lab/GLITCH/releases/download/rego_python-v0.2.0"
 
 # Unknown line sentinels: if a node's line is in this set, it has no reliable location
 UNKNOWN_SENTINELS = {-33550336, 2**32, 2**63 - 1, 2**63, -(2**63), 0}
@@ -56,6 +59,26 @@ class GlitchTool(AnalysisTool):
             raise FileNotFoundError(
                 f"GLITCH installation verification failed: {glitch_dir} missing or invalid."
             )
+
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        if system == "linux":
+            arch = "arm64" if machine in ("arm64", "aarch64") else "amd64"
+            binary_name = f"librego-linux-{arch}.so"
+        elif system == "darwin":
+            arch = "arm64" if machine in ("arm64", "aarch64") else "amd64"
+            binary_name = f"librego-darwin-{arch}.dylib"
+        elif system == "windows":
+            binary_name = "librego-windows-amd64.dll"
+        else:
+            raise RuntimeError(f"Unsupported platform for Rego binary download: {platform.system()!r}")
+
+        bin_dir = glitch_dir / "glitch" / "rego" / "rego_python" / "src" / "rego_python" / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        binary_path = bin_dir / binary_name
+        if not binary_path.exists():
+            url = f"{REGO_PYTHON_RELEASE}/{binary_name}"
+            urllib.request.urlretrieve(url, str(binary_path))
 
     def __init__(self, base_dir: Path):
         self._base_dir = Path(base_dir)
