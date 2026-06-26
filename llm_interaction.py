@@ -716,7 +716,6 @@ if __name__ == "__main__":
                 ir_reduction_percentage = f[5]
 
                 # Load original file content with line numbers
-                # Summarize  in the future should also using the windowed
                 original_file_path = Path(examples_folder) / file_name
                 original_file_numbered = ""
                 original_file_windowed = ""
