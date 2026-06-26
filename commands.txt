@@ -9,18 +9,23 @@ Ablation:
 
 No history ablation:
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 ablation_no_history validation/examples_extension glitch 0 --max-runs 5 --provider bedrock 250 258 259 284 319 326 327 353 478 546 798 1327
+./run_all_cwes.sh moonshotai.kimi-k2.5 ablation_no_history validation/examples_extension glitch 0 --max-runs 5 --provider bedrock 250 258 259 284 319 326 327 353 478 546 798 1327
 
 No cwe condition:
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 ablation_no_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-cwe-text 250 258 259 284 319 326 327 353 478 546 798 1327
+./run_all_cwes.sh moonshotai.kimi-k2.5 ablation_no_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-cwe-text 250 258 259 284 319 326 327 353 478 546 798 1327
 
 No slicing:
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 ablation_no_slicing validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --no-ir-slicing 250 258 259 284 319 326 327 353 478 546 798 1327
+./run_all_cwes.sh moonshotai.kimi-k2.5 ablation_no_slicing validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --no-ir-slicing 250 258 259 284 319 326 327 353 478 546 798 1327
 
 No semantic checking:
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 ablation_no_semantic_check validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --skip-semantic-check 250 258 259 284 319 326 327 353 478 546 798 1327
+./run_all_cwes.sh moonshotai.kimi-k2.5 ablation_no_semantic_check validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --skip-semantic-check 250 258 259 284 319 326 327 353 478 546 798 1327
 
 Barebones (all above flags are flagged):
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 ablation_barebones validation/examples_extension glitch 0 --max-runs 5 --provider bedrock --use-cwe-text --no-ir-slicing --skip-semantic-check 250 258 259 284 319 326 327 353 478 546 798 1327
+./run_all_cwes.sh moonshotai.kimi-k2.5 ablation_barebones validation/examples_extension glitch 0 --max-runs 5 --provider bedrock --use-cwe-text --no-ir-slicing --skip-semantic-check 250 258 259 284 319 326 327 353 478 546 798 1327
 
 
 KICS complete pipeline:
