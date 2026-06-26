@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T20:28:20.727461+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_259",
+  "type_name": "sec_hard_pass",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_259.rego",
+  "condition": "# CWE-259: Use of Hard-coded Password \u2014 Detection in Infrastructure as Code\n\n---\n\n## Core Weaknesses to Detect\n\n### 1. **Plaintext Password Assignment in Resource Definitions**\nDirect assignment of a literal string value to any password-related field within a resource or service definition block.\n\n**Relevant Keywords/Attributes/Fields:**\n- `password`, `passwd`, `pass`\n- `admin_password`, `root_password`, `user_password`\n- `master_password`, `db_password`, `database_password`\n- `initial_password`, `default_password`\n- `login_password`, `auth_password`\n\n---\n\n### 2. **Hard-coded Credentials in Connection Strings**\nA connection string field that embeds credentials as a literal inline value rather than referencing a secrets manager or variable.\n\n**Relevant Keywords/Attributes/Fields:**\n- `connection_string`, `connectionString`, `connection_url`\n- `datasource_url`, `db_url`, `jdbc_url`\n- `uri`, `endpoint` *(when containing embedded `pwd=`, `password=`, `:password@`)*\n- `dsn`\n\n**Suspicious Inline Patterns:**\n- `pwd=<literal>`\n- `password=<literal>`\n- `:<literal>@` *(user:password@host format)*\n\n---\n\n### 3. **Hard-coded Credentials in Environment Variable Definitions**\nEnvironment variables defined directly in IaC with literal string values for password fields.\n\n**Relevant Keywords/Attributes/Fields:**\n- `env`, `environment`, `env_vars`, `environment_variables`\n- Variable names containing: `PASSWORD`, `PASSWD`, `PASS`, `PWD`, `SECRET`, `CREDENTIAL`, `AUTH_TOKEN`, `API_KEY` *(when set to a literal value)*\n- `value` field paired with a sensitive-named `name` field\n\n---\n\n### 4. **Hard-coded Credentials in Secret/ConfigMap-Like Definitions**\nSecrets or configuration objects that store literal plaintext passwords instead of referencing an external vault or using encryption.\n\n**Relevant Keywords/Attributes/Fields:**\n- `data`, `stringData` *(when containing password keys with literal values)*\n- `secret_value`, `secret_string`, `secret_data`\n- `plain_text`, `cleartext`, `plaintext`\n- Keys named: `password`, `token`, `credentials`, `passphrase`, `pin`\n\n---\n\n### 5. **Hard-coded Credentials in Authentication Block Definitions**\nAuthentication configuration blocks that embed passwords directly.\n\n**Relevant Keywords/Attributes/Fields:**\n- `auth`, `authentication`, `credentials`, `basic_auth`\n- `http_basic_auth`, `login`, `access_credentials`\n- `username` + `password` used together as literal values\n- `bind_password`, `service_account_password`\n\n---\n\n### 6. **Hard-coded Passwords in User/Account Provisioning**\nUser or account creation configurations that set an initial or default password as a literal string.\n\n**Relevant Keywords/Attributes/Fields:**\n- `user_data`, `bootstrap`, `cloud_init`\n- `password_hash`, `hashed_password`, `shadow_password`\n- `initial_user_password`, `admin_user_password`\n- `account_password`, `iam_user_password`\n\n---\n\n### 7. **Hard-coded Passwords in TLS/Certificate Configuration**\nPrivate key or certificate configuration blocks that embed a passphrase as a literal value.\n\n**Relevant Keywords/Attributes/Fields:**\n- `private_key_passphrase`, `key_password`, `keystore_password`\n- `truststore_password`, `ssl_password`, `tls_passphrase`\n- `pfx_password`, `p12_password`, `certificate_password`\n\n---\n\n### 8. **Hard-coded Passwords in Proxy or Backend Communication Config**\nOutbound connection configurations that embed credentials for communicating with backend services.\n\n**Relevant Keywords/Attributes/Fields:**\n- `proxy_password`, `proxy_credentials`\n- `backend_password`, `upstream_password`\n- `smtp_password`, `mail_password`\n- `ftp_password`, `sftp_password`\n- `api_password`, `webhook_secret`\n\n---\n\n## General Detection Indicators (Cross-Field)\n\n| Signal | Description |\n|---|---|\n| **Literal string value** | Field contains a non-empty quoted string rather than a reference/variable |\n| **No secret manager reference** | Absence of references to vault paths, secret ARNs, parameter store keys, or key management identifiers |\n| **No variable interpolation** | Value is not parameterized (e.g., no `${}`, `$()`, `{{}}`, `var.*` pattern) |\n| **Non-empty default password** | A default or example password field is populated with a non-trivial literal |\n| **Sensitive key naming** | Field name semantically implies a credential (`pass`, `pwd`, `secret`, `token`, `auth`, `key`, `cred`) combined with a literal value |\n| **Cleartext flag present** | Presence of `plaintext: true`, `encrypted: false`, or similar flags alongside a password field |\n\n---\n\n## Summary Table\n\n| Weakness Category | Key Fields to Inspect |\n|---|---|\n| Direct password assignment | `password`, `passwd`, `pass`, `admin_password` |\n| Connection string embedding | `connection_string`, `uri`, `dsn` |\n| Environment variable values | `env.value`, `environment_variables.*PASSWORD*` |\n| Secret/config object data | `data`, `stringData`, `secret_value` |\n| Auth block credentials | `auth.password`, `basic_auth.password` |\n| User provisioning | `user_data`, `initial_password`, `account_password` |\n| TLS/key passphrases | `key_password`, `keystore_password`, `tls_passphrase` |\n| Outbound/proxy credentials | `proxy_password`, `smtp_password`, `backend_password` |",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\npassword_field_pattern := \"(?i).*(password|passwd|passphrase|secret|credential|keystore_pass|truststore_pass|ssl_pass|tls_pass|proxy_pass|smtp_pass|mail_pass|webhook_secret|key_pass|cert_pass|api_key|auth_token|bind_pass|pfx_pass|p12_pass|account_pass|initial_pass|admin_pass|root_pass|db_pass|database_pass|master_pass).*\"\n\nconnection_field_pattern := \"(?i).*(connection_string|connection_url|datasource_url|db_url|jdbc_url|dsn|uri|endpoint).*\"\n\ninterpolation_pattern := \"(\\\\$\\\\{|\\\\$\\\\(|\\\\{\\\\{|var\\\\.|<%=|\\\\$[A-Za-z_])\"\n\nis_literal_string(value) {\n    value.ir_type == \"String\"\n    value.value != \"\"\n    not regex.match(interpolation_pattern, value.value)\n}\n\nhas_embedded_credentials(value) {\n    value.ir_type == \"String\"\n    regex.match(\"(?i)(pwd=[^&\\\\s]+|password=[^&\\\\s]+|://[^:@/\\\\s]+:[^@/\\\\s]+@)\", value.value)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(password_field_pattern, attr.name)\n    is_literal_string(attr.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Passwords should not be hard-coded in IaC scripts. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    variable := vars[_]\n    regex.match(password_field_pattern, variable.name)\n    is_literal_string(variable.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": variable,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password - Passwords should not be hard-coded in IaC scripts. (CWE-259)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    regex.match(connection_field_pattern, attr.name)\n    has_embedded_credentials(attr.value)\n    result := {\n        \"type\": \"sec_hard_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of hard-coded password in connection string - Connection strings should not embed credentials. (CWE-259)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T20:28:20.749363+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 15514,
+    "output_tokens_total": 6016,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 15494
+  }
+}

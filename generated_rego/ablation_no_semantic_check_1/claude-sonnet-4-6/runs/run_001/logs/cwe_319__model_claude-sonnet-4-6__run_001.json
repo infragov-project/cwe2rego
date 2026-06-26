@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-25T20:31:32.443861+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_319",
+  "type_name": "sec_https",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/claude-sonnet-4-6/runs/run_001/cwe_319.rego",
+  "condition": "# CWE-319: Cleartext Transmission of Sensitive Information \u2014 IaC Detection Guide\n\n---\n\n## Core Weaknesses to Detect\n\n### 1. **Insecure Protocol Specification**\nExplicit use of unencrypted protocols in resource definitions.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| Unencrypted URL schemes | `http://`, `ftp://`, `telnet://`, `ldap://`, `smtp://` |\n| Protocol declarations | `protocol: HTTP`, `scheme: http`, `listener_protocol: HTTP` |\n| Unsecured transfer types | `ftp`, `telnet`, `rsh`, `rlogin` |\n\n---\n\n### 2. **Disabled or Missing Encryption-in-Transit Enforcement**\nFlags and settings that explicitly turn off or fail to enable TLS/SSL enforcement.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| HTTPS enforcement flags | `enable_https_traffic_only`, `https_only`, `require_secure_transfer`, `enforce_https` |\n| SSL/TLS toggles | `ssl_enabled`, `tls_enabled`, `ssl_enforcement_enabled`, `require_secure_transport`, `transit_encryption_enabled` |\n| Insecure values | `false`, `disabled`, `\"Disabled\"`, `none`, `off` assigned to any of the above |\n\n---\n\n### 3. **Unencrypted Port Exposure**\nSecurity group rules, firewall rules, or listener configurations exposing inherently insecure ports.\n\n| Unencrypted Port | Associated Service |\n|------------------|--------------------|\n| `80` | HTTP |\n| `21` | FTP |\n| `23` | Telnet |\n| `25` | SMTP (plain) |\n| `110` | POP3 (plain) |\n| `143` | IMAP (plain) |\n| `389` | LDAP (plain) |\n| `8080`, `8000` | HTTP alternates |\n\n**Relevant fields:** `from_port`, `to_port`, `port`, `port_range`, `destination_port`, `source_port`\n\n---\n\n### 4. **Missing or Absent TLS Certificate Configuration**\nResources that should use TLS but lack certificate attachments or SSL policy definitions.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| Certificate references | `certificate_arn`, `ssl_certificate_id`, `tls_certificate`, `certificate` (absent or null) |\n| Policy definitions | `ssl_policy`, `tls_policy`, `security_policy`, `minimum_tls_version` |\n| Minimum TLS version | Values of `TLS1.0`, `TLS1.1`, `SSLv3`, `None` are weak signals |\n\n---\n\n### 5. **Insecure Load Balancer / Listener Configuration**\nListeners configured to accept or forward unencrypted traffic without redirecting to HTTPS.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| Listener protocol | `protocol: HTTP` on public-facing listeners |\n| Missing redirect action | Absence of `redirect`, `redirect_to_https`, `action_type: redirect` |\n| Target group protocol | `target_group_protocol: HTTP`, `backend_protocol: HTTP` |\n\n---\n\n### 6. **Unencrypted Storage Access**\nStorage resources permitting non-TLS access.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| Storage HTTPS flags | `secure_transfer_required`, `enable_https_traffic_only`, `allow_http_traffic` |\n| Bucket policies | `aws:SecureTransport: false`, absence of `Condition` requiring HTTPS |\n| Access configuration | `public_access`, `acl`, `cors_rule` permitting HTTP origins |\n\n---\n\n### 7. **Unencrypted Database Connections**\nDatabase instances configured to accept non-TLS connections.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| SSL mode | `ssl_mode: disabled`, `require_ssl: false`, `ssl_enforcement: Disabled` |\n| Parameter groups | `rds.force_ssl = 0`, `require_secure_transport = OFF` |\n| Connection string hints | `ssl=false`, `sslmode=disable` in connection string values |\n\n---\n\n### 8. **Insecure Cookie and Session Configuration**\nWeb application or CDN resources missing the `Secure` flag on cookies.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| Cookie flags | `secure: false`, absence of `secure` attribute in cookie configuration |\n| Session settings | `cookie_secure`, `session_cookie_secure`, `secure_cookies` |\n\n---\n\n### 9. **Unencrypted In-Transit Cluster / Cache Communication**\nMessaging queues, caches, and clusters allowing unencrypted node communication.\n\n| Category | Keywords / Attributes / Fields |\n|----------|-------------------------------|\n| In-transit encryption | `transit_encryption_enabled: false`, `in_transit_encryption: false`, `encryption_in_transit` |\n| Client broker | `client_broker: PLAINTEXT`, `broker_protocol: PLAINTEXT` |\n| Internode encryption | `internode_encryption: false` |\n\n---\n\n## Summary of High-Signal Indicators\n\n```\nProtocols:       http, ftp, telnet, ldap, smtp, pop3, imap\nBoolean flags:   false / disabled / off / 0 on any SSL/TLS/HTTPS field\nPorts:           80, 21, 23, 25, 110, 143, 389, 8080\nKeywords:        PLAINTEXT, cleartext, no-ssl, insecure\nAbsent fields:   certificate_arn, ssl_policy, tls_certificate\nWeak versions:   SSLv3, TLSv1.0, TLSv1.1\n```\n\n> **Detection Priority:** Flag any resource where an encryption-in-transit field is explicitly set to `false`/`disabled`, where a plaintext protocol is used on a public-facing endpoint, or where a TLS certificate configuration is entirely absent on a service that transmits authentication credentials or sensitive data.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\ninsecure_url_pattern := \"(?i)^(http|ftp|telnet|ldap|smtp)://\"\n\nencryption_flags := {\n    \"enable_https_traffic_only\", \"https_only\", \"require_secure_transfer\",\n    \"enforce_https\", \"ssl_enabled\", \"tls_enabled\", \"ssl_enforcement_enabled\",\n    \"require_secure_transport\", \"transit_encryption_enabled\",\n    \"secure_transfer_required\", \"in_transit_encryption\",\n    \"ssl_enforcement\", \"require_ssl\", \"ssl_mode\"\n}\n\nprotocol_fields := {\"protocol\", \"scheme\", \"listener_protocol\", \"client_broker\", \"broker_protocol\"}\n\nport_fields := {\"from_port\", \"to_port\", \"port\", \"destination_port\", \"source_port\"}\n\ninsecure_ports := {21, 23, 25, 80, 110, 143, 389, 8000, 8080}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(insecure_url_pattern, attr.value.value)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Insecure protocol URL used. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == encryption_flags[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Encryption in transit explicitly disabled. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == encryption_flags[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(disabled|false|off|none|0|no)$\", attr.value.value)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Encryption in transit explicitly disabled. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == protocol_fields[_]\n    attr.value.ir_type == \"String\"\n    regex.match(\"(?i)^(http|ftp|telnet|ldap|smtp|plaintext|rsh|rlogin)$\", attr.value.value)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Insecure cleartext protocol declared. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == port_fields[_]\n    attr.value.ir_type == \"Integer\"\n    attr.value.value == insecure_ports[_]\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Unencrypted port exposed. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == port_fields[_]\n    attr.value.ir_type == \"String\"\n    port := to_number(attr.value.value)\n    port == insecure_ports[_]\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Cleartext Transmission of Sensitive Information - Unencrypted port exposed. (CWE-319)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-25T20:31:32.604910+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 15811,
+    "output_tokens_total": 8425,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 15791
+  }
+}
