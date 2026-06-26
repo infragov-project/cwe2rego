@@ -185,6 +185,39 @@ def add_line_numbers(content: str) -> str:
     return "\n".join(f"{index}: {line}" for index, line in enumerate(lines, start=1))
 
 
+def extract_line_windows(content: str, lines_of_interest: list[int], context: int = 3) -> str:
+    """Extract ±context lines around each line of interest with 1-based line numbers.
+
+    Non-contiguous windows are separated by '...'. Falls back to the full numbered
+    file when lines_of_interest is empty.
+    Lines of interest are 1-based; internally converted to 0-based indices.
+    """
+    all_lines = content.splitlines()
+    if not all_lines or not lines_of_interest:
+        return add_line_numbers(content)
+    n = len(all_lines)
+    indices: set[int] = set()
+    for line in lines_of_interest:
+        start = max(0, line - 1 - context)
+        end = min(n - 1, line - 1 + context)
+        indices.update(range(start, end + 1))
+    sorted_indices = sorted(indices)
+    chunks: list[list[int]] = []
+    group = [sorted_indices[0]]
+    for idx in sorted_indices[1:]:
+        if idx == group[-1] + 1:
+            group.append(idx)
+        else:
+            chunks.append(group)
+            group = [idx]
+    chunks.append(group)
+    parts = [
+        "\n".join(f"{i + 1}: {all_lines[i]}" for i in chunk)
+        for chunk in chunks
+    ]
+    return "\n...\n".join(parts)
+
+
 def _init_llm_usage_totals() -> dict:
     return {
         "calls": 0,
@@ -683,11 +716,15 @@ if __name__ == "__main__":
                 ir_reduction_percentage = f[5]
 
                 # Load original file content with line numbers
+                # Summarize  in the future should also using the windowed
                 original_file_path = Path(examples_folder) / file_name
                 original_file_numbered = ""
+                original_file_windowed = ""
                 if original_file_path.exists():
                     original_content = original_file_path.read_text(encoding="utf-8")
                     original_file_numbered = add_line_numbers(original_content)
+                    lines_of_interest = missing_lines + false_positives
+                    original_file_windowed = extract_line_windows(original_content, lines_of_interest)
 
                 formatted_failures.append({
                     "iac_language": iac_language,
@@ -695,6 +732,7 @@ if __name__ == "__main__":
                     "false_positives": false_positives,
                     "ir_file": ir_file,
                     "original_file_numbered": original_file_numbered,
+                    "original_file_windowed": original_file_windowed,
                     "ir_reduction_percentage": ir_reduction_percentage,
                 })
 

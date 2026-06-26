@@ -24,9 +24,9 @@ The lines that were incorrectly flagged (false positives) are:
 {% endfor %}
 {% endif %}
 
-The original Ansible file with line numbers:
+Relevant lines from the original Ansible file (±3 lines of context around each flagged line):
 ```
-{{failure.original_file_numbered}}
+{{failure.original_file_windowed}}
 ```
 
 The intermediate representation in Kics is:
