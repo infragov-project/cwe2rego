@@ -301,10 +301,10 @@ class KICSTool(AnalysisTool):
                     for doc in documents:
                         doc_file = doc.get("file", "")
                         if doc_file and Path(doc_file).resolve() == resolved_path:
-                            return json.dumps(doc, indent=2)
+                            return json.dumps({"document": [doc]}, indent=2)
                     return ""
                 if documents:
-                    return json.dumps(documents, indent=2)
+                    return json.dumps({"document": documents}, indent=2)
                 return ""
         except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
             return ""
@@ -485,43 +485,52 @@ class KICSTool(AnalysisTool):
         """
         Slice the IR to keep only nodes relevant to given line numbers.
 
+        Handles the KICS document-wrapper format {"document": [doc, ...]}.
+        Each inner document is sliced independently and the wrapper is preserved.
+
         Algorithm (GLITCH-style):
         1. Parse original YAML with line tracking
         2. Resolve each smell line to its deepest YAML path
         3. Convert path to IR traversal steps (root [i] → playbooks[i])
         4. Prune IR keeping ancestors-on-path + full subtree at each target node
-
-        Args:
-            ir: The intermediate representation dict
-            false_positive_lines: List of line numbers for false positives
-            false_negative_lines: List of line numbers for false negatives
-
-        Returns:
-            Sliced IR dict with only relevant nodes
         """
-        filepath = ir.get("file")
+        if "document" in ir and isinstance(ir.get("document"), list):
+            return {
+                "document": [
+                    self._slice_doc(doc, false_positive_lines, false_negative_lines)
+                    for doc in ir["document"]
+                ]
+            }
+        return self._slice_doc(ir, false_positive_lines, false_negative_lines)
+
+    def _slice_doc(
+        self,
+        doc: dict,
+        false_positive_lines: list[int],
+        false_negative_lines: list[int],
+    ) -> dict:
+        filepath = doc.get("file")
         if not filepath:
-            return ir
+            return doc
 
         yaml_map = self._parse_yaml_with_lines(filepath)
         if not yaml_map:
-            return ir
+            return doc
 
         smell_lines = set(false_positive_lines) | set(false_negative_lines)
         if not smell_lines:
-            return ir
+            return doc
 
         all_path_steps = []
         for line in smell_lines:
             paths = self._resolve_paths(line, yaml_map)
             if paths:
-                # Keep the most specific smell
                 steps = self._path_to_steps(paths[0])
                 if steps:
                     all_path_steps.append(steps)
 
         if not all_path_steps:
-            return ir
+            return doc
 
-        return self._prune_with_paths(ir, all_path_steps)
+        return self._prune_with_paths(doc, all_path_steps)
 
