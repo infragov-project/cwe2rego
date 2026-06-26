@@ -12,11 +12,21 @@ Example:
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 
 def find_log_files(root: Path) -> list[Path]:
     return sorted(root.rglob("logs/*.json"))
+
+
+def count_unique_rules(log_files: list[Path]) -> int:
+    ids: set[str] = set()
+    for path in log_files:
+        m = re.search(r"(cwe_\d+)", path.stem)
+        if m:
+            ids.add(m.group(1))
+    return len(ids)
 
 
 def sum_tokens(log_files: list[Path]) -> tuple[dict, list]:
@@ -104,6 +114,9 @@ def main():
         print(f"  Reasoning (info)   : {totals['reasoning_tokens']:>12,}")
     print()
     print(f"  Total cost         :                                        ${costs['total']:.6f}")
+    num_rules = count_unique_rules(log_files)
+    avg = costs["total"] / num_rules if num_rules else 0.0
+    print(f"  Avg cost/rule      :                                        ${avg:.6f}  ({num_rules} rules)")
 
 
 if __name__ == "__main__":
