@@ -2,29 +2,21 @@ package glitch
 
 import data.glitch_lib
 
-suspicious_keywords := [
-    "TODO", "FIXME", "HACK", "BUG", "XXX", "WORKAROUND",
-    "TEMP", "TEMPORARY", "KLUDGE", "LATER", "LATER2",
-    "HARDCODED", "INSECURE", "DISABLED", "NOCHECK", "NO_CHECK",
-    "NOSEC", "NOSONAR", "PASSWORD", "SECRET", "CRED",
-    "BYPASS", "REVIEW", "REMOVE", "DELETE"
-]
-
-comment_is_suspicious(comment) {
-    keyword := suspicious_keywords[_]
-    regex.match(sprintf("(?i).*%s.*", [keyword]), comment.content)
-}
+suspicious_comment_pattern := `(?i)(\btodo\b|\bto-do\b|\bto do\b|\bfixme\b|\bfix-me\b|\bfix me\b|\bbug\b|\bbugfix\b|\bbugme\b|\bdefect\b|\bhack\b|\bkludge\b|\bworkaround\b|\bbandaid\b|\btemp\b|\btemporary\b|\btempfix\b|\bdelete\b|\bremoveme\b|\blater\b|\breview\b|\brevisit\b|\bfollowup\b|\bwarning\b|\bwarn\b|\bcaution\b|\bdanger\b|\bunsafe\b|\bnocommit\b|\bsecurity\b|\binsecure\b|\bvulnerable\b|\bexploit\b|\bbypass\b|\bskipchecks\b|\bhardcoded\b|\bhardcode\b|change this|replace this|do not use in prod|xxx|\?\?\?|!!!|note:)`
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
-    walk(parent, [_, comment])
-    comment.ir_type == "Comment"
-    comment_is_suspicious(comment)
+
+    walk(parent, [_, node])
+    node.ir_type == "Comment"
+
+    regex.match(suspicious_comment_pattern, node.content)
+
     result := {
         "type": "sec_susp_comm",
-        "element": comment,
+        "element": node,
         "path": parent.path,
-        "description": "Suspicious comment detected - Comments containing keywords such as TODO, FIXME, HACK, INSECURE, or PASSWORD may indicate incomplete, insecure, or problematic configurations. (CWE-546)"
+        "description": "Suspicious comment detected - Comments indicating deferred, incomplete, or insecure configurations that have not been addressed. (CWE-546)"
     }
 }

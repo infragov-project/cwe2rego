@@ -2,19 +2,35 @@ package glitch
 
 import data.glitch_lib
 
+wildcard_perm_attrs := {"action", "actions", "resource", "resources", "permissions", "principal", "principals", "trusted_entity"}
+
+public_true_attrs := {"public_access", "publicly_accessible", "public_network_access_enabled", "anonymous_access", "cross_tenant_access"}
+
+security_must_enable_attrs := {"logging_enabled", "enable_access_logging", "rbac_enabled", "require_https", "enable_auth", "api_key_required", "block_public_acls", "block_public_policy", "restrict_public_buckets", "ignore_public_acls"}
+
+auth_none_attrs := {"authorization", "authentication_type", "auth_type"}
+
+open_cidr_regex := "^(0\\.0\\.0\\.0/0|::/0)$"
+
+public_acl_regex := "(?i)^public-(read|read-write|write)$"
+
+wildcard_regex := "^\\*$"
+
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(actions?|resources?|principal|permissions?|effect)$", attr.name)
+
+    attr.name == wildcard_perm_attrs[_]
     attr.value.ir_type == "String"
-    regex.match("(?i)(^\\*$|full_access|all_actions|admin_access|superuser|root_access)", attr.value.value)
+    regex.match(wildcard_regex, attr.value.value)
+
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Overly permissive access policy - Wildcard or full access in policy fields grants excessive privileges. (CWE-284)"
+        "description": "Overly permissive wildcard in access policy - Actions, resources or principals should not use wildcards. (CWE-284)"
     }
 }
 
@@ -23,14 +39,126 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)(authentication_required|require_auth|auth_mode|anonymous_access|public_access)", attr.name)
+
+    attr.name == wildcard_perm_attrs[_]
+    attr.value.ir_type == "Array"
+    elem := attr.value.value[_]
+    elem.ir_type == "String"
+    regex.match(wildcard_regex, elem.value)
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Overly permissive wildcard in access policy array - Actions, resources or principals should not use wildcards. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == public_true_attrs[_]
+    attr.value.ir_type == "Boolean"
+    attr.value.value == true
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Public access enabled on resource - Resources should not be publicly accessible without restriction. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == "acl"
+    attr.value.ir_type == "String"
+    regex.match(public_acl_regex, attr.value.value)
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Public ACL configured on resource - Resources should not use public-read or public-write ACLs. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == "visibility"
+    attr.value.ir_type == "String"
+    regex.match("(?i)^public$", attr.value.value)
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Resource visibility set to public - Resources should not be publicly visible without restriction. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == auth_none_attrs[_]
+    attr.value.ir_type == "String"
+    regex.match("(?i)^none$", attr.value.value)
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Authentication or authorization set to NONE - Resources must enforce authentication mechanisms. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == "unauthenticated_identities"
+    attr.value.ir_type == "String"
+    regex.match("(?i)^allow$", attr.value.value)
+
+    result := {
+        "type": "sec_invalid_bind",
+        "element": attr,
+        "path": parent.path,
+        "description": "Unauthenticated identities are allowed - Anonymous access should not be permitted. (CWE-284)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+
+    attr.name == security_must_enable_attrs[_]
     attr.value.ir_type == "Boolean"
     attr.value.value == false
+
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Authentication disabled - Resources must enforce identity verification. (CWE-284)"
+        "description": "Critical security or access control feature is disabled - Security features must be enabled to enforce proper access control. (CWE-284)"
     }
 }
 
@@ -39,14 +167,16 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)(auth_type|authorization|auth_mode)", attr.name)
+
+    attr.name == "cidr"
     attr.value.ir_type == "String"
-    regex.match("(?i)^(none|disabled|no_auth|skip)$", attr.value.value)
+    regex.match(open_cidr_regex, attr.value.value)
+
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Authentication disabled via string value - Resources must enforce identity verification. (CWE-284)"
+        "description": "Unrestricted network access via open CIDR - Firewall and network rules should not allow access from all sources. (CWE-284)"
     }
 }
 
@@ -55,14 +185,18 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)(^public$|publicly_accessible|expose_to_internet|allow_all_traffic|anonymous_access)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == true
+
+    attr.name == "source_ranges"
+    attr.value.ir_type == "Array"
+    elem := attr.value.value[_]
+    elem.ir_type == "String"
+    regex.match(open_cidr_regex, elem.value)
+
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Resource publicly exposed - Resources should not be accessible without access restrictions. (CWE-284)"
+        "description": "Unrestricted network access via open source range - Network policies should not allow access from all sources. (CWE-284)"
     }
 }
 
@@ -71,157 +205,15 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)(^acl$|visibility|public_access)", attr.name)
+
+    attr.name == "endpoint_type"
     attr.value.ir_type == "String"
-    regex.match("(?i)(public-read|public-write|public_read|public_write|^public$)", attr.value.value)
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Public ACL or visibility setting detected - Resources should not be world-readable or world-writable. (CWE-284)"
-    }
-}
+    regex.match("(?i)^public$", attr.value.value)
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(cidr|source_ranges?|ingress|from_cidr|allowed_ips?)", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(0\\.0\\.0\\.0/0|::/0)", attr.value.value)
     result := {
         "type": "sec_invalid_bind",
         "element": attr,
         "path": parent.path,
-        "description": "Open network access detected - CIDR 0.0.0.0/0 allows unrestricted inbound traffic. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(all_ports|allow_all_traffic|unrestricted_ingress|unrestricted_egress|firewall_rule)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == true
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "All ports open or all traffic allowed - Network access should be restricted to necessary ports only. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(^members?$|trusted_entities|assume_role_policy|^group$)", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(?i)(allUsers|allAuthenticatedUsers|^all$|^everyone$|^\\*$)", attr.value.value)
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Overly broad role or group membership - Resources should not be accessible to all users. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(^privileged$|org_wide_access|cross_account_access|allow_cross_account)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == true
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Privileged or cross-account access enabled - Access should be scoped to necessary principals only. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(logging_enabled|audit_logs|access_logging|monitor_access|cloud_trail|flow_logs|activity_tracking)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == false
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Audit logging or monitoring disabled - Access logging must be enabled to maintain accountability. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(audit_logs|cloud_trail|activity_tracking)", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(?i)^(disabled|off|false|none)$", attr.value.value)
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Audit logging or monitoring disabled via string value - Access logging must be enabled. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(encryption_at_rest|ssl_enforcement|require_ssl|tls_required)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == false
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Encryption or SSL/TLS disabled - Data stores and communication channels must enforce encryption. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(default_action|default_permissions)", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(?i)^(allow|open)$", attr.value.value)
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Default permissive settings detected - Default access should be restrictive, not permissive. (CWE-284)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)(use_default_policy|inherit_parent_permissions)", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == true
-    result := {
-        "type": "sec_invalid_bind",
-        "element": attr,
-        "path": parent.path,
-        "description": "Default or inherited permissions in use - Explicit access policies should be defined instead of relying on defaults. (CWE-284)"
+        "description": "API endpoint type set to PUBLIC - Endpoints should enforce access policy restrictions. (CWE-284)"
     }
 }

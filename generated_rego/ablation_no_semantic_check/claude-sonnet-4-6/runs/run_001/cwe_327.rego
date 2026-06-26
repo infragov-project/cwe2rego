@@ -2,39 +2,33 @@ package glitch
 
 import data.glitch_lib
 
-weak_cipher_attr_pattern := "(?i)^(algorithm|cipher|encryption_algorithm|cipher_suite|encryption_type|crypto_algorithm|cipher_type|sse_algorithm|server_side_encryption|default_encryption|storage_encryption)$"
+weak_cipher_fields := {"cipher", "cipher_suite", "cipher_list", "ssl_cipher", "encryption_algorithm", "encryption_type", "server_side_encryption", "kms_key_algorithm", "storage_encryption_algorithm", "disk_encryption_algorithm", "encryption_mode", "encryption_spec", "encryption_standard"}
 
-weak_cipher_value_pattern := "(?i)^(DES|3DES|TDEA|RC2|RC4|RC5|Blowfish|IDEA|TEA|ECB|AES.{0,5}ECB|AES.{0,5}128.{0,5}ECB)$"
+weak_hash_fields := {"hash_algorithm", "digest_algorithm", "signing_algorithm", "integrity_algorithm", "checksum_type", "signature_algorithm", "cert_hash_algorithm", "hmac_algorithm", "password_encryption", "hash_type", "password_hash", "cert_algorithm", "signing_hash", "certificate_hash"}
 
-weak_hash_attr_pattern := "(?i)^(hash_algorithm|digest_algorithm|checksum_type|integrity_algorithm|signature_algorithm|message_digest|hash_function|signing_algorithm|certificate_algorithm|signature_hash_algorithm|master_key_spec|password_encryption)$"
+weak_tls_fields := {"ssl_policy", "tls_policy", "min_protocol_version", "max_protocol_version", "ssl_protocols", "tls_version", "protocol_version", "minimum_tls_version", "ssl_minimum_version"}
 
-weak_hash_value_pattern := "(?i)^(MD2|MD4|MD5|SHA1|SHA-1|SHA_1|RIPEMD.{0,5}128|SHA1WithRSA|MD5WithRSA|sha1RSA|md5RSA|HMAC.{0,5}SHA1)$"
+bypass_fields := {"enforce_https", "require_ssl", "force_ssl", "encryption_enforced", "ssl_enforcement_enabled", "require_encrypted_endpoints", "allow_downgrade", "disable_encryption", "plaintext_allowed", "insecure_ssl", "allow_insecure", "disable_tls_validation"}
 
-weak_tls_attr_pattern := "(?i)^(ssl_policy|tls_policy|minimum_protocol_version|ssl_protocols|tls_version|protocol_version|security_policy|enabled_protocols|accepted_protocols|supported_protocols)$"
+weak_key_fields := {"key_size", "key_length", "rsa_bits", "modulus_length", "key_bits", "bit_strength"}
 
-weak_tls_value_pattern := "(?i)^(SSLv2|SSLv3|TLSv1|TLSv1.0|TLSv1.1|TLS1|TLS1_0|TLS1_1|TLS_1_0|TLS_1_1|SSL_2_0|SSL_3_0)$"
+weak_ssh_fields := {"kex_algorithms", "macs", "host_key_algorithms", "ciphers", "pubkey_accepted_algorithms"}
 
-weak_key_size_attr_pattern := "(?i)^(key_size|key_length|rsa_bits)$"
-
-weak_vpn_attr_pattern := "(?i)^(phase1_encryption_algorithm|phase2_encryption_algorithm|integrity_algorithm|prf_algorithm|dh_group|vpn_encryption|tunnel_encryption|ipsec_policy)$"
-
-weak_vpn_value_pattern := "(?i)^(3des|des|md5|sha1|group1|group2|group5)$"
+weak_vpn_fields := {"phase1_encryption", "phase2_encryption", "ipsec_policy", "vpn_encryption", "authentication_algorithm", "ike_policy", "encryption_algorithms", "integrity_algorithms"}
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-
-    regex.match(weak_cipher_attr_pattern, attr.name)
+    attr.name == weak_cipher_fields[_]
     attr.value.ir_type == "String"
-    regex.match(weak_cipher_value_pattern, attr.value.value)
-
+    regex.match("(?i)(\\bDES\\b|\\b3DES\\b|TRIPLE_DES|\\bRC2\\b|\\bRC4\\b|\\bRC5\\b|ARCFOUR|BLOWFISH|\\bIDEA\\b|\\bSEED\\b|\\bEXPORT\\b|eNULL|aNULL|_ECB\\b|\\bECB_)", attr.value.value)
     result := {
         "type": "sec_weak_crypt",
         "element": attr,
         "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Weak symmetric encryption algorithm detected. (CWE-327)"
+        "description": "Use of a broken or risky cryptographic algorithm - Weak or deprecated cipher algorithm detected. (CWE-327)"
     }
 }
 
@@ -43,16 +37,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-
-    regex.match(weak_hash_attr_pattern, attr.name)
+    attr.name == weak_hash_fields[_]
     attr.value.ir_type == "String"
-    regex.match(weak_hash_value_pattern, attr.value.value)
-
+    regex.match("(?i)(\\bMD2\\b|\\bMD4\\b|\\bMD5\\b|\\bSHA-?1\\b|\\bSHA_1\\b|RIPEMD-?160|MD5withRSA|SHA1withRSA|\\bcrypt\\b|md5crypt)", attr.value.value)
     result := {
         "type": "sec_weak_crypt",
         "element": attr,
         "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Weak hashing algorithm detected. (CWE-327)"
+        "description": "Use of a broken or risky cryptographic algorithm - Weak or broken hashing algorithm detected. (CWE-327)"
     }
 }
 
@@ -61,11 +53,9 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-
-    regex.match(weak_tls_attr_pattern, attr.name)
+    attr.name == weak_tls_fields[_]
     attr.value.ir_type == "String"
-    regex.match(weak_tls_value_pattern, attr.value.value)
-
+    regex.match("(?i)(SSLv?2|SSLv?3|TLSv?1\\.0|TLSv?1\\.1|TLS1_0|TLS1_1|TLS_1_0|TLS_1_1|\\bSSL2\\b|\\bSSL3\\b|\\bTLSv1\\b)", attr.value.value)
     result := {
         "type": "sec_weak_crypt",
         "element": attr,
@@ -79,108 +69,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-
-    regex.match(weak_tls_attr_pattern, attr.name)
-    attr.value.ir_type == "Array"
-    elem := attr.value.value[_]
-    elem.ir_type == "String"
-    regex.match(weak_tls_value_pattern, elem.value)
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Insecure TLS/SSL protocol version in list detected. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match("(?i)^(cipher_suites|allowed_ciphers|enabled_ciphers|ssl_ciphers|cipher_list|tls_cipher_policy|preferred_ciphers)$", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(?i).*(NULL|EXPORT|ANON|RC4|_DES_|3DES|WITH_MD5).*", attr.value.value)
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Weak cipher suite detected. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match(weak_key_size_attr_pattern, attr.name)
-    attr.value.ir_type == "Integer"
-    attr.value.value < 2048
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Insufficient key size (less than 2048 bits) detected. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match("(?i)^(key_algorithm|key_type|key_spec|asymmetric_algorithm)$", attr.name)
-    attr.value.ir_type == "String"
-    regex.match("(?i)^(DSA|DH)$", attr.value.value)
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Weak asymmetric key algorithm detected. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match(weak_vpn_attr_pattern, attr.name)
-    attr.value.ir_type == "String"
-    regex.match(weak_vpn_value_pattern, attr.value.value)
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Weak VPN/tunnel cryptographic algorithm detected. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match("(?i)^(fips_enabled|enforce_ssl|verify_ssl)$", attr.name)
+    attr.name == bypass_fields[_]
     attr.value.ir_type == "Boolean"
     attr.value.value == false
-
     result := {
         "type": "sec_weak_crypt",
         "element": attr,
         "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Strong cryptography has been explicitly disabled. (CWE-327)"
+        "description": "Use of a broken or risky cryptographic algorithm - Encryption enforcement disabled, allowing plaintext transmission or downgrade attacks. (CWE-327)"
     }
 }
 
@@ -189,33 +85,61 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-
-    regex.match("(?i)^(insecure_ssl|disable_tls|allow_legacy_renegotiation)$", attr.name)
-    attr.value.ir_type == "Boolean"
-    attr.value.value == true
-
-    result := {
-        "type": "sec_weak_crypt",
-        "element": attr,
-        "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - Insecure SSL/TLS option has been explicitly enabled. (CWE-327)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-
-    regex.match("(?i)^(ssl_mode|tls_mode)$", attr.name)
+    attr.name == bypass_fields[_]
     attr.value.ir_type == "String"
-    regex.match("(?i)^(none|disabled|allow|off)$", attr.value.value)
-
+    regex.match("(?i)^(false|disabled|none|no)$", attr.value.value)
     result := {
         "type": "sec_weak_crypt",
         "element": attr,
         "path": parent.path,
-        "description": "Use of a broken or risky cryptographic algorithm - SSL/TLS has been disabled or set to an insecure mode. (CWE-327)"
+        "description": "Use of a broken or risky cryptographic algorithm - Encryption enforcement disabled, allowing plaintext transmission or downgrade attacks. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+    attr.name == weak_key_fields[_]
+    attr.value.ir_type == "Integer"
+    attr.value.value < 2048
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of a broken or risky cryptographic algorithm - Weak asymmetric key length detected (less than 2048 bits). (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+    attr.name == weak_ssh_fields[_]
+    attr.value.ir_type == "String"
+    regex.match("(?i)(arcfour|aes128-cbc|3des-cbc|blowfish-cbc|hmac-md5|hmac-sha1|hmac-ripemd160|diffie-hellman-group1-sha1|diffie-hellman-group14-sha1|gss-group1-sha1)", attr.value.value)
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of a broken or risky cryptographic algorithm - Weak SSH cipher, MAC, or key exchange algorithm detected. (CWE-327)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attrs := glitch_lib.all_attributes(parent)
+    attr := attrs[_]
+    attr.name == weak_vpn_fields[_]
+    attr.value.ir_type == "String"
+    regex.match("(?i)(\\bdes\\b|\\b3des\\b|\\bmd5\\b|\\bsha1\\b|hmac-md5|hmac-sha1|\\baes-128\\b)", attr.value.value)
+    result := {
+        "type": "sec_weak_crypt",
+        "element": attr,
+        "path": parent.path,
+        "description": "Use of a broken or risky cryptographic algorithm - Weak VPN/IPSec encryption or integrity algorithm detected. (CWE-327)"
     }
 }

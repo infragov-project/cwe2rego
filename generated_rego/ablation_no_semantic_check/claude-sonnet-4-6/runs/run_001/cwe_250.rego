@@ -2,35 +2,23 @@ package glitch
 
 import data.glitch_lib
 
-check_permissive_mode(value) {
-    value.ir_type == "String"
-    regex.match("^0?(?:777|666)$", value.value)
-}
+priv_true_attrs := {"privileged", "allowprivilegeescalation", "run_as_root", "hostpid", "hostipc", "hostnetwork"}
 
-check_permissive_mode(value) {
-    value.ir_type == "Integer"
-    value.value == 777
-}
-
-check_permissive_mode(value) {
-    value.ir_type == "Integer"
-    value.value == 666
-}
+wildcard_permission_attrs := {"action", "resource", "verbs", "apigroups", "resources"}
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(privileged|allowprivilegeescalation|hostpid|hostipc|hostnetwork|shareprocessnamespace|automountserviceaccounttoken)$", attr.name)
+    lower(attr.name) == priv_true_attrs[_]
     attr.value.ir_type == "Boolean"
     attr.value.value == true
-
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - privileged or elevated host access enabled. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Container or process configured with elevated privileges. (CWE-250)"
     }
 }
 
@@ -39,32 +27,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^runasuser$", attr.name)
-    attr.value.ir_type == "Integer"
-    attr.value.value == 0
-
-    result := {
-        "type": "sec_def_admin",
-        "element": attr,
-        "path": parent.path,
-        "description": "Execution with unnecessary privileges - container configured to run as root (runAsUser: 0). (CWE-250)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)^runasnonroot$", attr.name)
+    lower(attr.name) == "runasnonroot"
     attr.value.ir_type == "Boolean"
     attr.value.value == false
-
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - runAsNonRoot explicitly set to false. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Non-root execution enforcement disabled. (CWE-250)"
     }
 }
 
@@ -73,14 +43,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(actions|verbs|resources|apigroups)$", attr.name)
-    glitch_lib.traverse(attr.value, "^\\*$")
-
+    lower(attr.name) == "runasuser"
+    attr.value.ir_type == "Integer"
+    attr.value.value == 0
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - wildcard permissions granted. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Process configured to run as root (UID 0). (CWE-250)"
     }
 }
 
@@ -89,14 +59,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(policy_arn|policy|managed_policy_arns|role_arn|role)$", attr.name)
-    glitch_lib.traverse(attr.value, "(?i)(administratoraccess|fullacc|poweruser|cluster.?admin|roles/owner|roles/editor|roles/contributor)")
-
+    lower(attr.name) == "user"
+    attr.value.ir_type == "String"
+    lower(attr.value.value) == {"root", "0"}[_]
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - admin-level policy or role assigned. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Service configured to run as root user. (CWE-250)"
     }
 }
 
@@ -105,14 +75,16 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^add$", attr.name)
-    glitch_lib.traverse(attr.value, {"ALL", "SYS_ADMIN", "NET_ADMIN", "SYS_PTRACE", "SYS_MODULE", "SYS_RAWIO"})
-
+    lower(attr.name) == "add"
+    attr.value.ir_type == "Array"
+    item := attr.value.value[_]
+    item.ir_type == "String"
+    upper(item.value) == {"ALL", "SYS_ADMIN", "NET_ADMIN", "SYS_PTRACE"}[_]
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - dangerous Linux capabilities added. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Dangerous Linux capability granted to container. (CWE-250)"
     }
 }
 
@@ -121,14 +93,14 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(hostpath|path)$", attr.name)
-    glitch_lib.traverse(attr.value, "(?i)^(/|/etc|/proc|/sys|/root|/var/run/docker\\.sock)")
-
+    lower(attr.name) == wildcard_permission_attrs[_]
+    attr.value.ir_type == "String"
+    attr.value.value == "*"
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - sensitive host path mounted. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Wildcard permission grants excessive access. (CWE-250)"
     }
 }
 
@@ -137,14 +109,16 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(become_user|run_as|execute_as)$", attr.name)
-    glitch_lib.traverse(attr.value, "(?i)^(root|administrator|admin)$")
-
+    lower(attr.name) == wildcard_permission_attrs[_]
+    attr.value.ir_type == "Array"
+    item := attr.value.value[_]
+    item.ir_type == "String"
+    item.value == "*"
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - automation task configured to run as privileged user. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Wildcard permission in array grants excessive access. (CWE-250)"
     }
 }
 
@@ -153,45 +127,12 @@ Glitch_Analysis[result] {
     parent.path != ""
     attrs := glitch_lib.all_attributes(parent)
     attr := attrs[_]
-    regex.match("(?i)^(username|master_username|db_user|database_user)$", attr.name)
-    glitch_lib.traverse(attr.value, "(?i)^(root|admin|sa|superuser|postgres|administrator)$")
-
+    attr.value.ir_type == "String"
+    regex.match("(?i)^(administratoraccess|cluster-admin|fullaccess|poweruseraccess)$", attr.value.value)
     result := {
         "type": "sec_def_admin",
         "element": attr,
         "path": parent.path,
-        "description": "Execution with unnecessary privileges - admin-level database credentials configured. (CWE-250)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)^(mode|file_permission|directory_permission|defaultmode)$", attr.name)
-    check_permissive_mode(attr.value)
-
-    result := {
-        "type": "sec_def_admin",
-        "element": attr,
-        "path": parent.path,
-        "description": "Execution with unnecessary privileges - world-writable file or volume permissions configured. (CWE-250)"
-    }
-}
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    attrs := glitch_lib.all_attributes(parent)
-    attr := attrs[_]
-    regex.match("(?i)^(scopes|scope)$", attr.name)
-    glitch_lib.traverse(attr.value, "(?i)(cloud.platform|cloud-platform|full.access|all)")
-
-    result := {
-        "type": "sec_def_admin",
-        "element": attr,
-        "path": parent.path,
-        "description": "Execution with unnecessary privileges - compute identity assigned full-access scope. (CWE-250)"
+        "description": "Execution with unnecessary privileges - Administrative role or policy with excessive permissions attached. (CWE-250)"
     }
 }
