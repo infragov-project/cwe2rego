@@ -4,7 +4,7 @@ import data.glitch_lib
 import future.keywords.in
 
 weak_algorithms := {"DES", "3DES", "RC2", "RC4", "Blowfish", "ECB", "MD5", "SHA1", "SHA-1", "MD-5", "md5", "sha1", "md5_crypt", "sha1_crypt", "des", "3des", "rc2", "rc4", "blowfish", "ecb"}
-weak_tls_versions := {"SSLv2", "SSLv3", "TLSv1.0", "TLSv1.1", "TLS1.0", "TLS1.1", "1.0", "1.1", "sslv2", "sslv3", "tlsv1.0", "tlsv1.1", "tls1.0", "tls1.1"}
+weak_tls_versions_1 := {"SSLv2", "SSLv3", "TLSv1.0", "TLSv1.1", "TLS1.0", "TLS1.1", "1.0", "1.1", "sslv2", "sslv3", "tlsv1.0", "tlsv1.1", "tls1.0", "tls1.1"}
 weak_cipher_patterns := {"RSA_WITH", "CBC", "DES", "3DES", "RC4", "NULL", "EXPORT", "anon", "eNULL", "aNULL"}
 weak_hash_functions := {"md5", "sha1", "MD5", "SHA1"}
 min_rsa_size := 2048
@@ -25,7 +25,7 @@ is_weak_algorithm(value) {
 }
 
 is_weak_tls_version(value) {
-    lower(value) == weak_tls_versions[_]
+    lower(value) == weak_tls_versions_1[_]
 }
 
 is_weak_cipher_suite(value) {

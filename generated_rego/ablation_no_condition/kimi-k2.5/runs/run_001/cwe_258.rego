@@ -2,7 +2,7 @@ package glitch
 
 import data.glitch_lib
 
-password_patterns := {"password", "passwd", "pwd", "pass"}
+password_patterns_1 := {"password", "passwd", "pwd", "pass"}
 key_patterns := {"key", "token", "secret"}
 auth_patterns := {"credential", "auth"}
 
@@ -21,7 +21,7 @@ check_empty_password(value) {
 
 is_password_attribute(name) {
     lower_name := lower(name)
-    contains(lower_name, password_patterns[_])
+    contains(lower_name, password_patterns_1[_])
     not exclude_password_pattern(lower_name)
 }
 
