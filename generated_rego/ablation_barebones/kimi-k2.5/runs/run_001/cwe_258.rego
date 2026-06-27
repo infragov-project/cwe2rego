@@ -2,11 +2,11 @@ package glitch
 
 import data.glitch_lib
 
-password_patterns := ["password", "passwd", "pwd", "pass"]
+password_patterns_1 := ["password", "passwd", "pwd", "pass"]
 
 is_password_related(name) {
     lower_name := lower(name)
-    pattern := password_patterns[_]
+    pattern := password_patterns_1[_]
     regex.match(sprintf(".*%s.*", [pattern]), lower_name)
 }
 
