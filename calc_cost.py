@@ -23,7 +23,7 @@ def find_log_files(root: Path) -> list[Path]:
 def count_unique_rules(log_files: list[Path]) -> int:
     ids: set[str] = set()
     for path in log_files:
-        m = re.search(r"(cwe_\d+)", path.stem)
+        m = re.match(r"^(.+?)__model_", path.stem)
         if m:
             ids.add(m.group(1))
     return len(ids)
