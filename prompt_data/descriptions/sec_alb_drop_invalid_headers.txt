@@ -1,0 +1,7 @@
+### Platform
+Terraform
+
+### Provider
+AWS
+### Description
+It's considered a best practice when using Application Load Balancers to drop invalid header fields

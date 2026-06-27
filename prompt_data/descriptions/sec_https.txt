@@ -1,3 +1,0 @@
-IaC configurations using unencrypted HTTP instead of HTTPS,
-or explicitly disabling SSL/TLS on network endpoints,
-exposing data in transit to interception.

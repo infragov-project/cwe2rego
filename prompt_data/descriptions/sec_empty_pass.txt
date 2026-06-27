@@ -1,3 +1,0 @@
-IaC configurations with empty, null, or undefined values
-in password-related attributes such as password, pwd, pass, secret, token, or credential,
-meaning no authentication is enforced.

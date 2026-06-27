@@ -1,3 +1,0 @@
-IaC configurations granting excessive or administrative privileges,
-such as wildcard permissions, privileged container mode, running as root,
-or publicly exposed storage buckets.

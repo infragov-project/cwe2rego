@@ -1,3 +1,0 @@
-Files or packages downloaded from the internet in IaC scripts
-without verifying their integrity via a checksum or cryptographic signature,
-leaving deployments open to supply chain tampering.

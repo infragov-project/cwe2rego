@@ -1,0 +1,8 @@
+### Platform
+Terraform
+
+### Provider
+Kubernetes
+
+### Description
+Containers can mount sensitive folders from the hosts, giving them potentially dangerous access to critical host configurations and binaries

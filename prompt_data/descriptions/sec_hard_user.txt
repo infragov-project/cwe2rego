@@ -1,3 +1,0 @@
-Usernames or user identifiers hard-coded directly in IaC source code,
-in attributes with names like user, username, login, or owner,
-rather than being sourced from variables or a secrets manager.

@@ -1,0 +1,27 @@
+### Expected Behavior
+Terraform with S3 Bucket and unsecured CORS policy should be detected
+
+### Actual Behavior
+Terraform with S3 Bucket and unsecured CORS policy should is not detected
+
+### Steps to Reproduce the Problem
+1. Create an identity pool. ( [I used this tutorial](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/s3-example-photos-view.html))
+2. Scan a folder that contains the attached file 
+[bucketWithCORS.tf.txt](https://github.com/Checkmarx/kics/files/6764789/bucketWithCORS.tf.txt)
+3. Results are attached as well. 
+[bucketWithCORS.html.txt](https://github.com/Checkmarx/kics/files/6764796/bucketWithCORS.html.txt)
+4. The HTML and the javascript file I used to make sure CORS works.
+[index.html.txt](https://github.com/Checkmarx/kics/files/6764804/index.html.txt)
+[PhotoViewer.js.txt](https://github.com/Checkmarx/kics/files/6764805/PhotoViewer.js.txt)
+
+
+
+
+
+
+
+### Specifications
+
+-   Version: v1.3.2
+-   Platform: Terraform
+-   Subsystem:

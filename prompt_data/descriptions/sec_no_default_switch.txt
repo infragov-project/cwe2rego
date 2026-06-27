@@ -1,3 +1,0 @@
-Switch/case in IaC scripts with no default,
-leaving unhandled input combinations that could result in
-unexpected behavior or exploitable logic gaps.

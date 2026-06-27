@@ -1,0 +1,8 @@
+### Platform
+Terraform
+
+### Provider
+AWS
+
+### Description
+API Gateway Deployment should have access log setting defined when connected to an API Gateway Stage

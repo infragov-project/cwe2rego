@@ -1,0 +1,22 @@
+{
+    "examples": [
+        {
+            "file": "positive1.tf",
+            "lines": [
+                8
+            ]
+        },
+        {
+            "file": "positive2.tf",
+            "lines": [
+                8
+            ]
+        },
+        {
+            "file": "positive3.tf",
+            "lines": [
+                8
+            ]
+        }
+    ]
+}

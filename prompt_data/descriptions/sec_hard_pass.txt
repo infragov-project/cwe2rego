@@ -1,3 +1,0 @@
-Passwords embedded directly in IaC source code as plain text, base64-encoded strings, or hashes,
-in attributes with names like password, passwd, pwd, or passphrase,
-rather than being sourced from a secrets manager or environment variable.
