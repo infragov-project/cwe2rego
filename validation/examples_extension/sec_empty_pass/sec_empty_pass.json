@@ -10,7 +10,15 @@
             "file": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main.yml",
             "lines": [
                 481
-            ]
+            ],
+            "tools": ["glitch"]
+        },
+        {
+            "file": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main_nocomments.yml",
+            "lines": [
+                481
+            ],
+            "tools": ["kics"]
         },
         {
             "file": "sous-chefs_yum-attributes-main.rb",

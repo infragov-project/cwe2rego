@@ -264,6 +264,10 @@ def semantic_check(
     for i, example in enumerate(examples, 1):
         print(f" Example #{i}/{len(examples)}:")
         script_path = folder / (example.get("file") or "")
+        allowed_tools = example.get("tools")
+        if allowed_tools is not None and tool.name not in allowed_tools:
+            print(f"  Skipping {script_path.name} (not for tool '{tool.name}')")
+            continue
         tech = tool.get_file_type(str(script_path)) if script_path else None
         if tech is None:
             print(
