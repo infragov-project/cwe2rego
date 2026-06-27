@@ -1,5 +1,10 @@
 [
-  {"type_name": "sec_aws_asg_no_elbs",          "rego_file": "sec_aws_asg_no_elbs.rego"},
-  {"type_name": "sec_aws_cmk_rotation_disabled", "rego_file": "sec_aws_cmk_rotation_disabled.rego"},
-  {"type_name": "sec_aws_cmk_unusable",          "rego_file": "sec_aws_cmk_unusable.rego"}
+  {"type_name": "sec_aws_asg_no_elbs",              "rego_file": "sec_aws_asg_no_elbs.rego"},
+  {"type_name": "sec_aws_cmk_rotation_disabled",    "rego_file": "sec_aws_cmk_rotation_disabled.rego"},
+  {"type_name": "sec_aws_cmk_unusable",             "rego_file": "sec_aws_cmk_unusable.rego"},
+  {"type_name": "sec_alb_drop_invalid_headers",     "rego_file": "sec_alb_drop_invalid_headers.rego"},
+  {"type_name": "sec_api_gateway_no_access_log",    "rego_file": "sec_api_gateway_no_access_log.rego"},
+  {"type_name": "sec_ec2_not_ebs_optimized",        "rego_file": "sec_ec2_not_ebs_optimized.rego"},
+  {"type_name": "sec_mount_write_permissions",      "rego_file": "sec_mount_write_permissions.rego"},
+  {"type_name": "sec_s3_unsecured_cors",            "rego_file": "sec_s3_unsecured_cors.rego"}
 ]
