@@ -1,0 +1,75 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-26T18:41:54.820622+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_258",
+  "type_name": "sec_empty_pass",
+  "model_used": "moonshotai.kimi-k2.5",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001/cwe_258.rego",
+  "condition": " Based on CWE-258 \"Empty Password in Configuration File\", here are the necessary weakness indicators for detection in Infrastructure as Code scripts:\n\n## Core Detection Patterns\n\n### Empty/Null Value Indicators\n- **Empty string assignments** following password-related identifiers\n- **Null value assignments** for authentication credentials\n- **Whitespace-only values** that appear empty upon trimming\n- **Default placeholder values** that resolve to empty strings during deployment\n\n### Password-Related Keywords and Fields\n\n| Category | Keywords |\n|----------|----------|\n| **Primary identifiers** | password, passwd, pwd, secret, credentials, auth_token, api_key |\n| **Compound patterns** | admin_password, db_password, root_password, service_account_key |\n| **Connection strings** | connection_string, jdbc_url, database_url, dsn |\n\n### Context-Dependent Attributes\n\n**Authentication Context:**\n- `authentication`, `login`, `signin`, `auth`\n- `username` paired with empty adjacent credential field\n- `user`/`pass` combinations\n\n**Secret Management Context:**\n- `tls_private_key`, `certificate_password`, `keystore_password`\n- `encryption_key`, `decryption_key`, `master_key`\n- `access_key_secret`, `client_secret`\n\n**Service Integration Context:**\n- `smtp_password`, `ldap_password`, `ad_password`\n- `vpn_preshared_key`, `ipsec_secret`\n- `rds_password`, `database_master_password`\n\n### Structural Weakness Indicators\n\n1. **Key-value pairs** where:\n   - Key contains password-related semantic markers\n   - Value is syntactically empty (`\"\"`, `''`, or unquoted empty)\n   - Value references variables/expressions resolving to empty defaults\n\n2. **Resource declarations** with:\n   - Authentication blocks containing empty credential assignments\n   - Connection configurations with null/empty secret parameters\n   - Identity blocks with unPopulated password fields\n\n3. **Variable/parameter definitions:**\n   - Default values set to empty strings for sensitive parameters\n   - Optional parameters without validation constraints\n   - Input variables marked as sensitive but allowing empty input\n\n### Configuration File Specific Patterns\n\n- **Property file structures**: `key=` (no value following delimiter)\n- **Markup configurations**: tags or keys with empty content or self-closing without value\n- **Serialization formats**: fields with zero-length string values or explicit null markers\n\n### Deployment-Specific Risk Patterns\n\n- Hardcoded empty defaults in reusable module definitions\n- Environment-specific overrides clearing production passwords\n- Conditional logic that falls back to empty strings when secrets aren't resolved\n- Template expressions that render empty when secret retrieval fails",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nempty_password_keywords := {\"password\", \"passwd\", \"pwd\", \"secret\", \"credentials\", \"auth_token\", \"api_key\", \"admin_password\", \"db_password\", \"root_password\", \"service_account_key\", \"tls_private_key\", \"certificate_password\", \"keystore_password\", \"encryption_key\", \"decryption_key\", \"master_key\", \"access_key_secret\", \"client_secret\", \"smtp_password\", \"ldap_password\", \"ad_password\", \"vpn_preshared_key\", \"ipsec_secret\", \"rds_password\", \"database_master_password\", \"connection_string\"}\n\nauth_context_keywords := {\"authentication\", \"login\", \"signin\", \"auth\", \"username\", \"user\"}\n\nis_empty_value(node) {\n    node.ir_type == \"String\"\n    count(trim(node.value, \" \\t\\n\\r\")) == 0\n}\n\nis_empty_value(node) {\n    node.ir_type == \"Null\"\n}\n\nis_empty_value(node) {\n    node.ir_type == \"Undef\"\n}\n\nis_password_related_key(key) {\n    lower_key := lower(key)\n    k := empty_password_keywords[_]\n    contains(lower_key, k)\n}\n\nis_in_auth_context(parent_block) {\n    attrs := glitch_lib.all_attributes(parent_block)\n    attr := attrs[_]\n    lower_name := lower(attr.name)\n    k := auth_context_keywords[_]\n    contains(lower_name, k)\n}\n\ncheck_nested_value(node) {\n    is_empty_value(node)\n}\n\ncheck_nested_value(node) {\n    node.ir_type == \"Hash\"\n    val := node.value[_]\n    check_nested_value(val)\n}\n\ncheck_nested_value(node) {\n    node.ir_type == \"Array\"\n    val := node.value[_]\n    check_nested_value(val)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    au := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(au)\n    attr := attrs[_]\n\n    is_password_related_key(attr.name)\n\n    check_nested_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n\n    is_password_related_key(var.name)\n\n    check_nested_value(var.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    au := atomic_units[_]\n\n    is_in_auth_context(au)\n\n    attrs := glitch_lib.all_attributes(au)\n    attr := attrs[_]\n\n    lower_name := lower(attr.name)\n    contains(lower_name, \"pass\")\n\n    check_nested_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "syntactic",
+          "annotation": "OPA syntax/type check failure",
+          "message": "2 errors occurred:\n/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001/cwe_258.rego:40: rego_recursion_error: rule data.glitch.check_nested_value is recursive: data.glitch.check_nested_value -> data.glitch.check_nested_value\n/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001/cwe_258.rego:46: rego_recursion_error: rule data.glitch.check_nested_value is recursive: data.glitch.check_nested_value -> data.glitch.check_nested_value -> data.glitch.check_nested_value\n"
+        }
+      ],
+      "status": "syntactic_error",
+      "nl_error_summary": " This rule attempts to detect empty password values in configuration files by checking for password-related keys and authentication contexts, then recursively examining whether their values are empty strings, null, undefined, or nested containers containing such empty values.\n\nThe error reveals **direct recursion** in the `check_nested_value` rule. OPA does not permit recursive rules, yet `check_nested_value` calls itself in the Hash and Array cases (lines 40 and 46), creating unbounded recursion.\n\nTo fix this, replace the recursive `check_nested_value` with an **iterative traversal using `walk`**. The `walk` builtin can flatten nested structures into paths and values, allowing you to check all nested elements for \"empty\" conditions without self-referential rule calls."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nempty_password_keywords := {\"password\", \"passwd\", \"pwd\", \"secret\", \"credentials\", \"auth_token\", \"api_key\", \"admin_password\", \"db_password\", \"root_password\", \"service_account_key\", \"tls_private_key\", \"certificate_password\", \"keystore_password\", \"encryption_key\", \"decryption_key\", \"master_key\", \"access_key_secret\", \"client_secret\", \"smtp_password\", \"ldap_password\", \"ad_password\", \"vpn_preshared_key\", \"ipsec_secret\", \"rds_password\", \"database_master_password\", \"connection_string\"}\n\nauth_context_keywords := {\"authentication\", \"login\", \"signin\", \"auth\", \"username\", \"user\"}\n\nis_empty_value(node) {\n    node.ir_type == \"String\"\n    count(trim(node.value, \" \\t\\n\\r\")) == 0\n}\n\nis_empty_value(node) {\n    node.ir_type == \"Null\"\n}\n\nis_empty_value(node) {\n    node.ir_type == \"Undef\"\n}\n\nis_password_related_key(key) {\n    lower_key := lower(key)\n    k := empty_password_keywords[_]\n    contains(lower_key, k)\n}\n\nis_in_auth_context(parent_block) {\n    attrs := glitch_lib.all_attributes(parent_block)\n    attr := attrs[_]\n    lower_name := lower(attr.name)\n    k := auth_context_keywords[_]\n    contains(lower_name, k)\n}\n\nhas_empty_value(node) {\n    is_empty_value(node)\n}\n\nhas_empty_value(node) {\n    walk(node, [_, n])\n    is_empty_value(n)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    au := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(au)\n    attr := attrs[_]\n\n    is_password_related_key(attr.name)\n\n    has_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    vars := glitch_lib.all_variables(parent)\n    var := vars[_]\n\n    is_password_related_key(var.name)\n\n    has_empty_value(var.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": var,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    au := atomic_units[_]\n\n    is_in_auth_context(au)\n\n    attrs := glitch_lib.all_attributes(au)\n    attr := attrs[_]\n\n    lower_name := lower(attr.name)\n    contains(lower_name, \"pass\")\n\n    has_empty_value(attr.value)\n\n    result := {\n        \"type\": \"sec_empty_pass\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Empty password in configuration file - Credentials should not be empty or null. (CWE-258)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-26T18:42:04.594284+00:00",
+    "elapsed_time": "0m9s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 14718,
+    "output_tokens_total": 2134,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 0
+  }
+}

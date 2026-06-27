@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-26T18:40:19.933483+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_barebones/kimi-k2.5/runs/run_001",
+  "experiment_name": "ablation_barebones",
+  "rule_id": "cwe_546",
+  "type_name": "sec_susp_comm",
+  "model_used": "moonshotai.kimi-k2.5",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_barebones/kimi-k2.5/runs/run_001/cwe_546.rego",
+  "condition": "{\n    \"ID\": \"546\",\n    \"Name\": \"Suspicious Comment\",\n    \"Abstraction\": \"Variant\",\n    \"Structure\": \"Simple\",\n    \"Status\": \"Draft\",\n    \"Description\": \"The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses.\",\n    \"ExtendedDescription\": \"Many suspicious comments, such as BUG, HACK, FIXME, LATER, LATER2, TODO, in the code indicate missing security functionality and checking. Others indicate code problems that programmers should fix, such as hard-coded variables, error handling, not using stored procedures, and performance issues.\",\n    \"RelatedWeaknesses\": [\n        {\n            \"Nature\": \"ChildOf\",\n            \"CweID\": \"1078\",\n            \"ViewID\": \"1000\",\n            \"Ordinal\": \"Primary\"\n        }\n    ],\n    \"WeaknessOrdinalities\": [\n        {\n            \"Ordinality\": \"Indirect\"\n        }\n    ],\n    \"ApplicablePlatforms\": [\n        {\n            \"Type\": \"Language\",\n            \"Class\": \"Not Language-Specific\",\n            \"Prevalence\": \"Undetermined\"\n        }\n    ],\n    \"ModesOfIntroduction\": [\n        {\n            \"Phase\": \"Implementation\"\n        }\n    ],\n    \"CommonConsequences\": [\n        {\n            \"Scope\": [\n                \"Other\"\n            ],\n            \"Impact\": [\n                \"Quality Degradation\"\n            ],\n            \"Note\": \"Suspicious comments could be an indication that there are problems in the source code that may need to be fixed and is an indication of poor quality. This could lead to further bugs and the introduction of weaknesses.\"\n        }\n    ],\n    \"DetectionMethods\": [\n        {\n            \"DetectionMethodID\": \"DM-14\",\n            \"Method\": \"Automated Static Analysis\",\n            \"Description\": \"Automated static analysis, commonly referred to as Static Application Security Testing (SAST), can find some instances of this weakness by analyzing source code (or binary/compiled code) without having to execute it. Typically, this is done by building a model of data flow and control flow, then searching for potentially-vulnerable patterns that connect \\\"sources\\\" (origins of input) with \\\"sinks\\\" (destinations where the data interacts with external components, a lower layer such as the OS, etc.)\"\n        }\n    ],\n    \"PotentialMitigations\": [\n        {\n            \"Phase\": [\n                \"Documentation\"\n            ],\n            \"Description\": \"Remove comments that suggest the presence of bugs, incomplete functionality, or weaknesses, before deploying the application.\"\n        }\n    ],\n    \"DemonstrativeExamples\": [\n        {\n            \"Entries\": [\n                {\n                    \"IntroText\": \"The following excerpt demonstrates the use of a suspicious comment in an incomplete code block that may have security repercussions.\"\n                },\n                {\n                    \"Nature\": \"Bad\",\n                    \"Language\": \"Java\",\n                    \"ExampleCode\": \"```\\n\\tif (user == null) {\\n```\\n// TODO: Handle null user condition.* \\n\\t\\t\\t}\"\n                }\n            ]\n        }\n    ],\n    \"MappingNotes\": {\n        \"Usage\": \"Allowed\",\n        \"Rationale\": \"This CWE entry is at the Variant level of abstraction, which is a preferred level of abstraction for mapping to the root causes of vulnerabilities.\",\n        \"Comments\": \"Carefully read both the name and description to ensure that this mapping is an appropriate fit. Do not try to 'force' a mapping to a lower-level Base/Variant simply to comply with this preferred level of abstraction.\",\n        \"Reasons\": [\n            \"Acceptable-Use\"\n        ]\n    },\n    \"ContentHistory\": [\n        {\n            \"Type\": \"Submission\",\n            \"SubmissionName\": \"Anonymous Tool Vendor (under NDA)\",\n            \"SubmissionDate\": \"2006-07-19\",\n            \"SubmissionVersion\": \"Draft 3\",\n            \"SubmissionReleaseDate\": \"2006-07-19\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"Sean Eidemiller\",\n            \"ModificationOrganization\": \"Cigital\",\n            \"ModificationDate\": \"2008-07-01\",\n            \"ModificationComment\": \"added/updated demonstrative examples\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"Eric Dalci\",\n            \"ModificationOrganization\": \"Cigital\",\n            \"ModificationDate\": \"2008-07-01\",\n            \"ModificationComment\": \"updated Potential_Mitigations, Time_of_Introduction\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2008-09-08\",\n            \"ModificationComment\": \"updated Description, Relationships, Taxonomy_Mappings\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2010-06-21\",\n            \"ModificationComment\": \"updated Demonstrative_Examples\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2011-06-01\",\n            \"ModificationComment\": \"updated Common_Consequences\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2011-06-27\",\n            \"ModificationComment\": \"updated Common_Consequences\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2012-05-11\",\n            \"ModificationComment\": \"updated Common_Consequences, Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2012-10-30\",\n            \"ModificationComment\": \"updated Potential_Mitigations\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2014-07-30\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2017-11-08\",\n            \"ModificationComment\": \"updated Relationships, Taxonomy_Mappings\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2019-01-03\",\n            \"ModificationComment\": \"updated Relationships, Weakness_Ordinalities\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2020-02-24\",\n            \"ModificationComment\": \"updated Applicable_Platforms, Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-04-27\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-06-29\",\n            \"ModificationComment\": \"updated Mapping_Notes\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2025-12-11\",\n            \"ModificationComment\": \"updated Detection_Factors\",\n            \"ModificationVersion\": \"4.19\",\n            \"ModificationReleaseDate\": \"2025-12-11\"\n        }\n    ]\n}",
+  "use_cwe_text": true,
+  "no_ir_slicing": true,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": 0,
+    "truncation_enabled": true,
+    "mode": "pinned_only",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_patterns := {\"BUG\", \"HACK\", \"FIXME\", \"LATER\", \"LATER2\", \"TODO\"}\n\ncontains_suspicious(content) {\n    pattern := suspicious_patterns[_]\n    regex.match(sprintf(\"(?i)\\\\b%s\\\\b\", [pattern]), content)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n    contains_suspicious(comment.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious Comment - The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses. (CWE-546)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-26T18:40:19.952923+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 1,
+    "input_tokens_total": 6248,
+    "output_tokens_total": 173,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 0
+  }
+}

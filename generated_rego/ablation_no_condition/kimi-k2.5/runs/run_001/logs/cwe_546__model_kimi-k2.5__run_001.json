@@ -1,0 +1,106 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T01:40:05.256293+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_condition/kimi-k2.5/runs/run_001",
+  "experiment_name": "ablation_no_condition",
+  "rule_id": "cwe_546",
+  "type_name": "sec_susp_comm",
+  "model_used": "moonshotai.kimi-k2.5",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_condition/kimi-k2.5/runs/run_001/cwe_546.rego",
+  "condition": "{\n    \"ID\": \"546\",\n    \"Name\": \"Suspicious Comment\",\n    \"Abstraction\": \"Variant\",\n    \"Structure\": \"Simple\",\n    \"Status\": \"Draft\",\n    \"Description\": \"The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses.\",\n    \"ExtendedDescription\": \"Many suspicious comments, such as BUG, HACK, FIXME, LATER, LATER2, TODO, in the code indicate missing security functionality and checking. Others indicate code problems that programmers should fix, such as hard-coded variables, error handling, not using stored procedures, and performance issues.\",\n    \"RelatedWeaknesses\": [\n        {\n            \"Nature\": \"ChildOf\",\n            \"CweID\": \"1078\",\n            \"ViewID\": \"1000\",\n            \"Ordinal\": \"Primary\"\n        }\n    ],\n    \"WeaknessOrdinalities\": [\n        {\n            \"Ordinality\": \"Indirect\"\n        }\n    ],\n    \"ApplicablePlatforms\": [\n        {\n            \"Type\": \"Language\",\n            \"Class\": \"Not Language-Specific\",\n            \"Prevalence\": \"Undetermined\"\n        }\n    ],\n    \"ModesOfIntroduction\": [\n        {\n            \"Phase\": \"Implementation\"\n        }\n    ],\n    \"CommonConsequences\": [\n        {\n            \"Scope\": [\n                \"Other\"\n            ],\n            \"Impact\": [\n                \"Quality Degradation\"\n            ],\n            \"Note\": \"Suspicious comments could be an indication that there are problems in the source code that may need to be fixed and is an indication of poor quality. This could lead to further bugs and the introduction of weaknesses.\"\n        }\n    ],\n    \"DetectionMethods\": [\n        {\n            \"DetectionMethodID\": \"DM-14\",\n            \"Method\": \"Automated Static Analysis\",\n            \"Description\": \"Automated static analysis, commonly referred to as Static Application Security Testing (SAST), can find some instances of this weakness by analyzing source code (or binary/compiled code) without having to execute it. Typically, this is done by building a model of data flow and control flow, then searching for potentially-vulnerable patterns that connect \\\"sources\\\" (origins of input) with \\\"sinks\\\" (destinations where the data interacts with external components, a lower layer such as the OS, etc.)\"\n        }\n    ],\n    \"PotentialMitigations\": [\n        {\n            \"Phase\": [\n                \"Documentation\"\n            ],\n            \"Description\": \"Remove comments that suggest the presence of bugs, incomplete functionality, or weaknesses, before deploying the application.\"\n        }\n    ],\n    \"DemonstrativeExamples\": [\n        {\n            \"Entries\": [\n                {\n                    \"IntroText\": \"The following excerpt demonstrates the use of a suspicious comment in an incomplete code block that may have security repercussions.\"\n                },\n                {\n                    \"Nature\": \"Bad\",\n                    \"Language\": \"Java\",\n                    \"ExampleCode\": \"```\\n\\tif (user == null) {\\n```\\n// TODO: Handle null user condition.* \\n\\t\\t\\t}\"\n                }\n            ]\n        }\n    ],\n    \"MappingNotes\": {\n        \"Usage\": \"Allowed\",\n        \"Rationale\": \"This CWE entry is at the Variant level of abstraction, which is a preferred level of abstraction for mapping to the root causes of vulnerabilities.\",\n        \"Comments\": \"Carefully read both the name and description to ensure that this mapping is an appropriate fit. Do not try to 'force' a mapping to a lower-level Base/Variant simply to comply with this preferred level of abstraction.\",\n        \"Reasons\": [\n            \"Acceptable-Use\"\n        ]\n    },\n    \"ContentHistory\": [\n        {\n            \"Type\": \"Submission\",\n            \"SubmissionName\": \"Anonymous Tool Vendor (under NDA)\",\n            \"SubmissionDate\": \"2006-07-19\",\n            \"SubmissionVersion\": \"Draft 3\",\n            \"SubmissionReleaseDate\": \"2006-07-19\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"Sean Eidemiller\",\n            \"ModificationOrganization\": \"Cigital\",\n            \"ModificationDate\": \"2008-07-01\",\n            \"ModificationComment\": \"added/updated demonstrative examples\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"Eric Dalci\",\n            \"ModificationOrganization\": \"Cigital\",\n            \"ModificationDate\": \"2008-07-01\",\n            \"ModificationComment\": \"updated Potential_Mitigations, Time_of_Introduction\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2008-09-08\",\n            \"ModificationComment\": \"updated Description, Relationships, Taxonomy_Mappings\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2010-06-21\",\n            \"ModificationComment\": \"updated Demonstrative_Examples\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2011-06-01\",\n            \"ModificationComment\": \"updated Common_Consequences\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2011-06-27\",\n            \"ModificationComment\": \"updated Common_Consequences\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2012-05-11\",\n            \"ModificationComment\": \"updated Common_Consequences, Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2012-10-30\",\n            \"ModificationComment\": \"updated Potential_Mitigations\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2014-07-30\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2017-11-08\",\n            \"ModificationComment\": \"updated Relationships, Taxonomy_Mappings\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2019-01-03\",\n            \"ModificationComment\": \"updated Relationships, Weakness_Ordinalities\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2020-02-24\",\n            \"ModificationComment\": \"updated Applicable_Platforms, Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-04-27\",\n            \"ModificationComment\": \"updated Relationships\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2023-06-29\",\n            \"ModificationComment\": \"updated Mapping_Notes\"\n        },\n        {\n            \"Type\": \"Modification\",\n            \"ModificationName\": \"CWE Content Team\",\n            \"ModificationOrganization\": \"MITRE\",\n            \"ModificationDate\": \"2025-12-11\",\n            \"ModificationComment\": \"updated Detection_Factors\",\n            \"ModificationVersion\": \"4.19\",\n            \"ModificationReleaseDate\": \"2025-12-11\"\n        }\n    ]\n}",
+  "use_cwe_text": true,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": "/home/RegoSmith/validation/examples_extension/sec_susp_comm",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_comment_patterns := [\"BUG\", \"HACK\", \"FIXME\", \"LATER\", \"LATER2\", \"TODO\"]\n\ncontains_suspicious(pattern, content) {\n    contains(upper(content), pattern)\n}\n\ncheck_comment_content(content) {\n    pattern := suspicious_comment_patterns[_]\n    contains_suspicious(pattern, content)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n    check_comment_content(comment.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious Comment - The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses. (CWE-546)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    walk(input, [_, node])\n    node.ir_type == \"Comment\"\n    check_comment_content(node.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": node,\n        \"path\": \"\",\n        \"description\": \"Suspicious Comment - The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses. (CWE-546)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            3,
+            28,
+            30
+          ],
+          "false_positives": [],
+          "file_name": "ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 30, \"code\": \"  # http://tracker.ceph.com/issues/18126#note-11\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126#note-11\"}, {\"ir_type\": \"Comment\", \"line\": 3, \"code\": \"  # http://tracker.ceph.com/issues/18126\\n\", \"content\": \"# http://tracker.ceph.com/issues/18126\"}, {\"ir_type\": \"Comment\", \"line\": 28, \"code\": \"  # http://tracker.ceph.com/issues/13522#note-51\\n\", \"content\": \"# http://tracker.ceph.com/issues/13522#note-51\"}], \"variables\": [{\"ir_type\": \"Variable\", \"line\": 2, \"code\": \"apt_repos:\\n\", \"name\": \"apt_repos\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"  - \\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 4, \"code\": \"\\\"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\\\"\", \"value\": \"deb [trusted=yes] https://chacra.ceph.com/r/valgrind/latest/HEAD/ubuntu/xenial/flavors/default/ xenial main\"}]}}, {\"ir_type\": \"Variable\", \"line\": 27, \"code\": \"packages_to_upgrade:\\n\", \"name\": \"packages_to_upgrade\", \"value\": {\"ir_type\": \"Array\", \"line\": 29, \"code\": \"  - libgoogle-perftools4\\n  # http://tracker.ceph.com/issues/18126#note-11\\n  - valgrind\\n\\n\", \"value\": [{\"ir_type\": \"String\", \"line\": 29, \"code\": \"libgoogle-perftools4\", \"value\": \"libgoogle-perftools4\"}, {\"ir_type\": \"String\", \"line\": 31, \"code\": \"valgrind\", \"value\": \"valgrind\"}]}}], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmith/validation/examples_extension/sec_susp_comm/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"path\": \"/home/RegoSmith/validation/examples_extension/sec_susp_comm/ceph_ceph-cm-ansible-roles-testnode-vars-ubuntu_16.yml\", \"type\": \"vars\", \"lines\": 36}",
+          "ir_node_reduction_percentage": 70.3
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            24
+          ],
+          "false_positives": [],
+          "file_name": "contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 24, \"code\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\\n\", \"content\": \"# NOTE (leseb): for version 1.1.0 because https://github.com/ansible/ansible-modules-core/issues/1227\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmith/validation/examples_extension/sec_susp_comm/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"path\": \"/home/RegoSmith/validation/examples_extension/sec_susp_comm/contiv_ansible-roles-ceph-mon-tasks-docker-pre_requisite.yml\", \"type\": \"tasks\", \"lines\": 28}",
+          "ir_node_reduction_percentage": 94.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "chef",
+          "missing_lines": [
+            22
+          ],
+          "false_positives": [],
+          "file_name": "sous-chefs_visualstudio-attributes-vs2012.rb",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [{\"ir_type\": \"Comment\", \"line\": 22, \"code\": \"# Currently you cannot change this, doing so will break the cookbook\\n\", \"content\": \"# Currently you cannot change this, doing so will break the cookbook\"}], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [], \"attributes\": [], \"name\": \"sous-chefs_visualstudio-attributes-vs2012.rb\", \"path\": \"/home/RegoSmith/validation/examples_extension/sec_susp_comm/sous-chefs_visualstudio-attributes-vs2012.rb\", \"type\": \"script\", \"lines\": 241}",
+          "ir_node_reduction_percentage": 99.5
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": " The rule attempts to detect suspicious comments containing keywords like \"BUG\", \"HACK\", \"FIXME\", \"TODO\", etc. to flag potential security weaknesses (CWE-546). It missed comments at lines 3, 24, 28, and 30 because these contain **bug tracker URLs and issue references** (e.g., \"tracker.ceph.com/issues/18126\", \"ansible-modules-core/issues/1227\") rather than the literal keywords in its pattern list.\n\nThe rule logic failed because it's too narrow: it only checks for exact keyword matches in a hardcoded list, missing **semantic indicators of bugs** such as URL patterns containing \"/issues/\", GitHub issue references, or informal descriptions of breakage (e.g., \"doing so will break the cookbook\"). The IR structure correctly captures these as Comment nodes with full content, but the rule's `suspicious_comment_patterns` doesn't include patterns that would match issue tracker references or natural language descriptions of known problems."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_patterns := {\n    \"BUG\", \"HACK\", \"FIXME\", \"TODO\", \"LATER\", \"LATER2\", \"XXX\",\n    \"/issues/\", \"issues/\", \"github.com/.*/issues/\",\n    \"break\", \"broken\", \"deprecat\", \"incomplete\", \"workaround\",\n    \"temporary\", \"temp\", \"broken\", \"will break\", \"cannot change\"\n}\n\ncheck_comment_content(content) {\n    pattern := suspicious_patterns[_]\n    regex.match(sprintf(\"(?i).*%s.*\", [pattern]), content)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    comment := parent.comments[_]\n    check_comment_content(comment.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": comment,\n        \"path\": parent.path,\n        \"description\": \"Suspicious Comment - The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses. (CWE-546)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    walk(input, [_, node])\n    node.ir_type == \"Comment\"\n    check_comment_content(node.content)\n\n    result := {\n        \"type\": \"sec_susp_comm\",\n        \"element\": node,\n        \"path\": \"\",\n        \"description\": \"Suspicious Comment - The code contains comments that suggest the presence of bugs, incomplete functionality, or weaknesses. (CWE-546)\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T01:42:16.411277+00:00",
+    "elapsed_time": "2m11s"
+  },
+  "llm_usage": {
+    "calls": 3,
+    "input_tokens_total": 20060,
+    "output_tokens_total": 790,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 0
+  }
+}

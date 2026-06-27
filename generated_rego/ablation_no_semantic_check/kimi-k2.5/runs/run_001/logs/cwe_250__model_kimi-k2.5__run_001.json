@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-26T18:41:43.150551+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_250",
+  "type_name": "sec_def_admin",
+  "model_used": "moonshotai.kimi-k2.5",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001/cwe_250.rego",
+  "condition": " I'll analyze CWE-250 (Execution with Unnecessary Privileges) and identify the necessary weaknesses, keywords, attributes, and fields to detect this in Infrastructure as Code (IaC) scripts.\n\n## Necessary Weakness to Detect CWE-250 in IaC Scripts\n\n### Core Detection Patterns\n\n| Category | Indicators |\n|----------|-----------|\n| **Identity & Access Management** | `root`, `administrator`, `system`, `privileged`, `elevation`, `impersonation`, `run_as`, `user`, `principal`, `identity` |\n| **Permission Over-Assignment** | `*` (wildcard permissions), `full`, `all`, `unrestricted`, `write`, `delete` paired with overly broad resource scopes |\n| **Role Definitions** | `role`, `policy`, `binding`, `assume_role`, `service_account`, `instance_profile` with elevated privilege levels |\n| **Security Context** | `security_context`, `privileged_mode`, `host_network`, `host_pid`, `host_ipc`, `capabilities`, `seccomp`, `apparmor` |\n| **File System Permissions** | `setuid`, `setgid`, `sticky_bit`, `mode`, `permission`, `chmod`, `0755`, `0777`, `4755` |\n\n### Critical Attribute Patterns\n\n**Excessive Permission Indicators:**\n- Permissions granted without resource constraints (global scope)\n- Permissions combining read + write + delete when fewer suffice\n- Administrative roles assigned to compute resources that don't require them\n- Wildcard (`*`) actions on wildcard (`*`) resources\n\n**Privilege Escalation Vectors:**\n- `allow_privilege_escalation: true` or equivalent\n- `privileged: true` flags on containers/VMs\n- `host_path` mounts with write access\n- Capabilities like `CAP_SYS_ADMIN`, `CAP_NET_ADMIN`, `CAP_SYS_PTRACE`\n\n**Authentication Gaps:**\n- Anonymous or unauthenticated access enabled\n- Default credentials with elevated permissions\n- Missing `authentication` or `authorization` blocks\n- `public_access_enabled` with elevated privileges\n\n### Structural Weakness Fields\n\n| Field Type | Concern |\n|------------|---------|\n| `metadata.annotations` | Privilege-related annotations that bypass security |\n| `spec.template.spec.containers[].securityContext` | Container-level privilege settings |\n| `spec.serviceAccountName` | Over-permissioned service account binding |\n| `assume_role_policy` / `trust_policy` | Overly permissive trust relationships |\n| `inline_policy` / `managed_policy_arns` | Direct policy attachment without least-privilege review |\n| `iam_instance_profile` | Instance profiles with excessive permissions |\n\n### Behavioral Indicators\n\n- **Default Denial Absence**: No explicit `Deny` statements or `NotAction` exclusions\n- **Permission Inheritance**: Resources inheriting parent permissions without explicit need\n- **Cross-Account/Project**: Excessive trust boundaries crossed without justification\n- **Temporal Privileges**: Permanent credentials where temporary suffice\n- **Scope Drift**: Permissions granted at cluster/organization level for single-namespace needs\n\n### Language-Agnostic Detection Logic\n\n```\nDETECT IF:\n  (role contains [\"admin\", \"root\", \"system\", \"*\"] OR\n   policy_action contains \"*\" OR\n   policy_resource contains \"*\" OR\n   privileged_flag == true OR\n   allow_privilege_escalation == true OR\n   run_as_user == 0 OR\n   capabilities contains [\"SYS_ADMIN\", \"NET_ADMIN\"] OR\n   host_access_enabled == true)\n  \n  AND NOT:\n    (justified_by_explicit_comment OR\n     minimal_required_permissions_documented OR\n     scoped_to_single_resource with justification)\n```\n\nThese patterns enable automated scanning to identify where IaC configurations violate the principle of least privilege, creating unnecessary attack surface through excessive permissions.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nprivileged_keywords := {\"root\", \"admin\", \"administrator\", \"system\", \"privileged\", \"elevation\", \"impersonation\", \"run_as\", \"assume_role\", \"admin_role\", \"full_access\"}\n\nwildcard_patterns := {\"*\", \"**\", \"/*\", \"*/*\"}\n\nprivileged_capabilities := {\"SYS_ADMIN\", \"NET_ADMIN\", \"SYS_PTRACE\", \"SYS_MODULE\", \"DAC_READ_SEARCH\", \"DAC_OVERRIDE\"}\n\nsecurity_context_keys := {\"security_context\", \"privileged\", \"allow_privilege_escalation\", \"run_as_user\", \"capabilities\", \"host_network\", \"host_pid\", \"host_ipc\", \"privileged_mode\"}\n\nis_privileged_true(value) {\n    value.ir_type == \"Boolean\"\n    value.value == true\n} else {\n    value.ir_type == \"String\"\n    lower(value.value) == \"true\"\n}\n\nis_run_as_root(value) {\n    value.ir_type == \"String\"\n    regex.match(\"^(root|0)$\", value.value)\n} else {\n    value.ir_type == \"Integer\"\n    value.value == 0\n}\n\nhas_wildcard_permission(value) {\n    value.ir_type == \"String\"\n    regex.match(`^\\s*\\*\\s*$`, value.value)\n}\n\nhas_privileged_keyword(value) {\n    value.ir_type == \"String\"\n    l := lower(value.value)\n    contains(l, privileged_keywords[_])\n}\n\ncontains(str, substr) {\n    regex.match(sprintf(\".*%s.*\", [substr]), str)\n}\n\ncheck_capabilities(value) {\n    value.ir_type == \"String\"\n    contains(upper(value.value), privileged_capabilities[_])\n} else {\n    value.ir_type == \"Array\"\n    v := value.value[_]\n    v.ir_type == \"String\"\n    contains(upper(v.value), privileged_capabilities[_])\n}\n\ncheck_hash_for_wildcards(value) {\n    value.ir_type == \"Hash\"\n    v := value.value[_]\n    has_wildcard_permission(v)\n}\n\ncheck_array_for_wildcards(value) {\n    value.ir_type == \"Array\"\n    v := value.value[_]\n    has_wildcard_permission(v)\n}\n\nis_security_context_attr(name) {\n    contains(lower(name), security_context_keys[_])\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    is_security_context_attr(attr.name)\n    is_privileged_true(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Privileged mode or privilege escalation is enabled, violating the principle of least privilege. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    is_security_context_attr(attr.name)\n    is_run_as_root(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Running as root or user 0 without justification, violating the principle of least privilege. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    is_security_context_attr(attr.name)\n    check_capabilities(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Dangerous capabilities granted, violating the principle of least privilege. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    lower(attr.name) == \"role\"\n    has_privileged_keyword(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Administrative or privileged role assigned without least privilege justification. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    lower(attr.name) == \"user\"\n    has_privileged_keyword(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Privileged user account configured, violating the principle of least privilege. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    regex.match(`(?i)(policy|permission|action|resource)`, attr.name)\n    check_hash_for_wildcards(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Wildcard permissions in policy actions or resources, violating the principle of least privilege. (CWE-250)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n\n    regex.match(`(?i)(policy|permission|action|resource)`, attr.name)\n    check_array_for_wildcards(attr.value)\n\n    result := {\n        \"type\": \"sec_def_admin\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Execution with unnecessary privileges - Wildcard permissions in policy actions or resources array, violating the principle of least privilege. (CWE-250)\"\n    }\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-26T18:41:43.173710+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 13781,
+    "output_tokens_total": 2219,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 0
+  }
+}

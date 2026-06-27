@@ -1,0 +1,62 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-26T19:02:54.646094+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001",
+  "experiment_name": "ablation_no_semantic_check",
+  "rule_id": "cwe_546",
+  "type_name": "sec_susp_comm",
+  "model_used": "moonshotai.kimi-k2.5",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/ablation_no_semantic_check/kimi-k2.5/runs/run_001/cwe_546.rego",
+  "condition": " ## CWE-546: Suspicious Comment - Detection in Infrastructure as Code (IaC)\n\n### Core Detection Approach\n\nTo detect CWE-546 in IaC scripts, the primary detection mechanism is **pattern-based comment analysis** within configuration files, deployment manifests, and infrastructure definitions.\n\n---\n\n### Keywords and Indicators to Detect\n\n| Category | Keywords/Patterns |\n|----------|-----------------|\n| **Bug Indicators** | `BUG`, `BUGFIX`, `KNOWN-ISSUE`, `BROKEN`, `WORKAROUND`, `KLUDGE` |\n| **Incomplete Functionality** | `TODO`, `FIXME`, `XXX`, `HACK`, `TEMP`, `TEMPORARY`, `PLACEHOLDER`, `STUB` |\n| **Deferred Work** | `LATER`, `FUTURE`, `NEXT-RELEASE`, `BACKLOG`, `PENDING`, `NOT-IMPLEMENTED` |\n| **Review Required** | `REVIEW`, `AUDIT`, `QUESTION`, `APPROVAL-NEEDED`, `CLEANUP` |\n| **Security-Specific** | `SECURITY-TODO`, `AUTH-TODO`, `ENCRYPT-LATER`, `CERT-PLACEHOLDER`, `HARDCODED-SECRET`, `DISABLE-CHECK` |\n| **Hardcoded Values** | `HARDCODED`, `HARDCODE`, `MANUAL-CONFIG`, `OVERRIDE-ME`, `CHANGE-ME` |\n\n---\n\n### IaC-Specific Contexts and Attributes\n\n#### Resource Configuration Fields\n- Comments adjacent to `enabled = false` or `count = 0` suspending resources\n- Annotations explaining why security features are disabled\n- Notes near `ignore_changes` lifecycle rules\n- Comments bypassing `prevent_destroy` protections\n\n#### Access Control Constructs\n- Comments near overly permissive IAM bindings (`*:*`, `Allow *`)\n- Explanations for `public_access = true` or `acl = public-read`\n- Notes about `unauthenticated` access allowances\n- TODOs regarding least privilege implementation\n\n#### Network Security Elements\n- Comments on `0.0.0.0/0` ingress rules\n- Notes about disabled encryption in transit\n- TODOs for VPC isolation or segmentation\n- Placeholder firewall rules marked for revision\n\n#### Secret and Credential Handling\n- Comments indicating hardcoded passwords or API keys\n- TODOs for secret manager integration\n- Notes about plaintext credential storage\n- TEMP indicators near certificate configurations\n\n#### Data Protection\n- Comments on disabled encryption at rest\n- TODOs for key rotation implementation\n- Notes about plaintext backup configurations\n- Placeholder encryption key references\n\n---\n\n### Structural Patterns\n\n| Pattern | Description |\n|---------|-------------|\n| **Comment-Code Proximity** | Suspicious keywords appearing within N lines of security-sensitive resource declarations |\n| **Block-Level Comments** | Multi-line comments containing indicators preceding resource blocks |\n| **Inline Annotations** | End-of-line comments on attribute assignments |\n| **Documentation Strings** | Description fields containing TODO/FIXME patterns |\n| **Metadata Annotations** | Tags or labels with embedded suspicious indicators |\n\n---\n\n### Severity-Modifying Contexts\n\nIncrease severity when suspicious comments appear near:\n- Production environment configurations\n- Authentication/authorization resources\n- Encryption or key management settings\n- Network boundary definitions\n- Logging and monitoring configurations\n- Data storage resource declarations",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": null,
+    "entries_count": 0,
+    "skipped": true
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nsuspicious_patterns := {\n\t\"BUG\", \"BUGFIX\", \"KNOWN-ISSUE\", \"BROKEN\", \"WORKAROUND\", \"KLUDGE\",\n\t\"TODO\", \"FIXME\", \"XXX\", \"HACK\", \"TEMP\", \"TEMPORARY\", \"PLACEHOLDER\", \"STUB\",\n\t\"LATER\", \"FUTURE\", \"NEXT-RELEASE\", \"BACKLOG\", \"PENDING\", \"NOT-IMPLEMENTED\",\n\t\"REVIEW\", \"AUDIT\", \"QUESTION\", \"APPROVAL-NEEDED\", \"CLEANUP\",\n\t\"SECURITY-TODO\", \"AUTH-TODO\", \"ENCRYPT-LATER\", \"CERT-PLACEHOLDER\", \"HARDCODED-SECRET\", \"DISABLE-CHECK\",\n\t\"HARDCODED\", \"HARDCODE\", \"MANUAL-CONFIG\", \"OVERRIDE-ME\", \"CHANGE-ME\"\n}\n\nhas_suspicious_pattern(content) {\n\tpattern := suspicious_patterns[_]\n\tregex.match(sprintf(\"(?i)\\\\b%s\\\\b\", [pattern]), content)\n}\n\nGlitch_Analysis[result] {\n\tparent := glitch_lib._gather_parent_unit_blocks[_]\n\tparent.path != \"\"\n\t\n\tcomment := parent.comments[_]\n\thas_suspicious_pattern(comment.content)\n\t\n\tresult := {\n\t\t\"type\": \"sec_susp_comm\",\n\t\t\"element\": comment,\n\t\t\"path\": parent.path,\n\t\t\"description\": \"Suspicious Comment - Code contains comments that may indicate security gaps or incomplete functionality. (CWE-546)\"\n\t}\n}",
+      "errors": [],
+      "status": "passed",
+      "semantic_check_skipped": true
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 1,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-26T19:02:54.664703+00:00",
+    "elapsed_time": "0m0s"
+  },
+  "llm_usage": {
+    "calls": 2,
+    "input_tokens_total": 7014,
+    "output_tokens_total": 1012,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 0,
+    "cache_write_tokens_total": 0
+  }
+}
