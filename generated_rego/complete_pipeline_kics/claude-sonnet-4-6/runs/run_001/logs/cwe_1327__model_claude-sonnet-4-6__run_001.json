@@ -1,0 +1,92 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T14:05:04.522906+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "complete_pipeline_kics",
+  "rule_id": "cwe_1327",
+  "type_name": "sec_invalid_bind",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001/cwe_1327.rego",
+  "condition": "# CWE-1327: Binding to an Unrestricted IP Address \u2014 IaC Detection Guide\n\n## Core Weakness to Detect\n\nThe fundamental issue is a **resource or service being configured to listen/bind on an unrestricted IP address**, exposing it to all available network interfaces rather than a specific, intended one.\n\n---\n\n## Key Indicators & Patterns to Detect\n\n### 1. Unrestricted Bind Address Values\nLook for fields/attributes whose **values** match:\n- `0.0.0.0` \u2014 wildcard IPv4 address\n- `::` or `::0` \u2014 wildcard IPv6 equivalent\n- `*` \u2014 wildcard symbol used as a bind address\n- Empty string `\"\"` \u2014 may default to wildcard binding\n\n### 2. Suspicious Attribute/Field Names\nThese fields, when set to the above values, are strong signals:\n\n| Category | Keywords / Attributes |\n|---|---|\n| **Bind/Listen address** | `listenaddr`, `listen_address`, `bind_address`, `bind_addr`, `host`, `listen_host`, `address`, `listen_on` |\n| **Network interface** | `interface`, `network_interface`, `iface` |\n| **Endpoint configuration** | `endpoint`, `advertise_addr`, `cluster_addr`, `advertise_address` |\n| **Database-specific** | `bind-address`, `db_host`, `db_bind`, `listen_addresses` |\n| **Service/Server config** | `server_address`, `grpc_address`, `http_address`, `api_address` |\n\n### 3. Resource/Service Types to Monitor\n- Database server configurations (e.g., MySQL, PostgreSQL, Redis instances)\n- Web server / API gateway definitions\n- Cloud compute instances (VMs, containers, Kubernetes workloads)\n- Signing servers, key management services\n- Message brokers and queue services\n- Container/pod network bindings (`hostIP`, `containerPort` bindings)\n- Load balancer listener configurations\n\n### 4. Context-Specific Signals\n\n#### Network/Firewall Rules\n- Absence of ingress/egress filtering rules when `0.0.0.0` is used\n- Security group or firewall rules permitting `0.0.0.0/0` as source in combination with a wildcard bind\n\n#### Port Exposure\n- A wildcard address paired with a widely accessible `port` value (e.g., well-known service ports like `3306`, `5432`, `6379`, `9200`)\n- `host_port` or `port_binding` fields mapping to `0.0.0.0`\n\n---\n\n## Detection Logic Summary\n\n```\nIF (bind/listen address field) EQUALS (\"0.0.0.0\" OR \"::\" OR \"*\" OR \"\")\nAND resource type is a (server | service | database | compute instance | container)\nTHEN \u2192 flag as CWE-1327\n```\n\n### Aggravating Conditions (Raise Severity)\n- No accompanying firewall / security group rules restricting inbound traffic\n- Resource is publicly accessible (e.g., in a public subnet or with a public IP)\n- No authentication mechanism configured on the same resource\n- Protocol is unencrypted (e.g., plain HTTP, unencrypted DB connection)\n\n---\n\n## Summary Table\n\n| Signal Type | Examples |\n|---|---|\n| **Wildcard IP values** | `0.0.0.0`, `::`, `*`, `\"\"` |\n| **Bind/listen fields** | `listenaddr`, `bind_address`, `listen_addresses`, `host`, `address` |\n| **Missing restriction** | Absence of firewall rules, security groups, or network ACLs |\n| **Exposed resource types** | Databases, APIs, key servers, containers, cluster nodes |\n| **Compounding risks** | Public subnet placement, open ports, no auth configured |",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_invalid_bind",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nbind_address_fields := {\n\t\"bind_address\", \"bind_addr\", \"listen_address\", \"listen_addr\",\n\t\"listenaddr\", \"listen_host\", \"listen_on\", \"bind-address\",\n\t\"listen_addresses\", \"db_host\", \"db_bind\",\n\t\"server_address\", \"grpc_address\", \"http_address\", \"api_address\",\n\t\"advertise_addr\", \"cluster_addr\", \"advertise_address\",\n}\n\nunrestricted_bind_values := {\"0.0.0.0\", \"::\", \"::0\", \"*\"}\n\ntask_control_keys := {\n\t\"name\", \"become\", \"become_user\", \"when\", \"register\",\n\t\"loop\", \"with_items\", \"with_list\", \"notify\", \"tags\", \"vars\",\n\t\"environment\", \"ignore_errors\", \"failed_when\", \"changed_when\",\n\t\"delegate_to\", \"no_log\", \"run_once\", \"any_errors_fatal\",\n\t\"block\", \"rescue\", \"always\", \"listen\",\n}\n\n# Detect unrestricted bind address in any module's direct parameters\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\n\tsome module_name\n\tmodule_params := task[module_name]\n\tis_object(module_params)\n\tnot task_control_keys[module_name]\n\n\tsome field_name\n\tvalue := module_params[field_name]\n\tis_string(value)\n\n\tbind_address_fields[lower(field_name)]\n\tunrestricted_bind_values[lower(value)]\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_name,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task.name, module_name, field_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should be bound to a specific IP address, not an unrestricted wildcard\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to '%s', which binds to all available network interfaces\", [field_name, value]),\n\t}\n}\n\n# Detect unrestricted bind address set via ini_file option/value pairs\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\n\tini_modules := {\"ansible.builtin.ini_file\", \"ini_file\", \"community.general.ini_file\"}\n\tsome module_name\n\tmodule_name == ini_modules[_]\n\n\tmodule_params := task[module_name]\n\tis_object(module_params)\n\n\toption := module_params.option\n\tis_string(option)\n\tbind_address_fields[lower(option)]\n\n\tvalue := module_params.value\n\tis_string(value)\n\tunrestricted_bind_values[lower(value)]\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_name,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.value\", [task.name, module_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"ini_file option '%s' should not be set to an unrestricted IP address\", [option]),\n\t\t\"keyActualValue\": sprintf(\"ini_file option '%s' is set to '%s', binding to all network interfaces\", [option, value]),\n\t}\n}\n\n# Detect unrestricted bind address set via lineinfile (line contains wildcard IP with a bind field keyword)\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\n\tline_modules := {\"ansible.builtin.lineinfile\", \"lineinfile\"}\n\tsome module_name\n\tmodule_name == line_modules[_]\n\n\tmodule_params := task[module_name]\n\tis_object(module_params)\n\n\tline_value := module_params.line\n\tis_string(line_value)\n\n\tsome field_name\n\tbind_address_fields[field_name]\n\tcontains(lower(line_value), field_name)\n\n\tsome ip_value\n\tunrestricted_bind_values[ip_value]\n\tcontains(line_value, ip_value)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_name,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.line\", [task.name, module_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"lineinfile should not configure '%s' with an unrestricted IP address\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"lineinfile sets '%s' to an unrestricted address in: %s\", [field_name, line_value]),\n\t}\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            14
+          ],
+          "false_positives": [],
+          "file_name": "UnderGreen_ansible-role-mongodb-molecule-default-converge.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_invalid_bind/UnderGreen_ansible-role-mongodb-molecule-default-converge.yml\", \"id\": \"de3fe49b-9b82-4a2a-88fe-c8b5b5ba243a\", \"playbooks\": [{\"vars\": {\"mongodb_net_bindip\": \"0.0.0.0\"}}]}]}",
+          "ir_node_reduction_percentage": 67.9
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            4
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_invalid_bind/group_vars/pulibrary_princeton_ansible-group_vars-mysql-staging.yml\", \"id\": \"4cc70a7c-534d-4ba5-b1e9-54e8222890ca\", \"mysql_bind_address\": \"0.0.0.0\"}]}",
+          "ir_node_reduction_percentage": 33.3
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary of Rule Failures\n\n### What the Rule Was Attempting to Detect\nThe rule tries to identify Ansible configurations that bind services to unrestricted network interfaces (e.g., `0.0.0.0`, `::`) by scanning task module parameters, `ini_file` option/value pairs, and `lineinfile` content for known bind-address field names paired with wildcard IP values.\n\n### What It Missed (False Negatives)\n\n**Example 1 (`mongodb_net_bindip: 0.0.0.0`):** The problematic value lives in the playbook-level `vars` block, which the IR represents as `playbooks[].vars`. The rule exclusively traverses `ansLib.tasks`, so it never reaches playbook-scoped variables. Additionally, the field name `mongodb_net_bindip` is not present in `bind_address_fields`, so even if the vars block were visited, the name wouldn't match.\n\n**Example 2 (`mysql_bind_address: 0.0.0.0`):** This is a flat group_vars file. The IR collapses it into a bare top-level key-value pair on the document object (`{\"mysql_bind_address\": \"0.0.0.0\"}`), with no `tasks` or `playbooks` structure at all. Again, since all three rule branches anchor on `ansLib.tasks`, this document is never evaluated.\n\n### Why the Logic Failed\nThe rule's fundamental assumption is that sensitive bind-address values appear inside Ansible task module parameters. The IR, however, represents playbook `vars` sections and standalone variable files (group_vars, host_vars) as different structural paths \u2014 either nested under `playbooks[].vars` or directly as flat document-level keys \u2014 neither of which is reachable via `ansLib.tasks`. The rule has no branches to handle these IR shapes, causing it to silently skip any bind-address misconfiguration defined outside of a task context."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nunrestricted_bind_values := {\"0.0.0.0\", \"::\", \"::0\", \"*\"}\n\ntask_control_keys := {\n\t\"name\", \"become\", \"become_user\", \"when\", \"register\",\n\t\"loop\", \"with_items\", \"with_list\", \"notify\", \"tags\", \"vars\",\n\t\"environment\", \"ignore_errors\", \"failed_when\", \"changed_when\",\n\t\"delegate_to\", \"no_log\", \"run_once\", \"any_errors_fatal\",\n\t\"block\", \"rescue\", \"always\", \"listen\",\n}\n\nis_bind_related(field_name) {\n\tcontains(lower(field_name), \"bind\")\n}\n\nis_bind_related(field_name) {\n\tcontains(lower(field_name), \"listen_addr\")\n}\n\nis_bind_related(field_name) {\n\tcontains(lower(field_name), \"listen_on\")\n}\n\nis_bind_related(field_name) {\n\tlower(field_name) == \"listen_host\"\n}\n\nis_bind_related(field_name) {\n\tlower(field_name) == \"listenaddr\"\n}\n\n# Detect in flat document-level key-value pairs (e.g., group_vars files)\nCxPolicy[result] {\n\tdocument := input.document[i]\n\tsome field_name\n\tvalue := document[field_name]\n\tis_string(value)\n\tis_bind_related(field_name)\n\tunrestricted_bind_values[lower(value)]\n\n\tresult := {\n\t\t\"documentId\": document.id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": field_name,\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should be bound to a specific IP address, not an unrestricted wildcard\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to '%s', which binds to all available network interfaces\", [field_name, value]),\n\t}\n}\n\n# Detect in playbook-level vars\nCxPolicy[result] {\n\tdocument := input.document[i]\n\tplaybook := document.playbooks[_]\n\tsome field_name\n\tvalue := playbook.vars[field_name]\n\tis_string(value)\n\tis_bind_related(field_name)\n\tunrestricted_bind_values[lower(value)]\n\n\tresult := {\n\t\t\"documentId\": document.id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": sprintf(\"vars.%s\", [field_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should be bound to a specific IP address, not an unrestricted wildcard\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to '%s', which binds to all available network interfaces\", [field_name, value]),\n\t}\n}\n\n# Detect in task module parameters\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][_]\n\tsome module_name\n\tmodule_params := task[module_name]\n\tis_object(module_params)\n\tnot task_control_keys[module_name]\n\n\tsome field_name\n\tvalue := module_params[field_name]\n\tis_string(value)\n\tis_bind_related(field_name)\n\tunrestricted_bind_values[lower(value)]\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module_name,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task.name, module_name, field_name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should be bound to a specific IP address, not an unrestricted wildcard\", [field_name]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to '%s', which binds to all available network interfaces\", [field_name, value]),\n\t}\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T14:06:17.411931+00:00",
+    "elapsed_time": "1m12s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 55726,
+    "output_tokens_total": 15088,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 24364,
+    "cache_write_tokens_total": 31325
+  }
+}

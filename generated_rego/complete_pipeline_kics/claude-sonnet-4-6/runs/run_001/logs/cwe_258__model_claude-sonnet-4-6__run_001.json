@@ -1,0 +1,124 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T13:15:29.636183+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "complete_pipeline_kics",
+  "rule_id": "cwe_258",
+  "type_name": "sec_empty_pass",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001/cwe_258.rego",
+  "condition": "# CWE-258: Empty Password in Configuration File \u2014 IaC Detection Guide\n\n## Core Weakness to Detect\n\n> A password-related field exists in a configuration resource but its assigned value is an **empty string**, null, or otherwise blank \u2014 providing no authentication barrier.\n\n---\n\n## Weakness Categories to Scan For\n\n### 1. **Empty String Assignment on Credential Fields**\nThe most direct indicator: a password key is present but its value resolves to `\"\"`, `''`, or is explicitly blank.\n\n**Keywords / Attributes / Fields to Target:**\n```\npassword        = \"\"\npassword        = ''\npasswd          = \"\"\npwd             = \"\"\npass            = \"\"\nsecret          = \"\"\ncredentials     = \"\"\nauth_password   = \"\"\ndb_password     = \"\"\nadmin_password  = \"\"\nuser_password   = \"\"\nroot_password   = \"\"\naccess_key      = \"\"\ntoken           = \"\"\n```\n\n---\n\n### 2. **Connection String Fields with Empty Password Segments**\nConnection strings that contain password segments left blank.\n\n**Patterns to Target:**\n```\npwd=;\npassword=;\nPassword=;\nPWD=;\npasswd=;\n:@           (user:empty-pass@host)\n://user:@    (URL scheme with no password)\n```\n\n---\n\n### 3. **Null or Absent Password with No Reference to Secret Store**\nA field defined as `null`, `~`, or omitted entirely while no secret management reference (vault, SSM, KMS) is present.\n\n**Indicators:**\n```\npassword: null\npassword: ~\npassword:         # (no value at all)\nsecret: null\n```\n\n---\n\n### 4. **Environment Variable Assigned Empty Default**\nAn environment variable fallback that defaults to an empty string.\n\n**Patterns:**\n```\n${VAR:-\"\"}\n${VAR:-''}\n$(VAR)        # with no default and no injection guardrail\nenv: PASSWORD=\"\"\n```\n\n---\n\n### 5. **Database / Data Store Configuration Blocks**\nResource blocks that configure databases, caches, message brokers, or directories where a password field is blank.\n\n**Block-level keywords to inspect for empty password children:**\n```\ndatabase_config\nconnection_string\ndb_settings\nldap_config\nredis_config\nmssql / mysql / postgres / mongodb / oracle\nbroker_config\nadmin_credentials\nservice_account\n```\n\n---\n\n### 6. **Authentication / IAM Resource Blocks**\nUser, role, or service-account definitions where the password attribute is empty.\n\n**Fields:**\n```\ninitial_password  = \"\"\nlogin_password    = \"\"\nconsole_password  = \"\"\nuser_password     = \"\"\napi_password      = \"\"\nbind_password     = \"\"    # common in LDAP/AD configs\n```\n\n---\n\n## Detection Logic Summary\n\n| Signal | Severity |\n|---|---|\n| `password = \"\"` / `password = ''` | **Critical** |\n| `pwd=;` inside a connection string | **Critical** |\n| `password: null` with no secret reference | **High** |\n| `password:` (key present, value absent) | **High** |\n| `${VAR:-\"\"}` as password default | **High** |\n| Empty `token` / `secret` / `access_key` | **High** |\n| `bind_password = \"\"` in directory configs | **Critical** |\n\n---\n\n## Related Weaknesses to Co-Detect\n- **CWE-260** \u2014 Password in Configuration File (plaintext, even if non-empty)\n- **CWE-521** \u2014 Weak Password Requirements\n- **CWE-798** \u2014 Hard-coded Credentials\n- **CWE-13** \u2014 ASP.NET Misconfiguration: Password in Configuration File\n\n---\n\n## Key Detection Rule\n> Flag any configuration attribute whose **name matches a password/secret/credential semantic pattern** AND whose **value is an empty string, null, whitespace-only, or missing** \u2014 especially when not delegated to an external secrets manager.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_empty_pass",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nnon_module_keys := {\n\t\"name\", \"become\", \"become_user\", \"register\", \"when\", \"notify\",\n\t\"tags\", \"loop\", \"with_items\", \"with_dict\", \"with_list\", \"vars\",\n\t\"ignore_errors\", \"failed_when\", \"changed_when\", \"no_log\",\n\t\"delegate_to\", \"run_once\", \"environment\", \"block\", \"rescue\",\n\t\"always\", \"listen\", \"any_errors_fatal\", \"check_mode\",\n}\n\nis_password_field(key) {\n\tpassword_keys := {\n\t\t\"password\", \"passwd\", \"pwd\", \"pass\", \"secret\", \"credentials\",\n\t\t\"auth_password\", \"db_password\", \"admin_password\", \"user_password\",\n\t\t\"root_password\", \"access_key\", \"token\", \"bind_password\",\n\t\t\"login_password\", \"console_password\", \"api_password\",\n\t\t\"initial_password\", \"auth_pass\", \"user_pass\",\n\t}\n\tlower(key) == password_keys[_]\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_password\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_passwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_secret\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_token\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pass\")\n}\n\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\n\tsome mod_key\n\tmodule_config := task[mod_key]\n\tnot non_module_keys[mod_key]\n\tis_object(module_config)\n\n\tsome field_key\n\tfield_val := module_config[field_key]\n\tis_string(field_key)\n\tis_password_field(field_key)\n\tcommonLib.emptyOrNull(field_val)\n\n\ttask_name := object.get(task, \"name\", \"undefined\")\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": mod_key,\n\t\t\"resourceName\": task_name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task_name, mod_key, field_key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should contain a non-empty credential value\", [field_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to an empty or null value, providing no authentication barrier\", [field_key]),\n\t}\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_empty_pass/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"id\": \"ed3963a3-f525-401f-b4fe-cbe61ea32c27\", \"subscription_manager_activationkey\": \"\"}]}",
+          "ir_node_reduction_percentage": 80.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            481
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main_nocomments.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_empty_pass/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main_nocomments.yml\", \"id\": \"75fc30bb-a2d0-4bec-b15d-b67ded569a3f\", \"gitlab_runner__ssh_password\": \"\"}]}",
+          "ir_node_reduction_percentage": 95.1
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was attempting to detect:**\nThe rule aimed to identify Ansible configurations where password or credential-related fields (e.g., `password`, `secret`, `token`, `_password` suffixes) are set to empty or null values inside module configurations within task definitions.\n\n**What it missed (false negatives):**\nBoth failing examples are **variable definition files** (`group_vars/` and `defaults/main.yml`), not playbook task files. These files contain flat top-level key-value assignments like `subscription_manager_activationkey: \"\"` and `gitlab_runner__ssh_password: ''` \u2014 credentials stored directly as variables rather than inside a task's module block.\n\n**Why the rule logic failed:**\nThe rule relies entirely on `ansLib.tasks[id][t]` to find relevant content, which only parses playbook task structures (lists of tasks with named modules). Variable/defaults files are represented in the IR as flat documents (`{\"id\": ..., \"key\": \"value\", ...}`) with no task or module nesting. Because the rule requires a two-level traversal (`task \u2192 module_config \u2192 field`), it never reaches or evaluates top-level variable keys in these files. The `ansLib.tasks` abstraction simply doesn't cover variable files, so the entire policy body fails to unify and produces no results for this file type."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nnon_doc_keys := {\"file\", \"id\", \"playbooks\"}\n\nnon_module_keys := {\n\t\"name\", \"become\", \"become_user\", \"register\", \"when\", \"notify\",\n\t\"tags\", \"loop\", \"with_items\", \"with_dict\", \"with_list\", \"vars\",\n\t\"ignore_errors\", \"failed_when\", \"changed_when\", \"no_log\",\n\t\"delegate_to\", \"run_once\", \"environment\", \"block\", \"rescue\",\n\t\"always\", \"listen\", \"any_errors_fatal\", \"check_mode\",\n}\n\nis_password_field(key) {\n\tpassword_keys := {\n\t\t\"password\", \"passwd\", \"pwd\", \"pass\", \"secret\", \"credentials\",\n\t\t\"auth_password\", \"db_password\", \"admin_password\", \"user_password\",\n\t\t\"root_password\", \"access_key\", \"token\", \"bind_password\",\n\t\t\"login_password\", \"console_password\", \"api_password\",\n\t\t\"initial_password\", \"auth_pass\", \"user_pass\",\n\t}\n\tlower(key) == password_keys[_]\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_password\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_passwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_secret\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_token\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pass\")\n}\n\nCxPolicy[result] {\n\tdoc := input.document[i]\n\tsome field_key\n\tfield_val := doc[field_key]\n\tnot non_doc_keys[field_key]\n\tis_string(field_key)\n\tis_password_field(field_key)\n\tcommonLib.emptyOrNull(field_val)\n\n\tresult := {\n\t\t\"documentId\": doc.id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": field_key,\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should contain a non-empty credential value\", [field_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to an empty or null value, providing no authentication barrier\", [field_key]),\n\t}\n}\n\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tsome mod_key\n\tmodule_config := task[mod_key]\n\tnot non_module_keys[mod_key]\n\tis_object(module_config)\n\tsome field_key\n\tfield_val := module_config[field_key]\n\tis_string(field_key)\n\tis_password_field(field_key)\n\tcommonLib.emptyOrNull(field_val)\n\n\ttask_name := object.get(task, \"name\", \"undefined\")\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": mod_key,\n\t\t\"resourceName\": task_name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task_name, mod_key, field_key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should contain a non-empty credential value\", [field_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to an empty or null value, providing no authentication barrier\", [field_key]),\n\t}\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            5
+          ],
+          "false_positives": [],
+          "file_name": "group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_empty_pass/group_vars/Mirantis_ceph-cm-ansible-roles-common-defaults-main.yml\", \"id\": \"fcb91ba5-5849-4fc3-981b-3148e6b6154f\", \"subscription_manager_activationkey\": \"\"}]}",
+          "ir_node_reduction_percentage": 80.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [],
+          "false_positives": [
+            178
+          ],
+          "file_name": "group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main_nocomments.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_empty_pass/group_vars/debops_debops-ansible-roles-gitlab_runner-defaults-main_nocomments.yml\", \"id\": \"cb5f5178-77f8-4da3-98bd-6b62f31810c9\", \"gitlab_runner__ssh_password\": \"\", \"gitlab_runner__api_token\": \"\"}]}",
+          "ir_node_reduction_percentage": 94.3
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Rule Analysis Summary\n\n**What the rule attempted to detect:**\nThe rule tries to find Ansible configuration fields whose names match credential-related patterns (passwords, tokens, secrets, etc.) and are set to empty or null values \u2014 checked both at the top-level document scope and inside task module configurations.\n\n**False Negative (line 5 missed):**\nThe field `subscription_manager_activationkey: \"\"` was not detected because `is_password_field` only covers suffixes like `_password`, `_token`, `_secret`, `_pwd`, `_pass`, `_passwd`, plus a fixed explicit set. The suffix `_activationkey` \u2014 or `_key` generically \u2014 is absent from all patterns, so the rule simply never matches this field name, silently skipping a clearly sensitive empty credential.\n\n**False Positive (line 178 incorrectly flagged):**\n`gitlab_runner__api_token: ''` is flagged by the document-level `CxPolicy` rule because it appears as a top-level IR field matching the `_token` suffix with an empty value. However, this is a role `defaults/main.yml` file where empty strings are an intentional Ansible idiom \u2014 deliberately left blank as placeholders to be overridden in inventory or host vars. The rule has no awareness of file context or the Ansible defaults-file convention, so it treats all empty top-level credential-named fields identically regardless of whether they represent a deployed misconfiguration or a structural placeholder.\n\n**Why the logic fails:**\nTwo compounding issues: (1) the `is_password_field` predicate uses an incomplete and brittle suffix/keyword list that misses common credential field naming conventions like `_key`; and (2) the document-level policy rule applies uniformly across all Ansible YAML document types in the IR without distinguishing role defaults files (where empty values are expected) from playbooks or inventory files (where they would be a genuine misconfiguration)."
+    },
+    {
+      "attempt": 3,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nnon_doc_keys := {\"file\", \"id\", \"playbooks\"}\n\nnon_module_keys := {\n\t\"name\", \"become\", \"become_user\", \"register\", \"when\", \"notify\",\n\t\"tags\", \"loop\", \"with_items\", \"with_dict\", \"with_list\", \"vars\",\n\t\"ignore_errors\", \"failed_when\", \"changed_when\", \"no_log\",\n\t\"delegate_to\", \"run_once\", \"environment\", \"block\", \"rescue\",\n\t\"always\", \"listen\", \"any_errors_fatal\", \"check_mode\",\n}\n\nis_password_field(key) {\n\texact_keys := {\n\t\t\"password\", \"passwd\", \"pwd\", \"pass\", \"secret\", \"credentials\",\n\t\t\"token\", \"access_key\", \"bind_password\", \"login_password\",\n\t\t\"console_password\", \"api_password\", \"initial_password\",\n\t\t\"auth_pass\", \"user_pass\", \"auth_password\", \"db_password\",\n\t\t\"admin_password\", \"user_password\", \"root_password\", \"activationkey\",\n\t}\n\tlower(key) == exact_keys[_]\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_password\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_passwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_secret\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pwd\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_pass\")\n}\n\nis_password_field(key) {\n\tcontains(lower(key), \"activationkey\")\n}\n\nis_password_field(key) {\n\tendswith(lower(key), \"_key\")\n\tcontains(lower(key), \"activation\")\n}\n\nCxPolicy[result] {\n\tdoc := input.document[i]\n\tsome field_key\n\tfield_val := doc[field_key]\n\tnot non_doc_keys[field_key]\n\tis_string(field_key)\n\tis_password_field(field_key)\n\tcommonLib.emptyOrNull(field_val)\n\n\tresult := {\n\t\t\"documentId\": doc.id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": field_key,\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should contain a non-empty credential value\", [field_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to an empty or null value, providing no authentication barrier\", [field_key]),\n\t}\n}\n\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tsome mod_key\n\tmodule_config := task[mod_key]\n\tnot non_module_keys[mod_key]\n\tis_object(module_config)\n\tsome field_key\n\tfield_val := module_config[field_key]\n\tis_string(field_key)\n\tis_password_field(field_key)\n\tcommonLib.emptyOrNull(field_val)\n\n\ttask_name := object.get(task, \"name\", \"undefined\")\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": mod_key,\n\t\t\"resourceName\": task_name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.%s\", [task_name, mod_key, field_key]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"'%s' should contain a non-empty credential value\", [field_key]),\n\t\t\"keyActualValue\": sprintf(\"'%s' is set to an empty or null value, providing no authentication barrier\", [field_key]),\n\t}\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 3,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T13:18:27.676551+00:00",
+    "elapsed_time": "2m58s"
+  },
+  "llm_usage": {
+    "calls": 6,
+    "input_tokens_total": 94144,
+    "output_tokens_total": 20118,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 48776,
+    "cache_write_tokens_total": 45313
+  }
+}

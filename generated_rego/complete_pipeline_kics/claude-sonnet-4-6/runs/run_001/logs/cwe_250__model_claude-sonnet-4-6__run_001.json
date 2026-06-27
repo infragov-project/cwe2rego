@@ -1,0 +1,92 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T13:13:42.683849+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "complete_pipeline_kics",
+  "rule_id": "cwe_250",
+  "type_name": "sec_def_admin",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/complete_pipeline_kics/claude-sonnet-4-6/runs/run_001/cwe_250.rego",
+  "condition": "# CWE-250: Execution with Unnecessary Privileges in IaC\n\n## Core Weakness Categories to Detect\n\n---\n\n### 1. **Overly Permissive Identity & Access Management (IAM)**\nRunning services or workloads with roles/policies granting more permissions than needed.\n\n**Keywords / Attributes / Fields:**\n- `effect: allow` combined with `actions: [\"*\"]` or `resources: [\"*\"]`\n- `admin`, `administrator`, `fullaccess`, `poweruser`\n- `assume_role_policy`, `trust_policy` with wildcard principals (`\"*\"`)\n- `managed_policy_arn` referencing broad built-in admin policies\n- `inline_policy` with unrestricted service access\n- `not_action`, `not_resource` (inverted deny \u2014 implicitly allows everything else)\n\n---\n\n### 2. **Privileged Container / Process Execution**\nContainers or processes configured to run with root or elevated system privileges.\n\n**Keywords / Attributes / Fields:**\n- `privileged: true`\n- `run_as_user: 0` or `run_as_root: true`\n- `allow_privilege_escalation: true`\n- `no_new_privileges: false` (or absent)\n- `user: root` or `user: \"0\"`\n- `host_pid: true`, `host_ipc: true`, `host_network: true`\n\n---\n\n### 3. **Excessive Linux Capabilities**\nGranting Linux capabilities beyond what the workload requires.\n\n**Keywords / Attributes / Fields:**\n- `capabilities: add:` containing `ALL`, `SYS_ADMIN`, `NET_ADMIN`, `SYS_PTRACE`, `NET_RAW`, `SYS_MODULE`, `DAC_OVERRIDE`, `SETUID`, `SETGID`\n- Absence of `capabilities: drop: [ALL]`\n- `securityContext` block missing or empty\n\n---\n\n### 4. **Overly Permissive Service Accounts / Role Bindings**\nBinding workloads to service accounts with cluster-wide or administrative roles.\n\n**Keywords / Attributes / Fields:**\n- `cluster_admin`, `cluster-admin`\n- `role_ref` pointing to `admin` or `edit` cluster roles\n- `service_account_name` bound to wildcard permissions\n- `automount_service_account_token: true` (without necessity)\n- `subjects` with broad namespace or group scope (`system:authenticated`, `system:unauthenticated`)\n\n---\n\n### 5. **Unrestricted Filesystem Access**\nGranting write or execute access to sensitive filesystem paths unnecessarily.\n\n**Keywords / Attributes / Fields:**\n- `read_only_root_filesystem: false` (or absent)\n- `volume_mounts` targeting `/etc`, `/var`, `/proc`, `/sys`, `/root`\n- `host_path` volume mounts with sensitive system paths\n- `mount_propagation: Bidirectional`\n- File permission values like `0777`, `0755` on sensitive paths\n\n---\n\n### 6. **Elevated Network Privileges**\nServices or pods with unnecessary access to host networking or sensitive ports.\n\n**Keywords / Attributes / Fields:**\n- `host_network: true`\n- `host_port` binding to privileged ports (< 1024)\n- `net_admin` capability\n- Security groups or firewall rules with `0.0.0.0/0` and unrestricted port ranges\n\n---\n\n### 7. **Execution as Root in Compute Resources**\nVirtual machines, serverless functions, or build pipelines running as root or with admin context.\n\n**Keywords / Attributes / Fields:**\n- `run_as_user: root`\n- `execution_role_arn` pointing to admin-level roles\n- `os_profile` with no restricted user account\n- `admin_username` or `admin_password` configured directly\n- `sudo` or `su` calls in provisioning scripts\n- `user_data` / `startup_script` invoking root-level operations\n\n---\n\n### 8. **Missing Security Context Constraints**\nAbsence of enforcement boundaries that prevent privilege escalation.\n\n**Keywords / Attributes / Fields:**\n- Missing or empty `security_context` / `pod_security_context`\n- `pod_security_policy` / `pod_security_standard` set to `privileged`\n- `apparmor` / `seccomp` profiles set to `unconfined` or absent\n- `selinux_options` absent or set to permissive levels\n- Missing `seccomp_profile` with `type: RuntimeDefault` or `Localhost`\n\n---\n\n## Summary Table\n\n| Weakness Area | Key Indicators |\n|---|---|\n| IAM Policies | Wildcard actions/resources, admin roles |\n| Container Privileges | `privileged: true`, `runAsUser: 0` |\n| Linux Capabilities | `add: ALL`, `SYS_ADMIN`, no capability drop |\n| Role Bindings | `cluster-admin`, broad service account scope |\n| Filesystem Access | Writable root FS, sensitive `hostPath` mounts |\n| Network Privileges | `hostNetwork: true`, unrestricted ports |\n| Compute Execution | Root user in VMs, admin execution roles |\n| Security Contexts | Missing `seccomp`, `apparmor`, `selinux` constraints |\n\n---\n\n## Detection Principle\n\n> Flag any resource where the **assigned privilege level exceeds the minimum required** to perform its stated function \u2014 especially where `*` wildcards, `root`, `admin`, `privileged`, or absent security constraints are present.",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\n# Helper: check if a user value represents root\nis_root_user(user) {\n\tlower(user) == \"root\"\n}\n\nis_root_user(user) {\n\tuser == \"0\"\n}\n\nis_root_user(user) {\n\tuser == 0\n}\n\ndocker_container_modules := {\"community.docker.docker_container\", \"docker_container\"}\n\ndangerous_capabilities := {\"ALL\", \"SYS_ADMIN\", \"NET_ADMIN\", \"SYS_PTRACE\", \"NET_RAW\", \"SYS_MODULE\", \"DAC_OVERRIDE\", \"SETUID\", \"SETGID\"}\n\n# Playbook-level: become true running as root (explicit or default)\nCxPolicy[result] {\n\tplaybook := input.document[i].playbooks[_]\n\tansLib.isAnsibleTrue(playbook.become)\n\tbecome_user := object.get(playbook, \"become_user\", \"root\")\n\tis_root_user(become_user)\n\n\tresult := {\n\t\t\"documentId\": input.document[i].id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": \"become\",\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"Playbook should not execute with root/superuser privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'become' is true and effective user is '%s'\", [become_user]),\n\t}\n}\n\n# Task-level: become true running as root (explicit or default)\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tansLib.isAnsibleTrue(task.become)\n\tbecome_user := object.get(task, \"become_user\", \"root\")\n\tis_root_user(become_user)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.become\", [task.name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"Task should not execute with root/superuser privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'become' is true and effective user is '%s'\", [become_user]),\n\t}\n}\n\n# Docker container: privileged mode enabled\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tansLib.isAnsibleTrue(container.privileged)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.privileged\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'privileged' should not be 'true' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": \"'privileged' is set to 'true'\",\n\t}\n}\n\n# Docker container: running as root user\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tcommonLib.valid_key(container, \"user\")\n\tis_root_user(container.user)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.user\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'user' should not be 'root' or '0' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'user' is set to '%s'\", [container.user]),\n\t}\n}\n\n# Docker container: dangerous Linux capabilities granted\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tcap := container.capabilities[_]\n\tupper(cap) == dangerous_capabilities[_]\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.capabilities\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"Container should not be granted the '%s' capability (CWE-250)\", [upper(cap)]),\n\t\t\"keyActualValue\": sprintf(\"Container has the '%s' capability granted\", [cap]),\n\t}\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            7
+          ],
+          "false_positives": [],
+          "file_name": "Shwetas25_ansiblenew-language_features-prompts.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/Shwetas25_ansiblenew-language_features-prompts.yml\", \"id\": \"07bfafb7-a742-477b-ac4f-a12f11045c78\", \"playbooks\": [{\"remote_user\": \"root\"}]}]}",
+          "ir_node_reduction_percentage": 78.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            9
+          ],
+          "false_positives": [],
+          "file_name": "shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml",
+          "ir_file": "{\"document\": [{\"file\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_extension/sec_def_admin/shourya7_Ansible_sha-ansible-configs-RHCLS-ScalableInfra-demo-playbooks-bastion-play.yml\", \"id\": \"c6f59158-4676-4ec1-8c83-41791d0ef7f9\", \"playbooks\": [{\"remote_user\": \"root\"}]}]}",
+          "ir_node_reduction_percentage": 42.9
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was attempting to detect:**\nThe rule aimed to flag unnecessary or excessive privileges in Ansible playbooks and Docker container tasks \u2014 specifically `become: true` running as root, Docker containers in privileged mode, containers running as the root user, and containers granted dangerous Linux capabilities.\n\n**What it missed (false negatives):**\nBoth failing examples use `remote_user: root` at the playbook level (line 7 and line 9 respectively), which causes all tasks to connect and execute directly as root without any privilege escalation mechanism. The rule contains no logic to inspect the `remote_user` field at all, so these cases were silently ignored.\n\n**Why the rule logic likely failed:**\nThe rule exclusively checks the `become` + `become_user` pattern for root-level execution. However, the IR clearly surfaces `remote_user: root` inside the `playbooks` array (e.g., `{\"playbooks\": [{\"remote_user\": \"root\"}]}`), which is a structurally distinct field the rule never references. Since `remote_user: root` grants direct root access without needing `become`, it represents an equally dangerous privilege issue that requires a separate policy branch checking `playbook.remote_user` against the `is_root_user` helper."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package Cx\n\nimport data.generic.ansible as ansLib\nimport data.generic.common as commonLib\n\nis_root_user(user) {\n\tlower(user) == \"root\"\n}\n\nis_root_user(user) {\n\tuser == \"0\"\n}\n\nis_root_user(user) {\n\tuser == 0\n}\n\ndocker_container_modules := {\"community.docker.docker_container\", \"docker_container\"}\n\ndangerous_capabilities := {\"ALL\", \"SYS_ADMIN\", \"NET_ADMIN\", \"SYS_PTRACE\", \"NET_RAW\", \"SYS_MODULE\", \"DAC_OVERRIDE\", \"SETUID\", \"SETGID\"}\n\n# Playbook-level: remote_user set to root\nCxPolicy[result] {\n\tplaybook := input.document[i].playbooks[_]\n\tcommonLib.valid_key(playbook, \"remote_user\")\n\tis_root_user(playbook.remote_user)\n\n\tresult := {\n\t\t\"documentId\": input.document[i].id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": sprintf(\"remote_user={{%s}}\", [playbook.remote_user]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'remote_user' should not be 'root' or '0' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'remote_user' is set to '%s'\", [playbook.remote_user]),\n\t}\n}\n\n# Playbook-level: become true running as root (explicit or default)\nCxPolicy[result] {\n\tplaybook := input.document[i].playbooks[_]\n\tansLib.isAnsibleTrue(playbook.become)\n\tbecome_user := object.get(playbook, \"become_user\", \"root\")\n\tis_root_user(become_user)\n\n\tresult := {\n\t\t\"documentId\": input.document[i].id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": \"n/a\",\n\t\t\"searchKey\": \"become\",\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"Playbook should not execute with root/superuser privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'become' is true and effective user is '%s'\", [become_user]),\n\t}\n}\n\n# Task-level: remote_user set to root\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tcommonLib.valid_key(task, \"remote_user\")\n\tis_root_user(task.remote_user)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.remote_user={{%s}}\", [task.name, task.remote_user]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'remote_user' should not be 'root' or '0' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'remote_user' is set to '%s'\", [task.remote_user]),\n\t}\n}\n\n# Task-level: become true running as root (explicit or default)\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tansLib.isAnsibleTrue(task.become)\n\tbecome_user := object.get(task, \"become_user\", \"root\")\n\tis_root_user(become_user)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": \"n/a\",\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.become\", [task.name]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"Task should not execute with root/superuser privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'become' is true and effective user is '%s'\", [become_user]),\n\t}\n}\n\n# Docker container: privileged mode enabled\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tansLib.isAnsibleTrue(container.privileged)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.privileged\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'privileged' should not be 'true' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": \"'privileged' is set to 'true'\",\n\t}\n}\n\n# Docker container: running as root user\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tcommonLib.valid_key(container, \"user\")\n\tis_root_user(container.user)\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.user\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": \"'user' should not be 'root' or '0' to avoid execution with unnecessary privileges (CWE-250)\",\n\t\t\"keyActualValue\": sprintf(\"'user' is set to '%s'\", [container.user]),\n\t}\n}\n\n# Docker container: dangerous Linux capabilities granted\nCxPolicy[result] {\n\ttask := ansLib.tasks[id][t]\n\tmodule := docker_container_modules[_]\n\tcontainer := task[module]\n\tcap := container.capabilities[_]\n\tupper(cap) == dangerous_capabilities[_]\n\n\tresult := {\n\t\t\"documentId\": id,\n\t\t\"resourceType\": module,\n\t\t\"resourceName\": task.name,\n\t\t\"searchKey\": sprintf(\"name={{%s}}.{{%s}}.capabilities\", [task.name, module]),\n\t\t\"issueType\": \"IncorrectValue\",\n\t\t\"keyExpectedValue\": sprintf(\"Container should not be granted the '%s' capability (CWE-250)\", [upper(cap)]),\n\t\t\"keyActualValue\": sprintf(\"Container has the '%s' capability granted\", [cap]),\n\t}\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T13:14:11.286958+00:00",
+    "elapsed_time": "0m28s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 64874,
+    "output_tokens_total": 10097,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 24776,
+    "cache_write_tokens_total": 40061
+  }
+}
