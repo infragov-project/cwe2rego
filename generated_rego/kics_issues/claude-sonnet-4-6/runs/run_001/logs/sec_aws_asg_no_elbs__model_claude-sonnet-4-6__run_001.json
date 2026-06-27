@@ -1,0 +1,96 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T19:51:30.698917+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "kics_issues",
+  "rule_id": "sec_aws_asg_no_elbs",
+  "type_name": "sec_aws_asg_no_elbs",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_asg_no_elbs.rego",
+  "condition": "# IaC Weakness Detection: AWS Auto Scaling Group Without ELB Association\n\n## Weakness Summary\nAWS Auto Scaling Groups (ASGs) must be associated with at least one Elastic Load Balancer (ELB) to ensure high availability, traffic distribution, and application performance.\n\n---\n\n## Detection Indicators\n\n### Resource/Module Identifiers\n- `autoscaling_group`\n- `auto_scaling_group`\n- `aws_autoscaling_group`\n- `AutoScalingGroup`\n- `ec2_asg`\n\n### Critical Attributes / Fields to Inspect\n| Attribute | Expected State | Weakness Condition |\n|---|---|---|\n| `load_balancer_names` | Defined and non-empty | Missing or empty list |\n| `LoadBalancerNames` | Defined and non-empty | Missing or empty list |\n| `target_group_arns` | Defined and non-empty | Missing (alternative to classic ELB) |\n| `TargetGroupARNs` | Defined and non-empty | Missing or empty |\n\n### Keywords to Flag\n- `load_balancers`\n- `elb_names`\n- `classic_load_balancers`\n- `target_groups`\n- `health_check_type`\n\n---\n\n## Detection Logic\n\n```\nIF resource is AutoScalingGroup\n  AND (load_balancer_names is UNDEFINED\n    OR load_balancer_names is EMPTY LIST [])\n  AND (target_group_arns is UNDEFINED\n    OR target_group_arns is EMPTY LIST [])\nTHEN flag as WEAKNESS\n```\n\n---\n\n## Notes\n- Both **classic ELB** (`LoadBalancerNames`) and **ALB/NLB** (`TargetGroupARNs`) associations should be checked\n- An empty list `[]` is treated the same as a missing attribute\n- Either field being populated satisfies the requirement",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs",
+    "entries_count": 4
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_asg_type(t) {\n    regex.match(\"(?i).*(auto.?scaling.?group|ec2.?asg).*\", t)\n}\n\nlb_attr_valid(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*(load_balancer_name|loadbalancername|elb_name|classic_load_balancer).*\", attr.name)\n    attr.value.ir_type != \"Array\"\n}\n\nlb_attr_valid(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*(load_balancer_name|loadbalancername|elb_name|classic_load_balancer).*\", attr.name)\n    attr.value.ir_type == \"Array\"\n    count(attr.value.value) > 0\n}\n\ntg_attr_valid(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*(target_group_arn|targetgrouparn|target_group).*\", attr.name)\n    attr.value.ir_type != \"Array\"\n}\n\ntg_attr_valid(attrs) {\n    attr := attrs[_]\n    regex.match(\"(?i).*(target_group_arn|targetgrouparn|target_group).*\", attr.name)\n    attr.value.ir_type == \"Array\"\n    count(attr.value.value) > 0\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_asg_type(node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n\n    not lb_attr_valid(attrs)\n    not tg_attr_valid(attrs)\n\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group without ELB association - Auto Scaling Groups should be associated with at least one Elastic Load Balancer to ensure high availability and traffic distribution.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            4
+          ],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive1.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: elb1\\n  community.aws.ec2_asg:\\n    name: special\\n    load_balancers: []\\n    availability_zones: [ 'eu-west-1a', 'eu-west-1b' ]\\n    launch_config_name: 'lc-1'\\n    min_size: 1\\n    max_size: 10\\n    desired_capacity: 5\\n    vpc_zone_identifier: [ 'subnet-abcd1234', 'subnet-1a2b3c4d' ]\\n    tags:\\n\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"elb1\", \"value\": \"elb1\"}, \"type\": \"community.aws.ec2_asg\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 4, \"code\": \"load_balancers: []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"type\": \"tasks\", \"lines\": 13}",
+          "ir_node_reduction_percentage": 84.4
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "terraform",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [
+            1
+          ],
+          "file_name": "positive2.tf",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_autoscaling_group\\\" \\\"bar2\\\" {\\n  availability_zones = [\\\"us-east-1a\\\"]\\n  desired_capacity   = 1\\n  max_size           = 1\\n  min_size           = 1\\n\\n  launch_template {\\n    id      = aws_launch_template.foobar.id\\n    version = \\\"$Latest\\\"\\n  }\\n\\n  load_balancers = []\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"bar2\\\"\", \"value\": \"bar2\"}, \"type\": \"aws_autoscaling_group\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"load_balancers = []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 12, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"type\": \"unknown\", \"lines\": 13}",
+          "ir_node_reduction_percentage": 78.3
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n### What the Rule Attempts to Detect\nThe rule tries to flag AWS Auto Scaling Groups that lack any association with an Elastic Load Balancer or target group \u2014 i.e., ASGs where neither a `load_balancer*` nor a `target_group*` attribute is present or populated.\n\n### What It Missed / Incorrectly Flagged\n- **False negative (lines 4 / 12):** Both examples explicitly set `load_balancers: []` / `load_balancers = []` \u2014 an empty array, which is the actual violation. The rule should have detected and reported this specific attribute line.\n- **False positive (line 1):** Instead, the rule fires against the AtomicUnit as a whole (line 1, the resource declaration), for the wrong reason \u2014 not because it detected an empty array, but because it failed to recognize the attribute as an LB attribute at all.\n\n### Why the Logic Failed\nThe root cause is a **regex mismatch** in `lb_attr_valid`. The pattern matches names like `load_balancer_name`, `loadbalancername`, `elb_name`, and `classic_load_balancer`, but the actual attribute in the IR for both Ansible (`community.aws.ec2_asg`) and Terraform (`aws_autoscaling_group`) is simply `load_balancers` \u2014 which none of those alternatives match. As a result, `lb_attr_valid` never evaluates the attribute at all, `not lb_attr_valid(attrs)` is trivially true (no matching attr found), and the rule fires unconditionally for any ASG regardless of whether it has a populated `load_balancers` array. Additionally, the result embeds `node` (the AtomicUnit at line 1) rather than the matched attribute, so even if detection were correct, the reported line would be wrong."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_asg_type(t) {\n    regex.match(\"(?i).*(auto.?scaling.?group|ec2.?asg).*\", t)\n}\n\nis_lb_or_tg_attr(name) {\n    regex.match(\"(?i).*(load.?balancer|elb.?name|classic.?load|target.?group).*\", name)\n}\n\nattr_is_empty_array(attr) {\n    attr.value.ir_type == \"Array\"\n    count(attr.value.value) == 0\n}\n\nhas_valid_lb_or_tg(node) {\n    attr := node.attributes[_]\n    is_lb_or_tg_attr(attr.name)\n    not attr_is_empty_array(attr)\n}\n\nlb_or_tg_attr_exists(node) {\n    attr := node.attributes[_]\n    is_lb_or_tg_attr(attr.name)\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_asg_type(node.type)\n    not has_valid_lb_or_tg(node)\n\n    attr := node.attributes[_]\n    is_lb_or_tg_attr(attr.name)\n    attr_is_empty_array(attr)\n\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group without ELB association - Auto Scaling Groups should be associated with at least one Elastic Load Balancer to ensure high availability and traffic distribution.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n    is_asg_type(node.type)\n    not has_valid_lb_or_tg(node)\n    not lb_or_tg_attr_exists(node)\n\n    result := {\n        \"type\": \"sec_aws_asg_no_elbs\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"Auto Scaling Group without ELB association - Auto Scaling Groups should be associated with at least one Elastic Load Balancer to ensure high availability and traffic distribution.\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T19:53:04.264336+00:00",
+    "elapsed_time": "1m33s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 16570,
+    "output_tokens_total": 16091,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 6078,
+    "cache_write_tokens_total": 10309
+  }
+}

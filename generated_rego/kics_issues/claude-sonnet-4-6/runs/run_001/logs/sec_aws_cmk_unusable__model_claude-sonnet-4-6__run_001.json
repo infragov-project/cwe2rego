@@ -1,0 +1,92 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T19:54:43.072470+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "kics_issues",
+  "rule_id": "sec_aws_cmk_unusable",
+  "type_name": "sec_aws_cmk_unusable",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_unusable.rego",
+  "condition": "## Weakness: AWS KMS Customer Master Key (CMK) Must Be in a Usable State\n\n### Overview\nThis weakness occurs when AWS KMS CMKs are either **disabled** or **scheduled for deletion**, making them non-operational and potentially disrupting dependent encryption operations.\n\n---\n\n### Detection Criteria\n\n#### 1. Key Disabled Condition\n| Element | Details |\n|---|---|\n| **Resource Identifiers** | `aws_kms_key`, `aws_kms`, `kms_key` |\n| **Critical Attributes** | `enabled`, `is_enabled` |\n| **Risky Values** | `false`, `0`, `no` |\n| **Expected Value** | `true` |\n\n#### 2. Key Pending Deletion Condition\n| Element | Details |\n|---|---|\n| **Resource Identifiers** | `aws_kms_key`, `aws_kms`, `kms_key` |\n| **Critical Attributes** | `pending_window`, `pending_window_in_days`, `deletion_window_in_days` |\n| **Risky State** | Attribute is **defined/present** (any value implies scheduled deletion) |\n| **Expected State** | Attribute should be **absent/undefined** |\n\n---\n\n### Detection Logic Summary\n\n```\nWEAKNESS EXISTS IF:\n  (enabled == false)\n  OR\n  (pending_window IS DEFINED)\n```\n\n---\n\n### Key Signals to Look For\n- `enabled: false`\n- `is_enabled: false`\n- Presence of `pending_window`\n- Presence of `deletion_window_in_days`\n- `key_state` values such as `Disabled` or `PendingDeletion`",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_unusable",
+    "entries_count": 3
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_resource_types := {\"aws_kms_key\", \"aws_kms\", \"kms_key\"}\nenabled_attrs := {\"enabled\", \"is_enabled\"}\npending_attrs := {\"pending_window\", \"pending_window_in_days\", \"deletion_window_in_days\"}\n\nis_disabled_value(value) {\n    value.ir_type == \"Boolean\"\n    value.value == false\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"Integer\"\n    value.value == 0\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == \"false\"\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == \"no\"\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"0\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    node.type == kms_resource_types[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_attrs[_]\n    is_disabled_value(attr.value)\n\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"AWS KMS Customer Master Key (CMK) is disabled - KMS keys should be enabled and not scheduled for deletion to ensure encryption operations are not disrupted.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    node.type == kms_resource_types[_]\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == pending_attrs[_]\n\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"AWS KMS Customer Master Key (CMK) is scheduled for deletion - KMS keys should not be scheduled for deletion to ensure encryption operations are not disrupted.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            6
+          ],
+          "false_positives": [],
+          "file_name": "positive1.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key1\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    enabled: false\", \"statements\": [], \"name\": null, \"type\": \"community.aws.aws_kms\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 6, \"code\": \"enabled: false\", \"name\": \"enabled\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 6, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_unusable/positive1.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_unusable/positive1.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 63.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "ansible",
+          "missing_lines": [
+            6
+          ],
+          "false_positives": [],
+          "file_name": "positive2.yaml",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: Update IAM policy on an existing KMS key2\\n  community.aws.aws_kms:\\n    alias: my-kms-key\\n    policy: '{\\\"Version\\\": \\\"2012-10-17\\\", \\\"Id\\\": \\\"my-kms-key-permissions\\\", \\\"Statement\\\": [ { <SOME STATEMENT> } ]}'\\n    state: present\\n    pending_window: 8\", \"statements\": [], \"name\": null, \"type\": \"community.aws.aws_kms\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 6, \"code\": \"pending_window: 8\", \"name\": \"pending_window\", \"value\": {\"ir_type\": \"Integer\", \"line\": 6, \"code\": \"8\", \"value\": 8}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_unusable/positive2.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_unusable/positive2.yaml\", \"type\": \"tasks\", \"lines\": 6}",
+          "ir_node_reduction_percentage": 63.6
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was attempting to detect:**\nThe rule aimed to flag AWS KMS Customer Master Keys (CMKs) that are either explicitly disabled (via an `enabled`/`is_enabled` attribute set to a falsy value) or scheduled for deletion (via presence of a `pending_window`/`deletion_window_in_days` attribute).\n\n**What it missed (false negatives):**\nBoth positive examples were missed entirely. Example 1 has `enabled: false` and example 2 has `pending_window: 8`, both of which should trigger findings on line 6. Neither was detected.\n\n**Why the rule logic failed:**\nThe root cause is a **type name mismatch**. The rule checks `node.type == kms_resource_types[_]` against the set `{\"aws_kms_key\", \"aws_kms\", \"kms_key\"}`, but in the Ansible IR the `AtomicUnit` carries the fully qualified module name `\"community.aws.aws_kms\"` \u2014 not the bare `\"aws_kms\"` the rule expects. Because no entry in `kms_resource_types` matches `\"community.aws.aws_kms\"`, the type guard fails immediately and neither rule body can produce a result. The fix would be to add `\"community.aws.aws_kms\"` to `kms_resource_types`, or use a `contains`/suffix match instead of exact equality."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nkms_resource_types := {\"aws_kms_key\", \"aws_kms\", \"kms_key\"}\nenabled_attrs := {\"enabled\", \"is_enabled\"}\npending_attrs := {\"pending_window\", \"pending_window_in_days\", \"deletion_window_in_days\"}\n\nis_kms_resource(node_type) {\n    glitch_lib.contains(node_type, kms_resource_types[_])\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"Boolean\"\n    value.value == false\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"Integer\"\n    value.value == 0\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == \"false\"\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    lower(value.value) == \"no\"\n}\n\nis_disabled_value(value) {\n    value.ir_type == \"String\"\n    value.value == \"0\"\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_kms_resource(node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == enabled_attrs[_]\n    is_disabled_value(attr.value)\n\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"AWS KMS Customer Master Key (CMK) is disabled - KMS keys should be enabled and not scheduled for deletion to ensure encryption operations are not disrupted.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_kms_resource(node.type)\n\n    attrs := glitch_lib.all_attributes(node)\n    attr := attrs[_]\n    attr.name == pending_attrs[_]\n\n    result := {\n        \"type\": \"sec_aws_cmk_unusable\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"AWS KMS Customer Master Key (CMK) is scheduled for deletion - KMS keys should not be scheduled for deletion to ensure encryption operations are not disrupted.\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T19:55:16.003157+00:00",
+    "elapsed_time": "0m32s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 16120,
+    "output_tokens_total": 8459,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 6029,
+    "cache_write_tokens_total": 9898
+  }
+}

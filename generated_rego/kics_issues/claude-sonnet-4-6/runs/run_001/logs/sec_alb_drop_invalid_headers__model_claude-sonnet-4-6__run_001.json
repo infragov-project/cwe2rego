@@ -1,0 +1,93 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-06-27T19:56:46.900721+00:00",
+  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "kics_issues",
+  "rule_id": "sec_alb_drop_invalid_headers",
+  "type_name": "sec_alb_drop_invalid_headers",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "us-east-2"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_alb_drop_invalid_headers.rego",
+  "condition": "## Weakness: ALB Not Dropping Invalid HTTP Header Fields\n\n### Description\nApplication Load Balancers (ALB) should be configured to drop invalid HTTP header fields. When this setting is disabled, malformed or unexpected headers are forwarded to backend targets, potentially enabling **HTTP header injection**, **request smuggling**, or **cache poisoning** attacks.\n\n---\n\n### Detection Indicators\n\n#### Resource Type Keywords\n- Load Balancer resource definitions\n- Application-type load balancer declarations\n- `alb`, `load_balancer`, `aws_lb`, `aws_alb`\n\n#### Critical Attributes / Fields to Inspect\n| Attribute | Risk Condition |\n|---|---|\n| `drop_invalid_header_fields` | Set to `false` or **absent/missing** |\n| `load_balancer_type` | Must be `\"application\"` to be in scope |\n| `internal` | Applies to both internal and external ALBs |\n\n#### Detection Logic\n```\nIF resource_type == LoadBalancer\nAND load_balancer_type == \"application\"\nAND (\n    drop_invalid_header_fields == false\n    OR drop_invalid_header_fields is ABSENT\n)\nTHEN FLAG as weakness\n```\n\n---\n\n### Key Notes\n- The weakness applies **exclusively** to `application` type load balancers (not `network` or `gateway`)\n- The **default behavior** when the attribute is omitted is `false`, making **absence** equally dangerous\n- Both **internet-facing** and **internal** ALBs should enforce this setting",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": false,
+    "model": null,
+    "directory": null,
+    "files": []
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "static_manifest",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
+    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers",
+    "entries_count": 3
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_load_balancer_resource(node_type) {\n    regex.match(\"(?i).*(alb|load_balancer).*\", node_type)\n}\n\nis_application_lb(attrs) {\n    attr := attrs[_]\n    attr.name == \"load_balancer_type\"\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"application\"\n}\n\nhas_attribute_named(attrs, name) {\n    attr := attrs[_]\n    attr.name == name\n}\n\nin_scope_for_alb(attrs) {\n    is_application_lb(attrs)\n}\n\nin_scope_for_alb(attrs) {\n    not has_attribute_named(attrs, \"load_balancer_type\")\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_load_balancer_resource(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    in_scope_for_alb(attrs)\n\n    attr := attrs[_]\n    attr.name == \"drop_invalid_header_fields\"\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_alb_drop_invalid_headers\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"ALB not dropping invalid HTTP header fields - Application Load Balancers should be configured to drop invalid HTTP header fields to prevent header injection, request smuggling, and cache poisoning attacks.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_load_balancer_resource(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    in_scope_for_alb(attrs)\n\n    not has_attribute_named(attrs, \"drop_invalid_header_fields\")\n\n    result := {\n        \"type\": \"sec_alb_drop_invalid_headers\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"ALB not dropping invalid HTTP header fields - Application Load Balancers should be configured to drop invalid HTTP header fields to prevent header injection, request smuggling, and cache poisoning attacks.\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "terraform",
+          "missing_lines": [
+            1,
+            14
+          ],
+          "false_positives": [],
+          "file_name": "positive2.tf",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_lb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 8, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 14, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 14, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"type\": \"unknown\", \"lines\": 15}",
+          "ir_node_reduction_percentage": 80.6
+        },
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "terraform",
+          "missing_lines": [
+            12
+          ],
+          "false_positives": [],
+          "file_name": "positive3.tf",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_alb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_alb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 7, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 12, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"type\": \"unknown\", \"lines\": 13}",
+          "ir_node_reduction_percentage": 77.8
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n### What the Rule Was Attempting to Detect\nThe rule aimed to flag AWS Application Load Balancers (`aws_lb` / `aws_alb`) that either explicitly set `drop_invalid_header_fields = false` or omit the attribute entirely, both of which leave the ALB vulnerable to header injection and request smuggling attacks.\n\n### What It Missed\nThe rule failed to detect **any resource of type `aws_lb`** across both failing examples. In `positive2.tf`, both the missing-attribute case (line 1) and the explicit `false` case (line 14) were missed entirely. In `positive3.tf`, the `aws_alb` resource (line 1) was correctly detected, but the `aws_lb` resource (line 12) was not \u2014 confirming the failure is type-specific.\n\n### Why the Logic Failed\nThe culprit is the `is_load_balancer_resource` regex: `(?i).*(alb|load_balancer).*`. This pattern requires the resource type string to contain the substring `\"alb\"` or `\"load_balancer\"`. The type `\"aws_alb\"` contains `\"alb\"` and matches, but `\"aws_lb\"` only contains `\"lb\"` \u2014 which satisfies neither alternative \u2014 so the predicate evaluates to `false` and the entire rule body short-circuits before any attribute checks are reached. The fix is to extend the regex to also cover the bare `lb` suffix, e.g., `(?i).*(aws_lb|alb|load_balancer).*`."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nis_load_balancer_resource(node_type) {\n    regex.match(\"(?i).*(alb|load_balancer|_lb).*\", node_type)\n}\n\nis_application_lb(attrs) {\n    attr := attrs[_]\n    attr.name == \"load_balancer_type\"\n    attr.value.ir_type == \"String\"\n    attr.value.value == \"application\"\n}\n\nhas_attribute_named(attrs, name) {\n    attr := attrs[_]\n    attr.name == name\n}\n\nin_scope_for_alb(attrs) {\n    is_application_lb(attrs)\n}\n\nin_scope_for_alb(attrs) {\n    not has_attribute_named(attrs, \"load_balancer_type\")\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_load_balancer_resource(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    in_scope_for_alb(attrs)\n\n    attr := attrs[_]\n    attr.name == \"drop_invalid_header_fields\"\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_alb_drop_invalid_headers\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"ALB not dropping invalid HTTP header fields - Application Load Balancers should be configured to drop invalid HTTP header fields to prevent header injection, request smuggling, and cache poisoning attacks.\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    atomic_units := glitch_lib.all_atomic_units(parent)\n    node := atomic_units[_]\n\n    is_load_balancer_resource(node.type)\n    attrs := glitch_lib.all_attributes(node)\n    in_scope_for_alb(attrs)\n\n    not has_attribute_named(attrs, \"drop_invalid_header_fields\")\n\n    result := {\n        \"type\": \"sec_alb_drop_invalid_headers\",\n        \"element\": node,\n        \"path\": parent.path,\n        \"description\": \"ALB not dropping invalid HTTP header fields - Application Load Balancers should be configured to drop invalid HTTP header fields to prevent header injection, request smuggling, and cache poisoning attacks.\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-06-27T19:58:51.419692+00:00",
+    "elapsed_time": "2m4s"
+  },
+  "llm_usage": {
+    "calls": 4,
+    "input_tokens_total": 16562,
+    "output_tokens_total": 18295,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 5981,
+    "cache_write_tokens_total": 10421
+  }
+}
