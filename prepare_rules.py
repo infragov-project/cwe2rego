@@ -94,11 +94,6 @@ def _find_passing_rego(runs_dir: Path, rule_id: str) -> Path | None:
     return None
 
 
-def _clean_managed_type_names(tool: GlitchTool | KICSTool, rows: list[tuple[str, str]]) -> None:
-    """Remove previously deployed rules for all type names managed by this mapping."""
-    for type_name in sorted({type_name for type_name, _ in rows}):
-        tool.remove_rule(type_name)
-
 
 
 def build_argument_parser(
@@ -191,7 +186,7 @@ def main(default_analysis_tool: str | None = None) -> int:
         tool = GlitchTool(base_dir)
         label = "GLITCH"
 
-    _clean_managed_type_names(tool, all_rows)
+    tool.clear_all_rules()
 
     written = 0
     skipped = 0

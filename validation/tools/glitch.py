@@ -1,4 +1,5 @@
 import platform
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -130,6 +131,18 @@ class GlitchTool(AnalysisTool):
         for parent in (rule_path.parent, rule_path.parent.parent):
             if parent.exists() and parent.is_dir() and not any(parent.iterdir()):
                 parent.rmdir()
+
+    def clear_all_rules(self) -> None:
+        security_dir = (
+            self._validation_dir
+            / "GLITCH"
+            / "glitch"
+            / "rego"
+            / "queries"
+            / "security"
+        )
+        if security_dir.exists():
+            shutil.rmtree(security_dir)
 
     def run_lint(
         self,

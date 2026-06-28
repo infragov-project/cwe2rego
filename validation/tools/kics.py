@@ -217,6 +217,11 @@ class KICSTool(AnalysisTool):
             if parent.exists() and parent.is_dir() and not any(parent.iterdir()):
                 parent.rmdir()
 
+    def clear_all_rules(self) -> None:
+        common_dir = self._queries_dir / "Ansible" / "common"
+        if common_dir.exists():
+            shutil.rmtree(common_dir)
+
     def run_lint(
         self,
         tech: str,

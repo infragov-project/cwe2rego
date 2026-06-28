@@ -42,6 +42,10 @@ class AnalysisTool(ABC):
         """Remove the deployed rule so the tool's query/rule directory stays empty. No-op if not applicable."""
         pass
 
+    def clear_all_rules(self) -> None:
+        """Remove all deployed custom rules. No-op if not applicable."""
+        pass
+
     @abstractmethod
     def run_lint(
         self,
