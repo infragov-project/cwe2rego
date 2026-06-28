@@ -1,7 +1,7 @@
 {
   "run_id": "run_001",
   "run_started_at_utc": "2026-06-27T19:53:42.323624+00:00",
-  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "run_directory": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
   "experiment_name": "kics_issues",
   "rule_id": "sec_aws_cmk_rotation_disabled",
   "type_name": "sec_aws_cmk_rotation_disabled",
@@ -11,7 +11,7 @@
     "region": "us-east-2"
   },
   "use_rag": false,
-  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_rotation_disabled.rego",
+  "output_rego_path": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_cmk_rotation_disabled.rego",
   "condition": "# IaC Security Weakness: AWS CMK Key Rotation Not Enabled\n\n## Weakness Overview\nAWS Customer Master Keys (CMK) must have automatic key rotation enabled to reduce the risk of key compromise. Failing to rotate keys periodically increases the blast radius of a potential key exposure.\n\n---\n\n## Detection Criteria\n\n### Resource Indicators\nKeywords that identify a **KMS key resource** definition:\n- `kms`\n- `key`\n- `master_key`\n- `customer_master_key`\n- `cmk`\n- `aws_kms_key`\n- `kms_key`\n\n---\n\n### Critical Attributes / Fields to Inspect\n\n| Attribute | Expected Safe Value | Risky Condition |\n|---|---|---|\n| `enable_key_rotation` | `true` | `false` or **missing/absent** |\n| `key_enabled` / `enabled` / `is_enabled` | `true` | When key is active but rotation is off |\n| `key_usage` | `ENCRYPT_DECRYPT` | Combined with missing rotation |\n| `deletion_window_in_days` | Any value | Presence confirms key definition |\n\n---\n\n### Detection Logic\n\n```\nIF resource is a KMS/CMK key definition\n  AND key is enabled (enabled = true OR enabled is absent/default)\n  AND (\n    enable_key_rotation is absent\n    OR enable_key_rotation = false\n  )\nTHEN \u2192 WEAKNESS DETECTED\n```\n\n---\n\n### Key Signals Summary\n- **Presence** of KMS key resource **without** `enable_key_rotation`\n- **Explicit** `enable_key_rotation: false` or `enable_key_rotation = false`\n- Key marked as **active/enabled** with no rotation policy attached",
   "use_cwe_text": false,
   "no_ir_slicing": false,
@@ -30,8 +30,8 @@
   "semantic_examples": {
     "source": "static_manifest",
     "directory_flag_provided": true,
-    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
-    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_cmk_rotation_disabled",
+    "configured_directory": "/home/RegoSmithvalidation/examples_kics_issue",
+    "resolved_directory": "/home/RegoSmithvalidation/examples_kics_issue/sec_aws_cmk_rotation_disabled",
     "entries_count": 4
   },
   "iterations": [

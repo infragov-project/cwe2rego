@@ -1,7 +1,7 @@
 {
   "run_id": "run_001",
   "run_started_at_utc": "2026-06-27T20:02:44.071466+00:00",
-  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "run_directory": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
   "experiment_name": "kics_issues",
   "rule_id": "sec_ec2_not_ebs_optimized",
   "type_name": "sec_ec2_not_ebs_optimized",
@@ -11,7 +11,7 @@
     "region": "us-east-2"
   },
   "use_rag": false,
-  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_ec2_not_ebs_optimized.rego",
+  "output_rego_path": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_ec2_not_ebs_optimized.rego",
   "condition": "## Weakness: EC2 Instance EBS Optimization Not Enabled\n\n### Description\nWhen launching EC2 instances, failing to enable EBS optimization can lead to performance degradation due to shared bandwidth between EBS I/O and other instance network traffic. This is considered a best practice misconfiguration.\n\n---\n\n### Keywords, Attributes & Fields to Detect\n\n| Category | Keywords / Attributes |\n|---|---|\n| **Resource Type** | `instance`, `ec2`, `virtual_machine`, `compute_instance` |\n| **EBS Optimization Flag** | `ebs_optimized`, `ebs_optimization`, `optimized` |\n| **Expected Value** | Should be `true`, `enabled`, `yes` |\n| **Risky Values** | `false`, `null`, `absent/missing field` |\n\n---\n\n### Detection Signals\n\n- **Missing attribute**: The `ebs_optimized` field is **entirely absent** from the resource block\n- **Explicit disable**: The field is present but explicitly set to `false`\n- **Resource context**: The resource represents an **EC2/compute instance** (not a launch template, autoscaling group, etc. \u2014 though those should also be checked)\n- **Related attributes**: Look for `instance_type` alongside \u2014 some instance types don't support EBS optimization, which should be cross-referenced\n\n---\n\n### Risk Indicators Summary\n\n```\nresource type    \u2192 EC2 / compute instance\nattribute name   \u2192 ebs_optimized\nrisky states     \u2192 false | missing | null\nexpected state   \u2192 true\n```",
   "use_cwe_text": false,
   "no_ir_slicing": false,
@@ -30,8 +30,8 @@
   "semantic_examples": {
     "source": "static_manifest",
     "directory_flag_provided": true,
-    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
-    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_ec2_not_ebs_optimized",
+    "configured_directory": "/home/RegoSmithvalidation/examples_kics_issue",
+    "resolved_directory": "/home/RegoSmithvalidation/examples_kics_issue/sec_ec2_not_ebs_optimized",
     "entries_count": 2
   },
   "iterations": [

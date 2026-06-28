@@ -1,7 +1,7 @@
 {
   "run_id": "run_001",
   "run_started_at_utc": "2026-06-27T19:51:30.698917+00:00",
-  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "run_directory": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
   "experiment_name": "kics_issues",
   "rule_id": "sec_aws_asg_no_elbs",
   "type_name": "sec_aws_asg_no_elbs",
@@ -11,7 +11,7 @@
     "region": "us-east-2"
   },
   "use_rag": false,
-  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_asg_no_elbs.rego",
+  "output_rego_path": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_aws_asg_no_elbs.rego",
   "condition": "# IaC Weakness Detection: AWS Auto Scaling Group Without ELB Association\n\n## Weakness Summary\nAWS Auto Scaling Groups (ASGs) must be associated with at least one Elastic Load Balancer (ELB) to ensure high availability, traffic distribution, and application performance.\n\n---\n\n## Detection Indicators\n\n### Resource/Module Identifiers\n- `autoscaling_group`\n- `auto_scaling_group`\n- `aws_autoscaling_group`\n- `AutoScalingGroup`\n- `ec2_asg`\n\n### Critical Attributes / Fields to Inspect\n| Attribute | Expected State | Weakness Condition |\n|---|---|---|\n| `load_balancer_names` | Defined and non-empty | Missing or empty list |\n| `LoadBalancerNames` | Defined and non-empty | Missing or empty list |\n| `target_group_arns` | Defined and non-empty | Missing (alternative to classic ELB) |\n| `TargetGroupARNs` | Defined and non-empty | Missing or empty |\n\n### Keywords to Flag\n- `load_balancers`\n- `elb_names`\n- `classic_load_balancers`\n- `target_groups`\n- `health_check_type`\n\n---\n\n## Detection Logic\n\n```\nIF resource is AutoScalingGroup\n  AND (load_balancer_names is UNDEFINED\n    OR load_balancer_names is EMPTY LIST [])\n  AND (target_group_arns is UNDEFINED\n    OR target_group_arns is EMPTY LIST [])\nTHEN flag as WEAKNESS\n```\n\n---\n\n## Notes\n- Both **classic ELB** (`LoadBalancerNames`) and **ALB/NLB** (`TargetGroupARNs`) associations should be checked\n- An empty list `[]` is treated the same as a missing attribute\n- Either field being populated satisfies the requirement",
   "use_cwe_text": false,
   "no_ir_slicing": false,
@@ -30,8 +30,8 @@
   "semantic_examples": {
     "source": "static_manifest",
     "directory_flag_provided": true,
-    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
-    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs",
+    "configured_directory": "/home/RegoSmithvalidation/examples_kics_issue",
+    "resolved_directory": "/home/RegoSmithvalidation/examples_kics_issue/sec_aws_asg_no_elbs",
     "entries_count": 4
   },
   "iterations": [
@@ -50,7 +50,7 @@
             1
           ],
           "file_name": "positive1.yaml",
-          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: elb1\\n  community.aws.ec2_asg:\\n    name: special\\n    load_balancers: []\\n    availability_zones: [ 'eu-west-1a', 'eu-west-1b' ]\\n    launch_config_name: 'lc-1'\\n    min_size: 1\\n    max_size: 10\\n    desired_capacity: 5\\n    vpc_zone_identifier: [ 'subnet-abcd1234', 'subnet-1a2b3c4d' ]\\n    tags:\\n\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"elb1\", \"value\": \"elb1\"}, \"type\": \"community.aws.ec2_asg\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 4, \"code\": \"load_balancers: []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"type\": \"tasks\", \"lines\": 13}",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"- name: elb1\\n  community.aws.ec2_asg:\\n    name: special\\n    load_balancers: []\\n    availability_zones: [ 'eu-west-1a', 'eu-west-1b' ]\\n    launch_config_name: 'lc-1'\\n    min_size: 1\\n    max_size: 10\\n    desired_capacity: 5\\n    vpc_zone_identifier: [ 'subnet-abcd1234', 'subnet-1a2b3c4d' ]\\n    tags:\\n\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"elb1\", \"value\": \"elb1\"}, \"type\": \"community.aws.ec2_asg\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 4, \"code\": \"load_balancers: []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 4, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"path\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_aws_asg_no_elbs/positive1.yaml\", \"type\": \"tasks\", \"lines\": 13}",
           "ir_node_reduction_percentage": 84.4
         },
         {
@@ -64,7 +64,7 @@
             1
           ],
           "file_name": "positive2.tf",
-          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_autoscaling_group\\\" \\\"bar2\\\" {\\n  availability_zones = [\\\"us-east-1a\\\"]\\n  desired_capacity   = 1\\n  max_size           = 1\\n  min_size           = 1\\n\\n  launch_template {\\n    id      = aws_launch_template.foobar.id\\n    version = \\\"$Latest\\\"\\n  }\\n\\n  load_balancers = []\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"bar2\\\"\", \"value\": \"bar2\"}, \"type\": \"aws_autoscaling_group\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"load_balancers = []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 12, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"type\": \"unknown\", \"lines\": 13}",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_autoscaling_group\\\" \\\"bar2\\\" {\\n  availability_zones = [\\\"us-east-1a\\\"]\\n  desired_capacity   = 1\\n  max_size           = 1\\n  min_size           = 1\\n\\n  launch_template {\\n    id      = aws_launch_template.foobar.id\\n    version = \\\"$Latest\\\"\\n  }\\n\\n  load_balancers = []\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"bar2\\\"\", \"value\": \"bar2\"}, \"type\": \"aws_autoscaling_group\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"load_balancers = []\", \"name\": \"load_balancers\", \"value\": {\"ir_type\": \"Array\", \"line\": 12, \"code\": \"[]\", \"value\": []}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"path\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_aws_asg_no_elbs/positive2.tf\", \"type\": \"unknown\", \"lines\": 13}",
           "ir_node_reduction_percentage": 78.3
         }
       ],

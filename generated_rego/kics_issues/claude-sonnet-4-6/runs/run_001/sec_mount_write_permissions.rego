@@ -2,78 +2,95 @@ package glitch
 
 import data.glitch_lib
 
-sensitive_path_pattern := `^(/|/etc|/proc|/sys|/var/run|/root|/home|/bin|/sbin|/usr|/boot|/dev|/lib)(/.*)?$`
+sensitive_path_pattern := "^(/|/etc|/proc|/sys|/var/run|/root|/boot|/dev|/lib|/usr|/bin|/sbin|/run/containerd)(/.*)?$"
 
-is_sensitive_path(val) {
-    val.ir_type == "String"
-    regex.match(sensitive_path_pattern, val.value)
+is_sensitive_path(value) {
+    value.ir_type == "String"
+    regex.match(sensitive_path_pattern, value.value)
 }
 
+volume_mount_names := {"volume_mount", "volumemount", "volumemounts", "volume_mounts"}
+
 Glitch_Analysis[result] {
-    input.path != ""
-    walk(input, [_, ub])
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+
+    walk(parent, [_, ub])
     ub.ir_type == "UnitBlock"
-    ub.line > 0
-    regex.match(`(?i)volume_?mount`, ub.name)
-    attr := ub.attributes[_]
-    regex.match(`(?i)mount_?path`, attr.name)
+    lower(ub.name) == volume_mount_names[_]
+
+    attrs := glitch_lib.all_attributes(ub)
+    attr := attrs[_]
+    lower(attr.name) == "mount_path"
     is_sensitive_path(attr.value)
+
     result := {
         "type": "sec_mount_write_permissions",
         "element": ub,
-        "path": input.path,
-        "description": "Sensitive host path mounted in container - Mounting sensitive host directories can lead to privilege escalation or container escape. (CWE-269)"
+        "path": parent.path,
+        "description": "Sensitive Host Path Volume Mount - Mounting sensitive host filesystem paths can escape container isolation and lead to privilege escalation or full host compromise. (CWE-269)"
     }
 }
 
 Glitch_Analysis[result] {
-    input.path != ""
-    walk(input, [_, attr])
-    attr.ir_type == "Attribute"
-    attr.line > 0
-    regex.match(`(?i)volume_?mount`, attr.name)
-    attr.value.ir_type == "Array"
-    hash_entry := attr.value.value[_]
-    hash_entry.ir_type == "Hash"
-    kv := hash_entry.value[_]
-    regex.match(`(?i)mount_?path`, kv.key.value)
-    is_sensitive_path(kv.value)
-    result := {
-        "type": "sec_mount_write_permissions",
-        "element": attr,
-        "path": input.path,
-        "description": "Sensitive host path mounted in container - Mounting sensitive host directories can lead to privilege escalation or container escape. (CWE-269)"
-    }
-}
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
 
-Glitch_Analysis[result] {
-    input.path != ""
-    walk(input, [_, ub])
+    walk(parent, [_, ub])
     ub.ir_type == "UnitBlock"
-    ub.line > 0
-    regex.match(`(?i)host_?path`, ub.name)
-    attr := ub.attributes[_]
+    lower(ub.name) == "host_path"
+
+    attrs := glitch_lib.all_attributes(ub)
+    attr := attrs[_]
     attr.name == "path"
     is_sensitive_path(attr.value)
+
     result := {
         "type": "sec_mount_write_permissions",
         "element": ub,
-        "path": input.path,
-        "description": "Sensitive host path mounted in container - Mounting sensitive host directories can lead to privilege escalation or container escape. (CWE-269)"
+        "path": parent.path,
+        "description": "Sensitive Host Path Volume Mount - Mounting sensitive host filesystem paths can escape container isolation and lead to privilege escalation or full host compromise. (CWE-269)"
     }
 }
 
 Glitch_Analysis[result] {
-    input.path != ""
-    walk(input, [_, attr])
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+
+    walk(parent, [_, attr])
     attr.ir_type == "Attribute"
-    attr.line > 0
-    regex.match(`(?i)host_?path`, attr.name)
+    lower(attr.name) == "host_path"
     is_sensitive_path(attr.value)
+
     result := {
         "type": "sec_mount_write_permissions",
         "element": attr,
-        "path": input.path,
-        "description": "Sensitive host path mounted in container - Mounting sensitive host directories can lead to privilege escalation or container escape. (CWE-269)"
+        "path": parent.path,
+        "description": "Sensitive Host Path Volume Mount - Mounting sensitive host filesystem paths can escape container isolation and lead to privilege escalation or full host compromise. (CWE-269)"
+    }
+}
+
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+
+    walk(parent, [_, attr])
+    attr.ir_type == "Attribute"
+    lower(attr.name) == volume_mount_names[_]
+    attr.value.ir_type == "Array"
+
+    entry := attr.value.value[_]
+    entry.ir_type == "Hash"
+
+    kv := entry.value[_]
+    kv.key.ir_type == "VariableReference"
+    lower(kv.key.value) == "mount_path"
+    is_sensitive_path(kv.value)
+
+    result := {
+        "type": "sec_mount_write_permissions",
+        "element": attr,
+        "path": parent.path,
+        "description": "Sensitive Host Path Volume Mount - Mounting sensitive host filesystem paths can escape container isolation and lead to privilege escalation or full host compromise. (CWE-269)"
     }
 }

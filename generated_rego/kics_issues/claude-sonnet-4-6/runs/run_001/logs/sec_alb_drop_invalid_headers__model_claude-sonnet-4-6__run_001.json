@@ -1,7 +1,7 @@
 {
   "run_id": "run_001",
   "run_started_at_utc": "2026-06-27T19:56:46.900721+00:00",
-  "run_directory": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
+  "run_directory": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001",
   "experiment_name": "kics_issues",
   "rule_id": "sec_alb_drop_invalid_headers",
   "type_name": "sec_alb_drop_invalid_headers",
@@ -11,7 +11,7 @@
     "region": "us-east-2"
   },
   "use_rag": false,
-  "output_rego_path": "/home/daniel/InfraGov/cwe2rego/generated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_alb_drop_invalid_headers.rego",
+  "output_rego_path": "/home/RegoSmithgenerated_rego/kics_issues/claude-sonnet-4-6/runs/run_001/sec_alb_drop_invalid_headers.rego",
   "condition": "## Weakness: ALB Not Dropping Invalid HTTP Header Fields\n\n### Description\nApplication Load Balancers (ALB) should be configured to drop invalid HTTP header fields. When this setting is disabled, malformed or unexpected headers are forwarded to backend targets, potentially enabling **HTTP header injection**, **request smuggling**, or **cache poisoning** attacks.\n\n---\n\n### Detection Indicators\n\n#### Resource Type Keywords\n- Load Balancer resource definitions\n- Application-type load balancer declarations\n- `alb`, `load_balancer`, `aws_lb`, `aws_alb`\n\n#### Critical Attributes / Fields to Inspect\n| Attribute | Risk Condition |\n|---|---|\n| `drop_invalid_header_fields` | Set to `false` or **absent/missing** |\n| `load_balancer_type` | Must be `\"application\"` to be in scope |\n| `internal` | Applies to both internal and external ALBs |\n\n#### Detection Logic\n```\nIF resource_type == LoadBalancer\nAND load_balancer_type == \"application\"\nAND (\n    drop_invalid_header_fields == false\n    OR drop_invalid_header_fields is ABSENT\n)\nTHEN FLAG as weakness\n```\n\n---\n\n### Key Notes\n- The weakness applies **exclusively** to `application` type load balancers (not `network` or `gateway`)\n- The **default behavior** when the attribute is omitted is `false`, making **absence** equally dangerous\n- Both **internet-facing** and **internal** ALBs should enforce this setting",
   "use_cwe_text": false,
   "no_ir_slicing": false,
@@ -30,8 +30,8 @@
   "semantic_examples": {
     "source": "static_manifest",
     "directory_flag_provided": true,
-    "configured_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue",
-    "resolved_directory": "/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers",
+    "configured_directory": "/home/RegoSmithvalidation/examples_kics_issue",
+    "resolved_directory": "/home/RegoSmithvalidation/examples_kics_issue/sec_alb_drop_invalid_headers",
     "entries_count": 3
   },
   "iterations": [
@@ -49,7 +49,7 @@
           ],
           "false_positives": [],
           "file_name": "positive2.tf",
-          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_lb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 8, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 14, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 14, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"type\": \"unknown\", \"lines\": 15}",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_lb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 8, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  load_balancer_type = \\\"application\\\"\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 14, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 14, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"path\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_alb_drop_invalid_headers/positive2.tf\", \"type\": \"unknown\", \"lines\": 15}",
           "ir_node_reduction_percentage": 80.6
         },
         {
@@ -61,7 +61,7 @@
           ],
           "false_positives": [],
           "file_name": "positive3.tf",
-          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_alb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_alb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 7, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 12, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"path\": \"/home/daniel/InfraGov/cwe2rego/validation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"type\": \"unknown\", \"lines\": 13}",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 1, \"code\": \"resource \\\"aws_alb\\\" \\\"disabled_1\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n}\", \"statements\": [], \"name\": {\"ir_type\": \"String\", \"line\": 1, \"code\": \"\\\"disabled_1\\\"\", \"value\": \"disabled_1\"}, \"type\": \"aws_alb\", \"attributes\": []}, {\"ir_type\": \"AtomicUnit\", \"line\": 7, \"code\": \"resource \\\"aws_lb\\\" \\\"disabled_2\\\" {\\n  internal           = false\\n  name               = \\\"alb\\\"\\n  subnets            = module.vpc.public_subnets\\n\\n  drop_invalid_header_fields = false\\n}\", \"statements\": [], \"name\": null, \"type\": \"aws_lb\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 12, \"code\": \"drop_invalid_header_fields = false\", \"name\": \"drop_invalid_header_fields\", \"value\": {\"ir_type\": \"Boolean\", \"line\": 12, \"code\": \"false\", \"value\": false}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"path\": \"/home/RegoSmithvalidation/examples_kics_issue/sec_alb_drop_invalid_headers/positive3.tf\", \"type\": \"unknown\", \"lines\": 13}",
           "ir_node_reduction_percentage": 77.8
         }
       ],
