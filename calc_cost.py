@@ -29,6 +29,15 @@ def count_unique_rules(log_files: list[Path]) -> int:
     return len(ids)
 
 
+def parse_elapsed(s: str) -> float:
+    """Parse 'XmYs' elapsed time strings to total seconds."""
+    m = re.fullmatch(r"(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s)?", s.strip())
+    if not m:
+        return 0.0
+    return float(m.group(1) or 0) * 60 + float(m.group(2) or 0)
+
+
+
 def sum_tokens(log_files: list[Path]) -> tuple[dict, list]:
     totals = {
         "calls": 0,
@@ -37,6 +46,7 @@ def sum_tokens(log_files: list[Path]) -> tuple[dict, list]:
         "cache_write_tokens": 0,
         "output_tokens": 0,
         "reasoning_tokens": 0,
+        "elapsed_seconds": 0.0,
     }
     skipped = []
     for path in log_files:
@@ -49,6 +59,9 @@ def sum_tokens(log_files: list[Path]) -> tuple[dict, list]:
             totals["cache_write_tokens"] += usage.get("cache_write_tokens_total", 0)
             totals["output_tokens"] += usage.get("output_tokens_total", 0)
             totals["reasoning_tokens"] += usage.get("reasoning_tokens_total", 0)
+            elapsed_str = data.get("result", {}).get("elapsed_time", "")
+            if elapsed_str:
+                totals["elapsed_seconds"] += parse_elapsed(elapsed_str)
         except Exception as e:
             skipped.append((path, e))
     return totals, skipped
@@ -81,10 +94,10 @@ def calc_cost(
 def main():
     parser = argparse.ArgumentParser(description="Calculate LLM cost for an experiment run.")
     parser.add_argument("folder", type=Path, help="Experiment folder to scan (e.g. generated_rego/my_test)")
-    parser.add_argument("--input", type=float, default=0.435, metavar="PRICE", help="Fresh input token price per 1M (default: 0.435)")
-    parser.add_argument("--cache-read", type=float, default=0.0036, metavar="PRICE", help="Cache read token price per 1M (default: 0.0036)")
-    parser.add_argument("--cache-write", type=float, default=0.54375, metavar="PRICE", help="Cache write token price per 1M (default: 0.54375, i.e. 1.25x input default)")
-    parser.add_argument("--output", type=float, default=0.87, metavar="PRICE", help="Output token price per 1M (default: 0.87)")
+    parser.add_argument("--input", type=float, default=0.0, metavar="PRICE", help="Fresh input token price per 1M (default: 0)")
+    parser.add_argument("--cache-read", type=float, default=0.0, metavar="PRICE", help="Cache read token price per 1M (default: 0)")
+    parser.add_argument("--cache-write", type=float, default=0.0, metavar="PRICE", help="Cache write token price per 1M (default: 0)")
+    parser.add_argument("--output", type=float, default=0.0, metavar="PRICE", help="Output token price per 1M (default: 0)")
     args = parser.parse_args()
 
     root = args.folder
@@ -117,6 +130,11 @@ def main():
     num_rules = count_unique_rules(log_files)
     avg = costs["total"] / num_rules if num_rules else 0.0
     print(f"  Avg cost/rule      :                                        ${avg:.6f}  ({num_rules} rules)")
+    print()
+    total_time = totals["elapsed_seconds"]
+    avg_time = total_time / num_rules if num_rules else 0.0
+    print(f"  Total time         :  {total_time:.2f}s")
+    print(f"  Avg time/rule      :  {avg_time:.2f}s  ({num_rules} rules)")
 
 
 if __name__ == "__main__":
