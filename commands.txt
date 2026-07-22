@@ -41,18 +41,9 @@ KICS complete pipeline:
 
 ./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 complete_pipeline_kics validation/examples_extension kics -1 --max-runs 5 --provider bedrock 250 258 259 284 319 353 798 1327
 
-Prepare rules KICA:
-Using 284 for invalid bind:
-python3 prepare_rules.py --analysis-tool kics --experiment-dir generated_rego/complete_pipeline_kics/claude-sonnet-4-6/ --mapping kics_rego_mapping.json --only-cwe 250 258 259 284 319 353 798
-
-Using 1327 for invalid bind:
-python3 prepare_rules.py --analysis-tool kics --experiment-dir generated_rego/complete_pipeline_kics/claude-sonnet-4-6/ --mapping kics_rego_mapping.json --only-cwe 250 258 259 319 353 798 1327
-
 
 KICS issues (description-based):
 
 ./run_all_descriptions.sh global.anthropic.claude-sonnet-4-6 kics_issues validation/examples_kics_issue glitch -1 --max-runs 5 --provider bedrock sec_aws_asg_no_elbs sec_aws_cmk_rotation_disabled sec_aws_cmk_unusable sec_alb_drop_invalid_headers sec_api_gateway_no_access_log sec_ec2_not_ebs_optimized sec_s3_unsecured_cors sec_mount_write_permissions
 
-Prepare rules:
-python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/kics_issues/claude-sonnet-4-6/ --mapping kics_issues_mapping.json
 

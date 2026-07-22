@@ -7,6 +7,8 @@ Rules can be generated from a CWE description or from a plain natural language d
 
 ## Installation
 
+> **Replication package note:** If you are using the Docker image provided in the replication package root, all dependencies below are already installed and the Installation section can be skipped. The exact commands used to produce the results in the study are documented in [`commands.txt`](commands.txt).
+
 ### Dependencies
 
 ```bash
@@ -121,6 +123,19 @@ Outputs are written under `generated_rego/<experiment_name>/<model>/runs/<run_id
 - LLM-generated examples (when `--use-llm-examples` is enabled) are saved to `runs/<run_id>/generated_examples/<type_name>/`.
 
 Static semantic examples live in `validation/examples/<type_name>/`.
+
+---
+
+## Replicating the study
+
+The file [`commands.txt`](commands.txt) contains the exact commands used to run every experiment in the study. It is organized into the following groups:
+
+- **Complete pipeline** — full RegoSmith pipeline for GLITCH, run across three models (`claude-sonnet-4-6`, `kimi-k2.5`, `mimo-v2.5-pro`).
+- **Ablation** — four ablation variants (no history, no condition, no slicing, no semantic check) plus a barebones combination, run across two models.
+- **KICS complete pipeline** — full pipeline targeting KICS instead of GLITCH.
+- **KICS issues** — description-based generation using KICS issue descriptions, targeting GLITCH.
+
+The mapping files used by `prepare_rules.py` are already included in this directory: `glitch_rego_mapping.json`, `kics_rego_mapping.json`, and `kics_issues_mapping.json`.
 
 ---
 
