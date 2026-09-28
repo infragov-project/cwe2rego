@@ -1,0 +1,5 @@
+Unrestricted IP Address:   This smell is the recurring 
+pattern of assigning the address 0.0.0.0 for a database 
+server or a cloud service/instance. Binding to the 
+address 0.0.0.0 may cause security concerns as this 
+address can allow connections from every possible network.

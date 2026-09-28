@@ -1,0 +1,3 @@
+Use of weak cryptography algorithms:  This smell is the 
+recurring pattern of using weak cryptography algorithms, 
+namely, MD5 and SHA-1, for encryption purposes.

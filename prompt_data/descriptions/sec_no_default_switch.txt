@@ -1,0 +1,3 @@
+Missing Default in Case Statement: This smell is the 
+recurring pattern of not handling all input 
+combinations when implementing a case conditional logic.

@@ -1,0 +1,5 @@
+Use of HTTP without SSL/TLS:  This smell is the recurring
+pattern of using HTTP without the Transport Layer
+Security (TLS) or Secure Sockets Layer (SSL). Such use
+makes the communication between two entities less
+secure.

@@ -1,0 +1,4 @@
+No integrity check: This smell is the recurring pattern
+of downloading content from the Internet and not
+checking the downloaded content using checksums or
+gpg signatures.

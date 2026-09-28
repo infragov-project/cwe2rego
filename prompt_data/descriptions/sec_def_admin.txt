@@ -1,0 +1,3 @@
+Admin by default: This smell is the recurring pattern 
+of specifying default users. The smell can violate the 
+“principle of least privilege” property.

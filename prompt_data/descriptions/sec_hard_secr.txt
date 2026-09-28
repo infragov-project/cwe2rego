@@ -1,0 +1,3 @@
+Hard-coded secret:  This smell is the recurring pattern 
+of revealing sensitive information, such as user name 
+and passwords in IaC scripts

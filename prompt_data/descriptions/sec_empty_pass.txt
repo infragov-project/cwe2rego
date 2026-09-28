@@ -1,0 +1,3 @@
+Empty password: The smell is the recurring pattern of 
+using a string of length zero or a null value for a 
+password.

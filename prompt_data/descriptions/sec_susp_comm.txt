@@ -1,0 +1,4 @@
+Suspicious comment: This smell is the recurring 
+pattern of putting information in comments about the 
+presence of defects, missing functionality, or weakness 
+of the system (e.g., “TODO” and “FIXME”).
