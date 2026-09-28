@@ -1,0 +1,88 @@
+{
+  "run_id": "run_001",
+  "run_started_at_utc": "2026-09-28T20:07:29.158231+00:00",
+  "run_directory": "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001",
+  "experiment_name": "llm_examples_description_no_condition",
+  "rule_id": "sec_https",
+  "type_name": "sec_https",
+  "model_used": "global.anthropic.claude-sonnet-4-6",
+  "provider": {
+    "name": "bedrock",
+    "region": "eu-west-1"
+  },
+  "use_rag": false,
+  "output_rego_path": "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/sec_https.rego",
+  "condition": "Use of HTTP without SSL/TLS:  This smell is the recurring\npattern of using HTTP without the Transport Layer\nSecurity (TLS) or Secure Sockets Layer (SSL). Such use\nmakes the communication between two entities less\nsecure.\n",
+  "use_cwe_text": false,
+  "no_ir_slicing": false,
+  "example_generation": {
+    "enabled": true,
+    "model": "global.anthropic.claude-sonnet-4-6",
+    "directory": "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https",
+    "files": [
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/configure_repo.pp",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/download_artifact.yaml",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/fetch_archive.pp",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/install_package.rb",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/notify_webhook.rb",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/register_service.yml",
+      "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/sec_https.json"
+    ]
+  },
+  "validation_history": {
+    "iterations": -1,
+    "truncation_enabled": false,
+    "mode": "keep_all",
+    "pinned_messages": 1
+  },
+  "semantic_examples": {
+    "source": "llm_generated",
+    "directory_flag_provided": true,
+    "configured_directory": "/home/RegoSmith/validation/examples_extension",
+    "resolved_directory": "/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https",
+    "entries_count": 6
+  },
+  "iterations": [
+    {
+      "attempt": 1,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nhttp_url_pattern := \"(?i)^http://\"\nssl_tls_names := {\"ssl\", \"tls\", \"ssl_enabled\", \"tls_enabled\", \"enable_ssl\", \"enable_tls\", \"use_ssl\", \"use_tls\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    attr.value.ir_type == \"String\"\n    regex.match(http_url_pattern, attr.value.value)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - Communication should use HTTPS instead of HTTP to ensure encrypted and secure communication. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    v.value.ir_type == \"String\"\n    regex.match(http_url_pattern, v.value.value)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - Communication should use HTTPS instead of HTTP to ensure encrypted and secure communication. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == ssl_tls_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - SSL/TLS is explicitly disabled. Communication should be encrypted. (CWE-319)\"\n    }\n}",
+      "errors": [
+        {
+          "error_type": "semantic",
+          "annotation": "Semantic validation mismatch between expected and detected lines",
+          "iac_language": "puppet",
+          "missing_lines": [
+            6
+          ],
+          "false_positives": [],
+          "file_name": "fetch_archive.pp",
+          "ir_file": "{\"ir_type\": \"UnitBlock\", \"line\": -33550336, \"code\": \"\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [], \"unit_blocks\": [{\"ir_type\": \"UnitBlock\", \"line\": 1, \"code\": \"class app::install (\\n  String $version = '3.1.0',\\n) {\\n  archive { \\\"/tmp/app-${version}.tar.gz\\\":\\n    ensure  => present,\\n    source  => \\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\",\\n    extract => true,\\n    extract_path => '/opt/app',\\n    creates => \\\"/opt/app/app-${version}\\\",\\n    cleanup => true,\\n  }\\n}\", \"statements\": [], \"dependencies\": [], \"comments\": [], \"variables\": [], \"atomic_units\": [{\"ir_type\": \"AtomicUnit\", \"line\": 4, \"code\": \"archive { \\\"/tmp/app-${version}.tar.gz\\\":\\n    ensure  => present,\\n    source  => \\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\",\\n    extract => true,\\n    extract_path => '/opt/app',\\n    creates => \\\"/opt/app/app-${version}\\\",\\n    cleanup => true,\\n  }\", \"statements\": [], \"name\": null, \"type\": \"archive\", \"attributes\": [{\"ir_type\": \"Attribute\", \"line\": 6, \"code\": \"source  => \\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"name\": \"source\", \"value\": {\"ir_type\": \"Sum\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"left\": {\"ir_type\": \"Sum\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"left\": {\"ir_type\": \"Sum\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"left\": {\"ir_type\": \"Sum\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"left\": {\"ir_type\": \"String\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"value\": \"http://releases.example.com/app/\"}, \"right\": {\"ir_type\": \"VariableReference\", \"line\": 6, \"code\": \"version\", \"value\": \"version\"}, \"type\": \"sum\"}, \"right\": {\"ir_type\": \"String\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"value\": \"/app-\"}, \"type\": \"sum\"}, \"right\": {\"ir_type\": \"VariableReference\", \"line\": 6, \"code\": \"version\", \"value\": \"version\"}, \"type\": \"sum\"}, \"right\": {\"ir_type\": \"String\", \"line\": 6, \"code\": \"\\\"http://releases.example.com/app/${version}/app-${version}.tar.gz\\\"\", \"value\": \".tar.gz\"}, \"type\": \"sum\"}}]}], \"unit_blocks\": [], \"attributes\": [], \"name\": \"app::install\", \"path\": \"/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/fetch_archive.pp\", \"type\": \"definition\", \"lines\": 12}], \"attributes\": [], \"name\": \"fetch_archive.pp\", \"path\": \"/home/RegoSmith/generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/runs/run_001/generated_examples/sec_https/fetch_archive.pp\", \"type\": \"script\", \"lines\": 12}",
+          "ir_node_reduction_percentage": 59.4
+        }
+      ],
+      "status": "semantic_error",
+      "nl_error_summary": "## Summary\n\n**What the rule was attempting to detect:**\nThe rule aims to flag insecure HTTP usage in IaC configurations \u2014 either by matching `http://` URL patterns in string attributes/variables, or by detecting attributes with SSL/TLS-related names explicitly set to `false`.\n\n**What it missed (false negative on line 6):**\nThe `source` attribute on line 6 contains a Puppet interpolated string (`\"http://releases.example.com/app/${version}/app-${version}.tar.gz\"`). Because it contains variable interpolations, the IR represents its value not as a flat `String` node but as a nested tree of `Sum` nodes (string concatenation), with the literal `\"http://releases.example.com/app/\"` buried in the leftmost leaf.\n\n**Why the rule logic failed:**\nThe rule's first branch checks `attr.value.ir_type == \"String\"` before applying the regex, but `attr.value.ir_type` is `\"Sum\"` here, so the condition fails immediately and no match is produced. The rule has no logic to recurse into or unwrap `Sum` trees to inspect the constituent `String` leaves. To fix this, the rule would need to traverse the nested `Sum` structure \u2014 for example by checking the leftmost leaf node \u2014 or use a helper that reconstructs/partially reconstructs the interpolated string to test whether its static prefix starts with `http://`."
+    },
+    {
+      "attempt": 2,
+      "rego_code": "package glitch\n\nimport data.glitch_lib\n\nhttp_url_pattern := \"(?i)^http://\"\nssl_tls_names := {\"ssl\", \"tls\", \"ssl_enabled\", \"tls_enabled\", \"enable_ssl\", \"enable_tls\", \"use_ssl\", \"use_tls\"}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    glitch_lib.traverse(attr.value, http_url_pattern)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - Communication should use HTTPS instead of HTTP to ensure encrypted and secure communication. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    vars := glitch_lib.all_variables(parent)\n    v := vars[_]\n    glitch_lib.traverse(v.value, http_url_pattern)\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": v,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - Communication should use HTTPS instead of HTTP to ensure encrypted and secure communication. (CWE-319)\"\n    }\n}\n\nGlitch_Analysis[result] {\n    parent := glitch_lib._gather_parent_unit_blocks[_]\n    parent.path != \"\"\n    attrs := glitch_lib.all_attributes(parent)\n    attr := attrs[_]\n    lower(attr.name) == ssl_tls_names[_]\n    attr.value.ir_type == \"Boolean\"\n    attr.value.value == false\n\n    result := {\n        \"type\": \"sec_https\",\n        \"element\": attr,\n        \"path\": parent.path,\n        \"description\": \"Use of HTTP without SSL/TLS - SSL/TLS is explicitly disabled. Communication should be encrypted. (CWE-319)\"\n    }\n}",
+      "errors": [],
+      "status": "passed"
+    }
+  ],
+  "result": {
+    "passed": true,
+    "attempts_used": 2,
+    "max_attempts": 20,
+    "ended_at_utc": "2026-09-28T20:08:11.092455+00:00",
+    "elapsed_time": "0m41s"
+  },
+  "llm_usage": {
+    "calls": 3,
+    "input_tokens_total": 15564,
+    "output_tokens_total": 6361,
+    "reasoning_tokens_total": 0,
+    "cache_read_tokens_total": 5682,
+    "cache_write_tokens_total": 9853
+  }
+}

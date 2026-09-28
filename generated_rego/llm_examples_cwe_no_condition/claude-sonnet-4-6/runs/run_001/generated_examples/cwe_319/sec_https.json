@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "file": "send_credentials.yml",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "fetch_config.yml",
+      "lines": [
+        6,
+        14
+      ]
+    },
+    {
+      "file": "post_credentials.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "download_secrets.rb",
+      "lines": [
+        2,
+        13
+      ]
+    },
+    {
+      "file": "register_service.pp",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "fetch_license.pp",
+      "lines": [
+        3,
+        11
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+---
+- name: Configure MySQL Database Server
+  hosts: db_servers
+  become: true
+  tasks:
+    - name: Install MySQL server
+      package:
+        name: mysql-server
+        state: present
+
+    - name: Disable SSL requirement in MySQL
+      community.mysql.mysql_variables:
+        variable: require_secure_transport
+        value: "OFF"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Set ssl to off in MySQL config file
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^#?ssl\s*='
+        line: 'ssl = off'
+        state: present
+      notify: restart mysql
+
+  handlers:
+    - name: restart mysql
+      service:
+        name: mysql
+        state: restarted

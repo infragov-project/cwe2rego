@@ -1,0 +1,28 @@
+---
+- name: Deploy privileged application container
+  hosts: k8s_master
+  gather_facts: false
+  tasks:
+    - name: Apply privileged pod manifest
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: privileged-app
+            namespace: production
+          spec:
+            hostPID: true
+            hostIPC: true
+            hostNetwork: true
+            containers:
+              - name: app-container
+                image: myapp:latest
+                securityContext:
+                  privileged: true
+                  runAsUser: 0
+                  allowPrivilegeEscalation: true
+                  capabilities:
+                    add:
+                      - ALL

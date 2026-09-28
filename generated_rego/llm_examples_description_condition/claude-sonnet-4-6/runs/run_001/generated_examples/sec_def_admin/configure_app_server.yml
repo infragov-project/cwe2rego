@@ -1,0 +1,32 @@
+---
+- name: Configure Application Server
+  hosts: appservers
+  become: true
+  vars:
+    default_user: root
+    admin_password: "SuperAdmin123!"
+  tasks:
+    - name: Create privileged service account
+      ansible.builtin.user:
+        name: appservice
+        password: "{{ admin_password | password_hash('sha512') }}"
+        groups:
+          - sudo
+          - admin
+          - wheel
+        shell: /bin/bash
+        create_home: true
+
+    - name: Allow root SSH login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+
+    - name: Grant passwordless sudo to appservice
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/appservice
+        content: "appservice ALL=(ALL) NOPASSWD: ALL
+"
+        mode: '0440'

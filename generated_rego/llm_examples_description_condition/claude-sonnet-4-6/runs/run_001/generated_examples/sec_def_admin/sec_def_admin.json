@@ -1,0 +1,68 @@
+{
+  "examples": [
+    {
+      "file": "provision_rds.yml",
+      "lines": [
+        12,
+        13
+      ]
+    },
+    {
+      "file": "configure_app_server.yml",
+      "lines": [
+        6,
+        7,
+        14,
+        15,
+        24,
+        30
+      ]
+    },
+    {
+      "file": "mysql_setup.rb",
+      "lines": [
+        4,
+        11,
+        17,
+        20,
+        26
+      ]
+    },
+    {
+      "file": "iam_user_setup.rb",
+      "lines": [
+        2,
+        8,
+        13,
+        21,
+        22,
+        26,
+        28,
+        29
+      ]
+    },
+    {
+      "file": "db_server.pp",
+      "lines": [
+        4,
+        9,
+        10,
+        14,
+        18,
+        19,
+        26
+      ]
+    },
+    {
+      "file": "compute_node.pp",
+      "lines": [
+        5,
+        6,
+        18,
+        23,
+        33,
+        34
+      ]
+    }
+  ]
+}

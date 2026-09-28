@@ -1,0 +1,13 @@
+---
+- name: Setup application server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create service account
+      user:
+        name: serviceuser
+        groups: "admin,sudo"
+        shell: /bin/bash
+        state: present
+        password: "secretpassword"
+        append: yes

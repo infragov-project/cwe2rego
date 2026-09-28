@@ -105,15 +105,15 @@ def _load_examples_with_content(folder: Path, type_name: str) -> List[Dict[str, 
     return hydrated_examples
 
 
-def _get_annotation_reference(type_name: str) -> tuple[str, str]:
-    """Return (ref_type_name, ref_cwe_number) for annotation reference examples.
+def _get_annotation_reference(type_name: str) -> str:
+    """Return the type name whose examples serve as annotation references.
 
-    Always resolves to sec_invalid_bind/284 or sec_no_int_check/353, choosing the
+    Always resolves to sec_invalid_bind or sec_no_int_check, choosing the
     one that differs from the current type being generated.
     """
     if type_name == "sec_no_int_check":
-        return "sec_invalid_bind", "284"
-    return "sec_no_int_check", "353"
+        return "sec_invalid_bind"
+    return "sec_no_int_check"
 
 
 def _load_annotation_reference_examples(ref_type_name: str) -> List[Dict[str, Any]]:
@@ -260,27 +260,16 @@ def get_llm_examples(
     target_technologies_text = tool.format_technologies(resolved_technologies)
     supported_extensions_text = ", ".join(resolved_extensions)
 
-    if cwe_number is not None:
-        print(f"🤖 Generating examples for {type_name} (CWE-{cwe_number})...")
-        data = _run_llm_prompt(
-            agent,
-            "prompts/examplegeneration.md",
-            cwe_text=cwe_text,
-            type_name=type_name,
-            cwe_number=cwe_number,
-            target_technologies_text=target_technologies_text,
-            supported_extensions_text=supported_extensions_text,
-        )
-    else:
-        print(f"🤖 Generating examples for {type_name}...")
-        data = _run_llm_prompt(
-            agent,
-            "prompts/examplegeneration_description.md",
-            condition_text=cwe_text,
-            type_name=type_name,
-            target_technologies_text=target_technologies_text,
-            supported_extensions_text=supported_extensions_text,
-        )
+    label = f"{type_name} (CWE-{cwe_number})" if cwe_number is not None else type_name
+    print(f"🤖 Generating examples for {label}...")
+    data = _run_llm_prompt(
+        agent,
+        "prompts/examplegeneration.md",
+        condition_text=cwe_text,
+        type_name=type_name,
+        target_technologies_text=target_technologies_text,
+        supported_extensions_text=supported_extensions_text,
+    )
 
     normalized = [_normalize_generated_example(item) for item in data]
     seen_files: set[str] = set()
@@ -316,31 +305,18 @@ def get_llm_example_annotations(
     if not numbered_files:
         raise ValueError("numbered_files must not be empty")
 
-    ref_type_name, ref_cwe_number = _get_annotation_reference(type_name)
-    reference_examples = _load_annotation_reference_examples(ref_type_name)
+    reference_examples = _load_annotation_reference_examples(_get_annotation_reference(type_name))
 
-    if cwe_number is not None:
-        print(f"🤖 Annotating smelly lines for {type_name} (CWE-{cwe_number})...")
-        data = _run_llm_prompt(
-            agent,
-            "prompts/exampleannotation.md",
-            cwe_text=cwe_text,
-            type_name=type_name,
-            cwe_number=cwe_number,
-            reference_cwe_number=ref_cwe_number,
-            reference_examples=reference_examples,
-            files=numbered_files,
-        )
-    else:
-        print(f"🤖 Annotating smelly lines for {type_name}...")
-        data = _run_llm_prompt(
-            agent,
-            "prompts/exampleannotation_description.md",
-            condition_text=cwe_text,
-            type_name=type_name,
-            reference_examples=reference_examples,
-            files=numbered_files,
-        )
+    label = f"{type_name} (CWE-{cwe_number})" if cwe_number is not None else type_name
+    print(f"🤖 Annotating smelly lines for {label}...")
+    data = _run_llm_prompt(
+        agent,
+        "prompts/exampleannotation.md",
+        condition_text=cwe_text,
+        type_name=type_name,
+        reference_examples=reference_examples,
+        files=numbered_files,
+    )
 
     annotations = [_normalize_annotation(item) for item in data]
     expected_files = {item["file"] for item in numbered_files}

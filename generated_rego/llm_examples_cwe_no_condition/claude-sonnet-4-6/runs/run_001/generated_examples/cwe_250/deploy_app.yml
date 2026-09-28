@@ -1,0 +1,22 @@
+---
+- name: Deploy backend application
+  hosts: appservers
+  become: yes
+  become_user: root
+  tasks:
+    - name: Copy application binary
+      copy:
+        src: /builds/myapp
+        dest: /opt/myapp/bin/myapp
+        mode: '0755'
+
+    - name: Start application service
+      service:
+        name: myapp
+        state: started
+        enabled: yes
+
+    - name: Configure application settings
+      template:
+        src: templates/app.conf.j2
+        dest: /etc/myapp/app.conf

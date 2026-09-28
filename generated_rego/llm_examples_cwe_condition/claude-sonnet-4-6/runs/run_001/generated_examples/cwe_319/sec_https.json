@@ -1,0 +1,52 @@
+{
+  "examples": [
+    {
+      "file": "configure_storage_account.yml",
+      "lines": [
+        10,
+        11
+      ]
+    },
+    {
+      "file": "configure_database_connection.yml",
+      "lines": [
+        12,
+        21
+      ]
+    },
+    {
+      "file": "load_balancer_listener.rb",
+      "lines": [
+        4,
+        5,
+        15
+      ]
+    },
+    {
+      "file": "smtp_email_service.rb",
+      "lines": [
+        7,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "file": "web_application_vhost.pp",
+      "lines": [
+        13,
+        14,
+        16,
+        20
+      ]
+    },
+    {
+      "file": "cache_cluster.pp",
+      "lines": [
+        14,
+        16
+      ]
+    }
+  ]
+}

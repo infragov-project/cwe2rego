@@ -1,0 +1,27 @@
+---
+- name: Configure AWS Application Load Balancer with HTTP
+  hosts: localhost
+  tasks:
+    - name: Create ALB with HTTP listener
+      community.aws.elb_application_lb:
+        name: "prod-alb"
+        state: present
+        subnets:
+          - subnet-12345abc
+          - subnet-67890def
+        listeners:
+          - Protocol: HTTP
+            Port: 80
+            DefaultActions:
+              - Type: forward
+                TargetGroupArn: "arn:aws:elasticloadbalancing:us-east-1:123456789:targetgroup/my-tg/abc"
+
+    - name: Create HTTP target group
+      community.aws.elb_target_group:
+        name: "my-target-group"
+        protocol: HTTP
+        port: 8080
+        vpc_id: "vpc-12345abc"
+        health_check_protocol: HTTP
+        health_check_path: /health
+        state: present

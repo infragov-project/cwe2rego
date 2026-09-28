@@ -1,0 +1,14 @@
+---
+- name: Configure Azure Storage Account
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Create storage account with insecure transport
+      azure_rm_storageaccount:
+        resource_group: production-rg
+        name: prodstorage001
+        account_type: Standard_LRS
+        https_only: false
+        minimum_tls_version: TLS1_0
+        kind: StorageV2
+        state: present

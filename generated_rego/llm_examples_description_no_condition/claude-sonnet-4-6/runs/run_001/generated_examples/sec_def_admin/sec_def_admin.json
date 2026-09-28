@@ -1,0 +1,51 @@
+{
+  "examples": [
+    {
+      "file": "setup_server.yml",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "file": "deploy_database.yml",
+      "lines": [
+        7,
+        16
+      ]
+    },
+    {
+      "file": "service_account.rb",
+      "lines": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "file": "deploy_user.rb",
+      "lines": [
+        3,
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "file": "webservice_user.pp",
+      "lines": [
+        3,
+        4,
+        5,
+        7,
+        8
+      ]
+    },
+    {
+      "file": "app_config.pp",
+      "lines": [
+        4,
+        13
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "file": "download_artifact.yaml",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "register_service.yml",
+      "lines": [
+        7
+      ]
+    },
+    {
+      "file": "install_package.rb",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "file": "notify_webhook.rb",
+      "lines": [
+        3
+      ]
+    },
+    {
+      "file": "fetch_archive.pp",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "file": "configure_repo.pp",
+      "lines": [
+        3
+      ]
+    }
+  ]
+}

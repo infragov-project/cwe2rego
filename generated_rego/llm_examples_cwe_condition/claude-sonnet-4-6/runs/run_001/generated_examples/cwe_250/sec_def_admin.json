@@ -1,0 +1,71 @@
+{
+  "examples": [
+    {
+      "file": "deploy_privileged_container.yml",
+      "lines": [
+        16,
+        17,
+        18,
+        23,
+        24,
+        25,
+        28
+      ]
+    },
+    {
+      "file": "create_iam_admin_policy.yml",
+      "lines": [
+        16,
+        17,
+        30
+      ]
+    },
+    {
+      "file": "privileged_service_recipe.rb",
+      "lines": [
+        4,
+        13,
+        21,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "file": "cluster_admin_binding_recipe.rb",
+      "lines": [
+        15,
+        22,
+        37,
+        38,
+        39
+      ]
+    },
+    {
+      "file": "privileged_container.pp",
+      "lines": [
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        15,
+        16
+      ]
+    },
+    {
+      "file": "overprivileged_exec.pp",
+      "lines": [
+        8,
+        15,
+        16,
+        22,
+        23,
+        31,
+        32
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+---
+- name: Provision IAM user with full admin access
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Create IAM policy with wildcard permissions
+      amazon.aws.iam_policy:
+        iam_type: user
+        iam_name: ci_deploy_user
+        policy_name: FullAccessPolicy
+        state: present
+        policy_json:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: "*"
+              Resource: "*"
+
+    - name: Attach AdministratorAccess managed policy to role
+      amazon.aws.iam_role:
+        name: deployment_role
+        assume_role_policy_document:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ec2.amazonaws.com
+              Action: sts:AssumeRole
+        managed_policies:
+          - arn:aws:iam::aws:policy/AdministratorAccess
+        state: present

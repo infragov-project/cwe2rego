@@ -1,0 +1,15 @@
+---
+- name: Run scheduled data processor
+  hosts: workers
+  tasks:
+    - name: Execute data ingestion script
+      command: /opt/processor/ingest.py --config /etc/processor/config.yaml
+      become: yes
+      become_user: root
+      args:
+        chdir: /opt/processor
+
+    - name: Execute data transformation step
+      shell: /opt/processor/transform.sh >> /var/log/processor.log 2>&1
+      become: yes
+      become_user: root

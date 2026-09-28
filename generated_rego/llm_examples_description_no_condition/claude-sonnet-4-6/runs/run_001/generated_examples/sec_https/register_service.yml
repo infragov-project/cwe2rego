@@ -1,0 +1,14 @@
+---
+- name: Register service with discovery
+  hosts: microservices
+  tasks:
+    - name: Post service registration payload
+      ansible.builtin.uri:
+        url: "http://service-registry.example.com:8500/v1/agent/service/register"
+        method: PUT
+        body_format: json
+        body:
+          Name: "payment-service"
+          Address: "{{ ansible_host }}"
+          Port: 8080
+        status_code: 200

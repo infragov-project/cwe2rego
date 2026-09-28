@@ -1,0 +1,28 @@
+---
+- name: Configure web application services
+  hosts: appservers
+  vars:
+    api_endpoint: "http://api.internal.example.com:8080"
+    enable_https: false
+  tasks:
+    - name: Configure application settings file
+      ansible.builtin.copy:
+        dest: /etc/myapp/config.yaml
+        content: |
+          backend_url: "http://backend.service:8080"
+          frontend_protocol: "HTTP"
+          ssl_enabled: false
+          insecure: true
+
+    - name: Register service with HTTP endpoint
+      ansible.builtin.uri:
+        url: "http://consul.service:8500/v1/agent/service/register"
+        method: PUT
+        validate_certs: false
+        body_format: json
+        body:
+          Name: "myapp"
+          Address: "10.0.1.5"
+          Port: 80
+          Tags:
+            - "protocol=http"

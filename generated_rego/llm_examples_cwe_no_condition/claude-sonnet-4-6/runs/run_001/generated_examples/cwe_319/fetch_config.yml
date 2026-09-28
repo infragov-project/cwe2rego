@@ -1,0 +1,20 @@
+---
+- hosts: appservers
+  tasks:
+    - name: Retrieve sensitive application configuration over HTTP
+      get_url:
+        url: "http://config.internal.example.com/secrets/database.conf"
+        dest: "/etc/myapp/database.conf"
+        mode: '0600'
+        owner: root
+        group: root
+
+    - name: Submit private token to registration endpoint
+      uri:
+        url: "http://registry.example.com/api/register"
+        method: PUT
+        body_format: json
+        body:
+          node: "{{ inventory_hostname }}"
+          token: "{{ vault_registration_token }}"
+        status_code: 201

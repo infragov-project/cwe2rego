@@ -1,0 +1,46 @@
+{
+  "examples": [
+    {
+      "file": "deploy_app.yml",
+      "lines": [
+        5
+      ]
+    },
+    {
+      "file": "run_data_processor.yml",
+      "lines": [
+        8,
+        15
+      ]
+    },
+    {
+      "file": "web_service.rb",
+      "lines": [
+        3,
+        12
+      ]
+    },
+    {
+      "file": "install_agent.rb",
+      "lines": [
+        7,
+        14,
+        20
+      ]
+    },
+    {
+      "file": "deploy_service.pp",
+      "lines": [
+        5,
+        12
+      ]
+    },
+    {
+      "file": "reporting_task.pp",
+      "lines": [
+        5,
+        12
+      ]
+    }
+  ]
+}

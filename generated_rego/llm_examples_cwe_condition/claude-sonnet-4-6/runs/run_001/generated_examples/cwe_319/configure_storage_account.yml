@@ -1,0 +1,14 @@
+---
+- name: Configure Azure Storage Account
+  hosts: localhost
+  tasks:
+    - name: Create storage account with insecure transport settings
+      azure.azcollection.azure_rm_storageaccount:
+        resource_group: myResourceGroup
+        name: mystorageaccount01
+        account_type: Standard_LRS
+        enable_https_traffic_only: false
+        minimum_tls_version: TLS1_0
+        kind: StorageV2
+        tags:
+          environment: production

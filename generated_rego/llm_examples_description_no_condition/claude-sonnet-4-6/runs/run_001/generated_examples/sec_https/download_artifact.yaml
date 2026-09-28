@@ -1,0 +1,9 @@
+---
+- name: Download application artifact
+  hosts: app_servers
+  tasks:
+    - name: Fetch deployment package
+      ansible.builtin.get_url:
+        url: "http://artifacts.internal.example.com/releases/app-1.4.2.tar.gz"
+        dest: /opt/app/app-1.4.2.tar.gz
+        mode: '0644'

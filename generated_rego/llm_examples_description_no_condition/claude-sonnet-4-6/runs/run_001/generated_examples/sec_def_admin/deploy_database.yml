@@ -1,0 +1,17 @@
+---
+- name: Deploy database server
+  hosts: db_servers
+  tasks:
+    - name: Create MySQL admin user
+      mysql_user:
+        name: admin
+        password: "dbpassword"
+        priv: "*.*:ALL,GRANT"
+        host: "%"
+        state: present
+    - name: Run application container
+      docker_container:
+        name: myapp
+        image: myapp:latest
+        user: root
+        state: started

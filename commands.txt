@@ -55,3 +55,25 @@ Prepare rules:
 python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/glitch_smell_descriptions/claude-sonnet-4-6/ --mapping glitch_descriptions_mapping.json
 
 
+LLM-generated examples (sec_def_admin / CWE-250, sec_https / CWE-319):
+Shell scripts require an existing examples directory. However, if examples are generated, it is ignored.
+
+CWE with condition:
+./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 llm_examples_cwe_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-llm-examples --technologies ansible,chef,puppet 250 319
+
+CWE without condition:
+./run_all_cwes.sh global.anthropic.claude-sonnet-4-6 llm_examples_cwe_no_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-llm-examples --technologies ansible,chef,puppet --use-cwe-text 250 319
+
+Description with condition:
+./run_all_descriptions.sh global.anthropic.claude-sonnet-4-6 llm_examples_description_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-llm-examples --technologies ansible,chef,puppet sec_def_admin sec_https
+
+Description without condition:
+./run_all_descriptions.sh global.anthropic.claude-sonnet-4-6 llm_examples_description_no_condition validation/examples_extension glitch -1 --max-runs 5 --provider bedrock --use-llm-examples --technologies ansible,chef,puppet --use-description-text sec_def_admin sec_https
+
+Prepare rules:
+python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/llm_examples_cwe_condition/claude-sonnet-4-6/ --mapping glitch_rego_mapping.json --only-cwe 250 319
+python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/llm_examples_cwe_no_condition/claude-sonnet-4-6/ --mapping glitch_rego_mapping.json --only-cwe 250 319
+python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/llm_examples_description_condition/claude-sonnet-4-6/ --mapping glitch_descriptions_mapping.json
+python3 prepare_rules.py --analysis-tool glitch --experiment-dir generated_rego/llm_examples_description_no_condition/claude-sonnet-4-6/ --mapping glitch_descriptions_mapping.json
+
+

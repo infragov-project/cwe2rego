@@ -169,6 +169,8 @@ Example:
 ./run_all_descriptions.sh global.anthropic.claude-sonnet-4-6 my_experiment validation/examples glitch -1 --provider bedrock sec_hard_pass sec_https
 ```
 
+To restrict technologies, pass `--technologies` as a comma-separated list (e.g. `--technologies ansible,chef,puppet`); the scripts expand it before forwarding it to `llm_interaction.py`.
+
 Both scripts retry failed runs up to `--max-runs` times (default: 1, overridable via `MAX_RUNS` env var) and report failures at the end. The provider defaults to `openrouter` and can also be set via the `PROVIDER` environment variable.
 
 Any flags after the known positional/optional arguments are forwarded directly to `llm_interaction.py`.

@@ -45,6 +45,20 @@ while [[ $# -gt 0 ]]; do
             PROVIDER="${1#*=}"
             shift 1
             ;;
+        --technologies)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --technologies requires a comma-separated value (e.g. ansible,chef,puppet)" >&2
+                exit 1
+            fi
+            IFS=',' read -r -a techs <<< "$2"
+            EXTRA_ARGS+=(--technologies "${techs[@]}")
+            shift 2
+            ;;
+        --technologies=*)
+            IFS=',' read -r -a techs <<< "${1#*=}"
+            EXTRA_ARGS+=(--technologies "${techs[@]}")
+            shift 1
+            ;;
         --*)
             EXTRA_ARGS+=("$1")
             shift

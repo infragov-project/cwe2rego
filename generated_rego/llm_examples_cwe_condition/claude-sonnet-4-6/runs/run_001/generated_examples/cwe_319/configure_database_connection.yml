@@ -1,0 +1,21 @@
+---
+- name: Configure MySQL Database Server
+  hosts: db_servers
+  become: true
+  tasks:
+    - name: Disable secure transport requirement on MySQL
+      community.mysql.mysql_variables:
+        login_host: localhost
+        login_user: root
+        login_password: rootpassword
+        variable: require_secure_transport
+        value: 'OFF'
+
+    - name: Deploy application database configuration file
+      ansible.builtin.template:
+        src: db_config.j2
+        dest: /etc/myapp/database.conf
+        owner: appuser
+        mode: '0644'
+      vars:
+        db_connection_string: "mysql://appuser:s3cr3t@db.internal/appdb?sslmode=disable&Encrypt=False"
